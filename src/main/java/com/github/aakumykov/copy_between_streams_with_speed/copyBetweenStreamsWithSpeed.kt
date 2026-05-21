@@ -24,19 +24,22 @@ fun copyBetweenStreamsWithSpeed(
     speedBytesPerSecond: Int = -1,
     discretizationHz: Int = 10,
     bufferSizeBytes: Int = DEFAULT_BUFFER_SIZE,
-    progressCallback: ((totalBytesTransferred:Long, speed:Long) -> Unit)? = null,
-    finishCallback: ((totalBytesTransferred:Long, elapsedTimeMs:Long) -> Unit)? = null,
+    progressCallback: ((totalBytesTransferred:Long, speed:Int) -> Unit)? = null,
+    finishCallback: ((Long,Long) -> Unit)? = null,
     printDebug: Boolean = false,
 ){
     fun plnDebug(text: String, tag: String = "copyBetweenStreamsWithSpeed") { if (printDebug) println("[$tag] $text") }
 
+    /**
+     * @return Pair<sleepDiffMs:Long, speed:Int>
+     */
     fun calcSleepAndSpeed(
         dataSizeNeedToBeTransferredBeforeSleep: Long,
         dataSizeRealTransferredBeforeSleep: Long,
         pieceStartTime: Long,
         pieceFinishTime: Long,
         steps: Int,
-    ): Pair<Long,Long> {
+    ): Pair<Long,Int> {
         val timeWindowToTransferPieceMs = (
                 (dataSizeRealTransferredBeforeSleep.toDouble() / dataSizeNeedToBeTransferredBeforeSleep) * 1000 / steps
         ).roundToLong()
@@ -45,10 +48,10 @@ fun copyBetweenStreamsWithSpeed(
         val realPieceTransferTimeMs = pieceFinishTime - pieceStartTime
         val timeToCalcSpeedMs = if (realPieceTransferTimeMs > 1000) realPieceTransferTimeMs else timeWindowToTransferPieceMs
 
-        val speed = (dataSizeRealTransferredBeforeSleep.toDouble() / (timeToCalcSpeedMs / 1000)).toLong()
-        val sleepDiff = timeWindowToTransferPieceMs - realPieceTransferTimeMs
+        val sleepDiffMs = timeWindowToTransferPieceMs - realPieceTransferTimeMs
+        val speed = (dataSizeRealTransferredBeforeSleep.toDouble() / (timeToCalcSpeedMs / 1000)).toInt()
 
-        return Pair(sleepDiff, speed)
+        return Pair(sleepDiffMs, speed)
     }
 
     fun calcOperationPortionSize(
