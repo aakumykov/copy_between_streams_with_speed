@@ -1,6 +1,21 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    id 'maven-publish'
+}
+
+project.ext {
+    artifactId = 'copy_between_streams_with_speed'
+    groupId = 'com.github.aakumykov'
+
+    majorVersionNum = 0
+    minorVersionNum = 0
+    patchVersionNum = 1
+    suffix = 'alpha'
+
+    versionCode = 1
+
+    versionName = majorVersionNum + "." + minorVersionNum + "." + patchVersionNum + "-" + suffix
 }
 
 android {
