@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.math.roundToLong
@@ -29,6 +30,8 @@ fun copyBetweenStreamsWithSpeed(
     printDebug: Boolean = false,
 ){
     fun plnDebug(text: String, tag: String = "copyBetweenStreamsWithSpeed") { if (printDebug) println("[$tag] $text") }
+
+    plnDebug("0.0.3")
 
     /**
      * @return Pair<sleepDiffMs:Long, speed:Int>
