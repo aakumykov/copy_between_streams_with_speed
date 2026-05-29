@@ -14,9 +14,9 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.eraseStringFromPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.errorMsg
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getStringFromPreferences
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeStringInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.humanReadableByteCount
-import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed
 import com.github.aakumykov.file_lister_navigator_selector.file_lister.SimpleSortingMode
 import com.github.aakumykov.file_lister_navigator_selector.file_selector.FileSelector
@@ -47,7 +47,16 @@ class MainActivity :
         get() = LocalFileSelector().prepare()
 
     private var selectedFSItem: FSItem? = null
+    private var sourceFile: File? = null
+    private val fileLength: Long? get() = sourceFile?.length()
     private var inputStream: InputStream? = null
+
+    private val estimatedTimeMs: Int get() {
+        return fileLength?.let {
+            if (speedLimitEnabled) ((it.toDouble() / speedBytesPerSec) * 1000).roundToInt()
+            else -1
+        } ?: -1
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,26 +86,13 @@ class MainActivity :
         binding.clearSelectionButton.setOnClickListener { onClearFileSelectionClicked() }
         binding.startButton.setOnClickListener { onStartClicked() }
         binding.stopButton.setOnClickListener { onStopClicked() }
-//        binding.action3Button.setOnClickListener { action3() }
 
-        binding.dataSizeSlider.apply {
-            max = MAX_SIZE
-            setChangeListener(object: SeekBarWithTextInput.ChangeListener{
-                override fun onSeekBarWithTextInputProgressChanged(progress: Int, fromUser: Boolean) {
-//                    Log.d(TAG, "progress: $progress")
-                    storeDataSize()
-                }
-            })
-            setProgressLabelProvider { progress ->
-                getString(R.string.dataSize, progress, humanReadableByteCount(progress.toLong()))
-            }
-        }
+//        getString(R.string.dataSize, progress, humanReadableByteCount(progress.toLong()))
 
         binding.speedSlider.apply {
             max = MAX_SPEED
             setChangeListener(object: SeekBarWithTextInput.ChangeListener{
                 override fun onSeekBarWithTextInputProgressChanged(progress: Int, fromUser: Boolean) {
-//                    Log.d(TAG, "speed: $progress")
                     storeSpeed()
                 }
             })
@@ -114,12 +110,6 @@ class MainActivity :
         }
     }
 
-    private fun storeDataSize() {
-        sharedPreferences.edit {
-            putInt(KEY_DATA_SIZE, dataSizeBytes)
-        }
-    }
-
     private fun onSelectFileClicked() {
         resetView()
         storageAccessHelper.requestReadAccess { selectAFile() }
@@ -131,27 +121,9 @@ class MainActivity :
         displayFileSelectionState()
     }
 
-    val dataSizeBytes get() = binding.dataSizeSlider.progress
     val speedBytesPerSec get() = binding.speedSlider.progress//.let { if (0 == it) 1 else it }
 
-    val file1: File get() {
-        val f1 = File(cacheDir, "file1.bin")
-
-        if (!f1.exists()) {
-            Log.d(TAG, "@@ Создаю файл ${f1.name}")
-            f1.createNewFile()
-        }
-
-        if (f1.length() != dataSizeBytes.toLong())
-            f1.apply {
-                createNewFile()
-                this.writeBytes(random.nextBytes(dataSizeBytes))
-            }
-
-        return f1
-    }
-
-    val file2: File get() {
+    val outputFile: File get() {
         val f2 = File(cacheDir, "file2.bin")
         if (!f2.exists()) f2.createNewFile()
         return f2
@@ -170,7 +142,6 @@ class MainActivity :
     }
 
     private fun restoreFormData() {
-        binding.dataSizeSlider.progress = sharedPreferences.getInt(KEY_DATA_SIZE, DEFAULT_DATA_SIZE)
         binding.speedSlider.progress = sharedPreferences.getInt(KEY_SPEED, DEFAULT_SPEED)
         selectedFSItem = fsItemFomJSON(getStringFromPreferences(SELECTED_ITEM))
 
@@ -179,25 +150,26 @@ class MainActivity :
 
     private fun storeFormData() {
         storeSpeed()
-        storeDataSize()
     }
 
     private fun onStartClicked() {
 
-        val estimatedTimeMs: Int = if (speedLimitEnabled) ((dataSizeBytes.toDouble() / speedBytesPerSec) * 1000).roundToInt()
-                                    else -1
-
-        Log.d(TAG, "@@ размер данных: ${humanReadableByteCount(dataSizeBytes.toLong())}, " +
+        /*Log.d(TAG, "@@ размер данных: ${humanReadableByteCount(dataSizeBytes.toLong())}, " +
                 "скорость: ${
                     humanReadableByteCount(
                         speedBytesPerSec.toLong(),
                         decimalNotation = true
                     )
                 }/с, " +
-                "ожидаемое время: ${estimatedTimeMs.toFloat()/100000} с")
+                "ожидаемое время: ${estimatedTimeMs.toFloat()/100000} с")*/
 
-        inputStream = file1.inputStream()
-        val outputStream = file2.outputStream()
+        if (null == sourceFile) {
+            showToast(R.string.file_not_selected)
+            return
+        }
+
+        inputStream = sourceFile!!.inputStream()
+        val outputStream = outputFile.outputStream()
 
         val eh = CoroutineExceptionHandler { _, throwable ->
             Log.e(TAG, throwable.errorMsg, throwable)
@@ -240,7 +212,7 @@ class MainActivity :
                 // FIXME: вот этот блок существенно тормозит процесс копирования.
                 //  Кажется, уже не тормозит.
                 lifecycleScope.launch {
-                    showProgress(totalBytesTransferred,dataSizeBytes.toLong())
+                    showProgress(totalBytesTransferred,fileLength!!)
                 }
             },
             finishCallback = { totalBytesTransferred, elapsedTimeMs ->
@@ -294,6 +266,7 @@ class MainActivity :
 
     override fun onFileSelected(list: List<FSItem>) {
         selectedFSItem = list.first()
+        sourceFile = File(selectedFSItem!!.absolutePath)
         storeStringInPreferences(SELECTED_ITEM, fsItem2JSON(selectedFSItem))
         displayFileSelectionState()
     }
@@ -307,6 +280,7 @@ class MainActivity :
 
         if (null != selectedFSItem) {
             val filePath = selectedFSItem!!.absolutePath
+//            val file = File(filePath)
             val fileLength = File(filePath).length()
             getString(
                 R.string.selected_file_path,

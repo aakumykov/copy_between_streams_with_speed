@@ -36,14 +36,6 @@
         tools:text="Выбранный файл" />
 
     <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
-        android:id="@+id/data_size_slider"
-        android:layout_height="wrap_content"
-        android:layout_width="match_parent"
-        app:max="1073741824"
-        app:progress="10485760"
-    />
-
-    <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
         android:id="@+id/speedSlider"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
@@ -51,26 +43,31 @@
         app:progress="102400"
         />
 
-    <ToggleButton
-        android:id="@+id/noSpeedLimitToggle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAllCaps="false"
-        android:layout_marginHorizontal="12dp"
-        android:textOn="Без ограничения скорости"
-        android:textOff="Заданная скорость"/>
+        android:orientation="horizontal"
+        android:layout_weight="0">
 
-    <ToggleButton
-        android:id="@+id/debugToggle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:checked="false"
-        android:textAllCaps="false"
-        android:layout_marginHorizontal="12dp"
-        android:textOff="Отладка нет"
-        android:textOn="Отладка да"/>
+        <ToggleButton
+            android:id="@+id/noSpeedLimitToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:textAllCaps="false"
+            android:textOn="Без ограничения скорости"
+            android:textOff="Заданная скорость"/>
 
-
+        <ToggleButton
+            android:id="@+id/debugToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:checked="false"
+            android:textAllCaps="false"
+            android:textOff="Отладка нет"
+            android:textOn="Отладка да"/>
+    </LinearLayout>
 
     <Button
         android:id="@+id/startButton"
