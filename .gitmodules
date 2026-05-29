@@ -1,0 +1,3 @@
+[submodule "seek_bar_with_text_input"]
+	path = seek_bar_with_text_input
+	url = git@github.com:aakumykov/seek_bar_with_text_input

@@ -1,0 +1,7 @@
+<resources>
+<!-- Base application theme. -->
+<style name="Base.Theme.Copy_between_streams_with_speed" parent="Theme.AppCompat.DayNight">
+    <!-- Customize your dark theme here. -->
+    <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+</style>
+</resources>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/selectFileButton"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="@string/select_a_file" />
+        <ImageButton
+            android:id="@+id/clearSelectionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="0"
+            android:src="@drawable/ic_close"
+            tools:ignore="ContentDescription" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/fileInfoView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:padding="2dp"
+        tools:text="Выбранный файл" />
+
+    <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
+        android:id="@+id/data_size_slider"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        app:max="1073741824"
+        app:progress="10485760"
+    />
+
+    <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
+        android:id="@+id/speedSlider"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        app:max="1048576"
+        app:progress="102400"
+        />
+
+    <ToggleButton
+        android:id="@+id/noSpeedLimitToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAllCaps="false"
+        android:layout_marginHorizontal="12dp"
+        android:textOn="Без ограничения скорости"
+        android:textOff="Заданная скорость"/>
+
+    <ToggleButton
+        android:id="@+id/debugToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:checked="false"
+        android:textAllCaps="false"
+        android:layout_marginHorizontal="12dp"
+        android:textOff="Отладка нет"
+        android:textOn="Отладка да"/>
+
+
+
+    <Button
+        android:id="@+id/startButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:backgroundTint="#4DB6AC"
+        android:textColor="@color/white"
+        android:text="Пуск" />
+
+    <Button
+        android:id="@+id/stopButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:backgroundTint="#FFA726"
+        android:textColor="@color/white"
+        android:text="Стоп" />
+
+    <!--<Button
+        android:id="@+id/action3Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:backgroundTint="#F48FB1"
+        android:textColor="@color/white"
+        android:text="Отменить задачу" />-->
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:visibility="invisible"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        />
+
+    <TextView
+        android:id="@+id/errorView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="2dp"
+        android:textColor="@color/error"
+        android:focusable="false"
+        tools:text="Ошибка" />
+
+    <ScrollView
+        android:id="@+id/infoScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:focusable="false">
+        <TextView
+            android:id="@+id/infoView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="2dp"
+            android:textSize="12sp"
+            android:focusable="false"
+            tools:text="Инфа" />
+    </ScrollView>
+
+</LinearLayout>

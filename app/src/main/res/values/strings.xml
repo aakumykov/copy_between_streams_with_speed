@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Из потока в поток со скоростью</string>
+    <string name="select_a_file">Выбрать файл</string>
+    <string name="select_another_file">Выбрать другой файл</string>
+    <string name="selected_file_path">Выбран файл: %1$s [%2$s]</string>
+    <string name="file_not_selected">Файла не выбрано</string>
+    <string name="dataSize">Размер данных: %1$n %2$s</string>
+    <string name="speed">Скорость: %1$n %2$s/с</string>
+</resources>
