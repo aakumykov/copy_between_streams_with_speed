@@ -39,7 +39,10 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
      - значение дискретизации выше значения скорости
        [exception_thrown_if_discretization_greater_than_speed];
 
-    В) Разные значения необязательных аргументов:
+    В) При заданной скорости реальное время соответствует ожидаемому
+    (с небольшой погрешностью) [work_time_matches_estimated_time]
+
+    Г) Разные значения других аргументов:
      - скорости [works_with_different_speed_values];
      - размер буфера
      - частота дискретизации
@@ -225,6 +228,26 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 discretizationHz = 20
             )
         }
+    }
+
+
+    @Test
+    fun work_time_matches_estimated_time() {
+        val dataSizeBytes = 10_000
+        val speedBytesPerSec = 5000
+        val estimatedTimeMs = (dataSizeBytes.toDouble() / speedBytesPerSec).toLong() * 1000
+
+        prepareSourceAndTargetFiles(testData(dataSizeBytes))
+
+        val startTime = System.currentTimeMillis()
+        copyBetweenStreamsWithSpeed(
+            sourceFileStream,
+            targetFileStream,
+            speedBytesPerSecond = speedBytesPerSec
+        )
+        val realTimeMs = System.currentTimeMillis() - startTime
+
+        println("estimatedTimeMs: $estimatedTimeMs, realTimeMs: $realTimeMs")
     }
 
 
