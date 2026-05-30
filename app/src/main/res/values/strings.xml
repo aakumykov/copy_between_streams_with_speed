@@ -6,4 +6,6 @@
     <string name="file_not_selected">Файла не выбрано</string>
     <string name="dataSize">Размер данных: %1$n %2$s</string>
     <string name="speed">Скорость: %1$n %2$s/с</string>
+    <string name="estimatedTime">Ожидаемое время:\n%1$f с</string>
+    <string name="realTime">Реальное время:\n%1$f с</string>
 </resources>

@@ -14,7 +14,7 @@ fun humanReadableByteCount(
     if (bytes < base) return "$bytes ${sizeNames[0]}"
     val exp = (ln(bytes.toDouble()) / ln(1024.0)).toInt()
     val pre = sizeNames[exp]
-    val suffix = if (decimalNotation) "bit" else "iB"
+    val suffix = if (decimalNotation) "bit" else "B"
     return String.format(
         locale,
         "%.1f %c$suffix",

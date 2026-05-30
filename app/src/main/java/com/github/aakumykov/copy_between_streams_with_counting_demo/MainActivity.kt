@@ -47,15 +47,15 @@ class MainActivity :
         get() = LocalFileSelector().prepare()
 
     private var selectedFSItem: FSItem? = null
-    private var sourceFile: File? = null
-    private val fileLength: Long? get() = sourceFile?.length()
-    private var inputStream: InputStream? = null
+    private val selectedFile: File get() = File(selectedFSItem!!.absolutePath)
+    private val selectedFileLength: Long get() = selectedFile.length()
+    private val inputStream: InputStream get() = selectedFile.inputStream()
 
-    private val estimatedTimeMs: Int get() {
-        return fileLength?.let {
-            if (speedLimitEnabled) ((it.toDouble() / speedBytesPerSec) * 1000).roundToInt()
-            else -1
-        } ?: -1
+    private val estimatedTimeSec: Float get() {
+        return selectedFileLength.let {
+            if (speedLimitEnabled) (it.toDouble() / speedBytesPerSec).toFloat()
+            else (-1).toFloat()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,8 +71,6 @@ class MainActivity :
 
         prepareButtons()
         prepareComponents()
-
-//        action1()
     }
 
     private fun prepareComponents() {
@@ -87,13 +85,13 @@ class MainActivity :
         binding.startButton.setOnClickListener { onStartClicked() }
         binding.stopButton.setOnClickListener { onStopClicked() }
 
-//        getString(R.string.dataSize, progress, humanReadableByteCount(progress.toLong()))
-
         binding.speedSlider.apply {
             max = MAX_SPEED
             setChangeListener(object: SeekBarWithTextInput.ChangeListener{
                 override fun onSeekBarWithTextInputProgressChanged(progress: Int, fromUser: Boolean) {
                     storeSpeed()
+                    if (null != selectedFSItem)
+                        showEstimatedTime()
                 }
             })
             setProgressLabelProvider { progress ->
@@ -102,6 +100,13 @@ class MainActivity :
                 )
             }
         }
+    }
+
+    private fun showEstimatedTime() {
+        binding.estimatedTimeView.text = getString(
+            R.string.estimatedTime,
+            estimatedTimeSec
+        )
     }
 
     private fun storeSpeed() {
@@ -121,7 +126,8 @@ class MainActivity :
         displayFileSelectionState()
     }
 
-    val speedBytesPerSec get() = binding.speedSlider.progress//.let { if (0 == it) 1 else it }
+    val speedBytesPerSec
+        get() = binding.speedSlider.progress * 8
 
     val outputFile: File get() {
         val f2 = File(cacheDir, "file2.bin")
@@ -154,26 +160,16 @@ class MainActivity :
 
     private fun onStartClicked() {
 
-        /*Log.d(TAG, "@@ размер данных: ${humanReadableByteCount(dataSizeBytes.toLong())}, " +
-                "скорость: ${
-                    humanReadableByteCount(
-                        speedBytesPerSec.toLong(),
-                        decimalNotation = true
-                    )
-                }/с, " +
-                "ожидаемое время: ${estimatedTimeMs.toFloat()/100000} с")*/
-
-        if (null == sourceFile) {
+        if (null == selectedFSItem) {
             showToast(R.string.file_not_selected)
             return
         }
 
-        inputStream = sourceFile!!.inputStream()
         val outputStream = outputFile.outputStream()
 
         val eh = CoroutineExceptionHandler { _, throwable ->
             Log.e(TAG, throwable.errorMsg, throwable)
-            inputStream?.close()
+            inputStream.close()
             lifecycleScope.launch {
                 showError(throwable.errorMsg)
             }
@@ -184,9 +180,9 @@ class MainActivity :
                 showProgressBar()
             }
 
-            inputStream!!.use { iStream ->
+            inputStream.use { iStream ->
                 outputStream.use { oStream ->
-                    doCopy(iStream, oStream, estimatedTimeMs)
+                    doCopy(iStream, oStream)
                 }
             }
 
@@ -197,34 +193,42 @@ class MainActivity :
         }
     }
 
-    fun doCopy(iStream: InputStream, oStream: OutputStream, estimatedTimeMs: Int) {
+    private val speedForCopying: Int get() {
+        return if (speedLimitEnabled) speedBytesPerSec
+        else -1
+    }
+
+    fun doCopy(iStream: InputStream, oStream: OutputStream) {
         copyBetweenStreamsWithSpeed(
             inputStream = iStream,
             outputStream = oStream,
-            speedBytesPerSecond = if (speedLimitEnabled) speedBytesPerSec else -1,
-            progressCallback = { totalBytesTransferred, speed ->
-                if (isDebugEnabled)
-                    Log.d(TAG, "totalBytesTransferred: $totalBytesTransferred, speed: ${
-                        humanReadableByteCount(
-                            speed.toLong()
-                        )
-                    }/s")
+            speedBytesPerSecond = speedForCopying,
+            progressCallback = { processed, speed ->
                 // FIXME: вот этот блок существенно тормозит процесс копирования.
                 //  Кажется, уже не тормозит.
                 lifecycleScope.launch {
-                    showProgress(totalBytesTransferred,fileLength!!)
+                    showProgress(processed,selectedFileLength, speed)
                 }
             },
             finishCallback = { totalBytesTransferred, elapsedTimeMs ->
-                Log.d(TAG, "@@ реальное время ${elapsedTimeMs.toFloat()/1000} с")
-                showInfo("ожидаемое время: ${estimatedTimeMs.toFloat()/1000}, реальное время ${elapsedTimeMs.toFloat()/1000} с")
+                showRealTime(elapsedTimeMs)
             },
             printDebug = isDebugEnabled
         )
     }
 
+    fun showRealTime(elapsedTimeMs: Long) {
+        lifecycleScope.launch {
+            val realTime = elapsedTimeMs.toFloat()/1000
+            Log.d(TAG, "@@ реальное время ${realTime} с")
+            binding.realTimeView.text = getString(R.string.realTime, realTime)
+        }
+    }
+
     private fun onStopClicked() {
-        inputStream?.close()
+        selectedFSItem?.also {
+            inputStream.close()
+        }
     }
 
     private fun action3() {
@@ -249,7 +253,16 @@ class MainActivity :
         }
     }
 
-    private fun showProgress(processed: Long, total: Long) {
+    private fun showProgress(processed: Long, total: Long, speed: Int) {
+
+        if (isDebugEnabled) {
+            Log.d(
+                TAG,
+                "Передано байт: $processed, " +
+                        "скорость: ${humanReadableByteCount(speed.toLong())}/с"
+            )
+        }
+
         binding.progressBar.apply {
             max = 100
             progress = calculateProgress(processed, total)
@@ -266,32 +279,26 @@ class MainActivity :
 
     override fun onFileSelected(list: List<FSItem>) {
         selectedFSItem = list.first()
-        sourceFile = File(selectedFSItem!!.absolutePath)
         storeStringInPreferences(SELECTED_ITEM, fsItem2JSON(selectedFSItem))
         displayFileSelectionState()
     }
 
     private fun displayFileSelectionState() {
 
-        binding.selectFileButton.setText(
-            if (null != selectedFSItem) R.string.select_another_file
-            else R.string.select_a_file
+        if (null == selectedFSItem) {
+            binding.selectFileButton.setText(R.string.select_a_file)
+            return
+        }
+
+        binding.selectFileButton.setText(R.string.select_another_file)
+
+        binding.fileInfoView.text = getString(
+            R.string.selected_file_path,
+            selectedFile.absolutePath,
+            humanReadableByteCount(selectedFileLength)
         )
 
-        if (null != selectedFSItem) {
-            val filePath = selectedFSItem!!.absolutePath
-//            val file = File(filePath)
-            val fileLength = File(filePath).length()
-            getString(
-                R.string.selected_file_path,
-                filePath,
-                humanReadableByteCount(fileLength)
-            ).also {
-                binding.fileInfoView.text = it
-            }
-        } else {
-            binding.fileInfoView.text = getString(R.string.file_not_selected)
-        }
+        showEstimatedTime()
     }
 
     private fun showError(throwable: Throwable) {
