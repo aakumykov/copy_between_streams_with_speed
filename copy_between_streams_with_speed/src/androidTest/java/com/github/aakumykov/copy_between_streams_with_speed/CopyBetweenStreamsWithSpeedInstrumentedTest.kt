@@ -3,6 +3,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
+import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -232,22 +233,157 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
-    fun work_time_matches_estimated_time() {
-        val dataSizeBytes = 10_000
-        val speedBytesPerSec = 5000
-        val estimatedTimeMs = (dataSizeBytes.toDouble() / speedBytesPerSec).toLong() * 1000
+    fun simple_copy_test() {
+
+        val size = 10_000
+        val speed = 50_000
+        val estimatedTimeMs = size.toFloat() / speed
+
+        val realTimeMs = doCopy(
+            size,
+            speed,
+            100
+        )
+
+        val percent = (realTimeMs / estimatedTimeMs) * 100
+
+        println("estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
+    }
+
+    @Test
+    fun work_time_matches_estimated_time_on_low_data_size() {
+
+        val dataSizeFrom = 1
+        val dataSizeTo=  10
+        val step = 1
+        val baseSpeed = 1
+
+        repeatFromTo(1,11) { speedMultiplier ->
+
+            val res = test_data_sizes(
+                dataSizeFrom,
+                dataSizeTo,
+                step,
+                baseSpeed,
+                speedMultiplier = speedMultiplier,
+                discretizationHz = 1
+            )
+
+            println("---- данные: ${res.first}, скорость x${speedMultiplier} ----")
+            println(res.second.joinToString("\n"))
+            println()
+        }
+    }
+
+    @Test
+    fun work_time_matches_estimated_time_on_big_data_size() {
+
+        val dataSizeFrom = 10_000
+        val dataSizeTo=  20_000
+        val step = 1000
+        val baseSpeed = 10_000
+
+        println("============= ОБЪЁМ ДАННЫХ (${dataSizeFrom}-${dataSizeTo} БАЙТ, ШАГ $step, БАЗОВАЯ СКОРОСТЬ $baseSpeed) =============")
+        println()
+
+        repeatFromTo(1,11) { speedMultiplier ->
+
+            val res = test_data_sizes(
+                fromDataSize = dataSizeFrom,
+                toDataSize = dataSizeTo,
+                dataStep = step,
+                baseSpeedBytesPerSec = baseSpeed,
+                speedMultiplier = speedMultiplier
+            )
+
+            println("---- данные: ${res.first}, скорость x${speedMultiplier} ----")
+            println(res.second.joinToString("\n"))
+            println()
+        }
+    }
+
+    /**
+     * @return Pair<DataSizeBytes,WorkTimePercentsOfEstimated>
+     */
+    private fun test_data_sizes(
+        fromDataSize: Int,
+        toDataSize: Int,
+        dataStep: Int,
+        baseSpeedBytesPerSec: Int,
+        speedMultiplier: Int,
+        discretizationHz: Int = 10,
+    ): Pair<Int,List<Float>> {
+
+        val dataSizeFrom = fromDataSize
+        val dataSizeTo = toDataSize
+
+        val percentList = mutableListOf<Float>()
+        var size = 0
+
+        repeatFromTo(dataSizeFrom,dataSizeTo+1, dataStep) { dataSizeBytes ->
+
+            size = dataSizeBytes
+
+            val speedBytesPerSec = baseSpeedBytesPerSec * speedMultiplier
+
+            val realTimeMs = doCopy(
+                dataSizeBytes = dataSizeBytes,
+                speedBytesPerSec = speedBytesPerSec,
+                discretizationHz = discretizationHz
+            )
+
+            val estimatedTimeMs = (dataSizeBytes.toFloat() / speedBytesPerSec) * 1000
+
+            val differencePercents = ((realTimeMs.toFloat() / estimatedTimeMs) * 100)
+
+            percentList.add(differencePercents)
+
+            /*println("dataSize: $dataSizeBytes, " +
+                    "speed: $speedBytesPerSec, " +
+                    "x${speedMultiplier}, " +
+                    "estimatedTimeMs: $estimatedTimeMs, " +
+                    "realTimeMs: $realTimeMs (${differencePercents}%)")*/
+        }
+
+        /*println("----- Процентовки для скорости x${speedMultiplier} для данных ${dataSizeFrom}-${dataSizeTo} байт -----")
+        println(
+            percentList.sortedDescending().joinToString("\n")
+        )
+        println("------------")*/
+
+        return Pair(size, percentList.sortedDescending())
+    }
+
+
+    /**
+     * @return Затраченное на копирование время, мс.
+     */
+    private fun doCopy(
+        dataSizeBytes: Int,
+        speedBytesPerSec: Int,
+        discretizationHz: Int = 10
+    ): Long {
+
+        println("doCopy(dataSizeBytes:$dataSizeBytes, speedBytesPerSec:$speedBytesPerSec, discretizationHz:$discretizationHz)")
 
         prepareSourceAndTargetFiles(testData(dataSizeBytes))
 
         val startTime = System.currentTimeMillis()
-        copyBetweenStreamsWithSpeed(
-            sourceFileStream,
-            targetFileStream,
-            speedBytesPerSecond = speedBytesPerSec
-        )
+
+        sourceFileStream.use { inputStream ->
+            targetFileStream.use { outputStream ->
+                copyBetweenStreamsWithSpeed(
+                    inputStream = inputStream,
+                    outputStream = outputStream,
+                    speedBytesPerSecond = speedBytesPerSec,
+                    discretizationHz = discretizationHz
+                )
+            }
+        }
+
         val realTimeMs = System.currentTimeMillis() - startTime
 
-        println("estimatedTimeMs: $estimatedTimeMs, realTimeMs: $realTimeMs")
+        return realTimeMs
     }
 
 
