@@ -2,6 +2,8 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.aakumykov.copy_between_streams_with_speed.utils.estimateTimeMs
+import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
 import org.junit.Assert
@@ -233,21 +235,40 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
-    fun simple_copy_test() {
+    fun simple_10kb_copy_test() {
 
         val size = 10_000
-        val speed = 50_000
-        val estimatedTimeMs = size.toFloat() / speed
+        val speedBytesPerSec = 50_000
+        val estimatedTimeMs = estimateTimeMs(size, speedBytesPerSec)
 
         val realTimeMs = doCopy(
             size,
-            speed,
-            100
+            speedBytesPerSec,
+            10
         )
 
-        val percent = (realTimeMs / estimatedTimeMs) * 100
+        val percent = percent(realTimeMs, estimatedTimeMs)
 
-        println("estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
+        println("RESULT: estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
+    }
+
+
+    @Test
+    fun simple_100b_copy_test() {
+
+        val size = 100
+        val speedBytesPerSec = 200
+        val estimatedTimeMs = estimateTimeMs(size, speedBytesPerSec)
+
+        val realTimeMs = doCopy(
+            size,
+            speedBytesPerSec,
+            10
+        )
+
+        val percent = percent(realTimeMs, estimatedTimeMs)
+
+        println("RESULT: estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
     }
 
     @Test
@@ -376,14 +397,13 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     inputStream = inputStream,
                     outputStream = outputStream,
                     speedBytesPerSecond = speedBytesPerSec,
-                    discretizationHz = discretizationHz
+                    discretizationHz = discretizationHz,
+                    printDebug = true
                 )
             }
         }
 
-        val realTimeMs = System.currentTimeMillis() - startTime
-
-        return realTimeMs
+        return System.currentTimeMillis() - startTime
     }
 
 
