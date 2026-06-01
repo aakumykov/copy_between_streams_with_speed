@@ -246,7 +246,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val realTimeMs = doCopy(
             size,
             speedBytesPerSec,
-            10
         )
 
         val percent = percent(realTimeMs, estimatedTimeMs)
@@ -267,7 +266,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val realTimeMs = doCopy(
             size,
             speedBytesPerSec,
-            discretizationHz
+            discretizationHz,
         )
 
         val percent = percent(realTimeMs, estimatedTimeMs)
@@ -278,7 +277,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun size_1000_speed_9000() {
-        copyDataSimple(size = 1000, speed = 9000)
+        copyDataSimple(size = 1000, speed = 9000, printDebug = true)
     }
 
 
@@ -289,26 +288,27 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         }
     }
 
-    fun data_sizes_test(dataSizeMultiplier: Int) {
+    fun data_sizes_test(dataSizeMultiplier: Int, printDebug: Boolean = false) {
         println("===================== data_sizes_test($dataSizeMultiplier) =====================")
         repeatFromTo(1,10) { sizeBase ->
             val size = sizeBase * dataSizeMultiplier
             repeatFromTo(1,11) { speedMultiplier ->
                 val speed = size * speedMultiplier
 //                println("------------------- speed: $speed ------------------")
-                copyDataSimple(size = size, speed = speed)
+                copyDataSimple(size = size, speed = speed, printDebug = printDebug)
             }
         }
     }
 
-    fun copyDataSimple(size: Int, speed: Int, discretizationHz: Int = 10) {
+    fun copyDataSimple(size: Int, speed: Int, discretizationHz: Int = 10, printDebug: Boolean = false) {
 
         val estimatedTimeMs = estimateTimeMs(size, speed)
 
         val realTimeMs = doCopy(
             size,
             speed,
-            discretizationHz
+            discretizationHz,
+            printDebug
         )
 
         val percent = percent(realTimeMs, estimatedTimeMs)
@@ -385,6 +385,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         baseSpeedBytesPerSec: Int,
         speedMultiplier: Int,
         discretizationHz: Int = 10,
+        printDebug: Boolean = false,
     ): Pair<Int,List<Float>> {
 
         val dataSizeFrom = fromDataSize
@@ -402,7 +403,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             val realTimeMs = doCopy(
                 dataSizeBytes = dataSizeBytes,
                 speedBytesPerSec = speedBytesPerSec,
-                discretizationHz = discretizationHz
+                discretizationHz = discretizationHz,
+                printDebug = printDebug
             )
 
             val estimatedTimeMs = (dataSizeBytes.toFloat() / speedBytesPerSec) * 1000
@@ -434,7 +436,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     private fun doCopy(
         dataSizeBytes: Int,
         speedBytesPerSec: Int,
-        discretizationHz: Int = 10
+        discretizationHz: Int = 10,
+        printDebug: Boolean = false
     ): Long {
 
         println("doCopy(dataSizeBytes:$dataSizeBytes, speedBytesPerSec:$speedBytesPerSec, discretizationHz:$discretizationHz)")
@@ -450,7 +453,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     outputStream = outputStream,
                     speedBytesPerSecond = speedBytesPerSec,
                     discretizationHz = discretizationHz,
-//                    printDebug = true
+                    printDebug = printDebug
                 )
             }
         }
