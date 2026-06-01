@@ -275,21 +275,27 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         println("RESULT: estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
     }
 
+
     @Test
-    fun data_10x_test() {
-//        listOf(10, 100, 1000, 10_000, 100_000).forEach { dataSizeMultiplier ->
-        listOf(10).forEach { dataSizeMultiplier ->
+    fun size_1000_speed_9000() {
+        copyDataSimple(size = 1000, speed = 9000)
+    }
+
+
+    @Test
+    fun data_sizes_and_speed_test() {
+        listOf(10, 100, 1000, 10_000, 100_000).forEach { dataSizeMultiplier ->
             data_sizes_test(dataSizeMultiplier)
         }
     }
 
-    @Test
     fun data_sizes_test(dataSizeMultiplier: Int) {
         println("===================== data_sizes_test($dataSizeMultiplier) =====================")
         repeatFromTo(1,10) { sizeBase ->
             val size = sizeBase * dataSizeMultiplier
             repeatFromTo(1,11) { speedMultiplier ->
                 val speed = size * speedMultiplier
+//                println("------------------- speed: $speed ------------------")
                 copyDataSimple(size = size, speed = speed)
             }
         }
@@ -308,9 +314,13 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val percent = percent(realTimeMs, estimatedTimeMs)
         val percentInt = percent.roundToInt()
 
-        val anomalySign = if (percentInt !in 90..102) "----->" else ""
+        val anomalySign = when {
+            (percentInt <= 90) -> "<----- "
+            (percentInt > 110) -> "-----> "
+            else -> ""
+        }
 
-        println("${anomalySign}RESULT: size: $size, speed: $speed, est: $estimatedTimeMs, real: $realTimeMs (${percent.roundToDigits(2)}%)")
+        println("RESULT: size: $size, speed: $speed, est: $estimatedTimeMs, real: $realTimeMs ${anomalySign}(${percent.roundToDigits(2)}%)")
     }
 
     @Test
@@ -440,7 +450,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     outputStream = outputStream,
                     speedBytesPerSecond = speedBytesPerSec,
                     discretizationHz = discretizationHz,
-                    printDebug = true
+//                    printDebug = true
                 )
             }
         }
