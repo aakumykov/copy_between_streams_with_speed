@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.estimateTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -13,6 +14,7 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.roundToInt
 
 @RunWith(AndroidJUnit4::class)
 class CopyBetweenStreamsWithSpeedInstrumentedTest {
@@ -258,17 +260,57 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
         val size = 100
         val speedBytesPerSec = 200
+        val discretizationHz = 10
+
         val estimatedTimeMs = estimateTimeMs(size, speedBytesPerSec)
 
         val realTimeMs = doCopy(
             size,
             speedBytesPerSec,
-            10
+            discretizationHz
         )
 
         val percent = percent(realTimeMs, estimatedTimeMs)
 
         println("RESULT: estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
+    }
+
+    @Test
+    fun data_10x_test() {
+//        listOf(10, 100, 1000, 10_000, 100_000).forEach { dataSizeMultiplier ->
+        listOf(10).forEach { dataSizeMultiplier ->
+            data_sizes_test(dataSizeMultiplier)
+        }
+    }
+
+    @Test
+    fun data_sizes_test(dataSizeMultiplier: Int) {
+        println("===================== data_sizes_test($dataSizeMultiplier) =====================")
+        repeatFromTo(1,10) { sizeBase ->
+            val size = sizeBase * dataSizeMultiplier
+            repeatFromTo(1,11) { speedMultiplier ->
+                val speed = size * speedMultiplier
+                copyDataSimple(size = size, speed = speed)
+            }
+        }
+    }
+
+    fun copyDataSimple(size: Int, speed: Int, discretizationHz: Int = 10) {
+
+        val estimatedTimeMs = estimateTimeMs(size, speed)
+
+        val realTimeMs = doCopy(
+            size,
+            speed,
+            discretizationHz
+        )
+
+        val percent = percent(realTimeMs, estimatedTimeMs)
+        val percentInt = percent.roundToInt()
+
+        val anomalySign = if (percentInt !in 90..102) "----->" else ""
+
+        println("${anomalySign}RESULT: size: $size, speed: $speed, est: $estimatedTimeMs, real: $realTimeMs (${percent.roundToDigits(2)}%)")
     }
 
     @Test

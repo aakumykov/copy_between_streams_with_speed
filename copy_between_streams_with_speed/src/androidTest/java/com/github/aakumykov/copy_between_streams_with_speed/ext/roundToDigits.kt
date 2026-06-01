@@ -9,3 +9,11 @@ fun Float.roundToDigits(n: Int): String {
         this
     )
 }
+
+fun Double.roundToDigits(n: Int): String {
+    return String.format(
+        Locale.getDefault(),
+        "%.${n}f",
+        this
+    )
+}
