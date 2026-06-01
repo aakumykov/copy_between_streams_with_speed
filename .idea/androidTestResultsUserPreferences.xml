@@ -3,6 +3,19 @@
   <component name="AndroidTestResultsUserPreferences">
     <option name="androidTestResultsTableState">
       <map>
+        <entry key="-1979740813">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="9.0_aosp_api28" value="120" />
+                  <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="-1877647722">
           <value>
             <AndroidTestResultsTableState>
@@ -35,6 +48,7 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="16.0_AOSP_api36" value="120" />
+                  <entry key="9.0_aosp_api28" value="120" />
                   <entry key="Duration" value="90" />
                   <entry key="Tests" value="360" />
                 </map>
@@ -126,6 +140,19 @@
               <option name="preferredColumnWidths">
                 <map>
                   <entry key="16.0_AOSP_api36" value="120" />
+                  <entry key="Duration" value="90" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="419108235">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="9.0_aosp_api28" value="120" />
                   <entry key="Duration" value="90" />
                   <entry key="Tests" value="360" />
                 </map>
