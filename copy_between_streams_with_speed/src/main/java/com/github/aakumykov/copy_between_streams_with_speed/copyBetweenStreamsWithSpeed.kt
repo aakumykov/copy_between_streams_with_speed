@@ -118,6 +118,7 @@ fun copyBetweenStreamsWithSpeed(
         val pieceStartTime = System.currentTimeMillis()
 
         readBytes = inputStream.read(dataBuffer,0,operationPortionSize)
+        plnDebug("прочитано байт: $readBytes")
         if (-1 == readBytes)
             break
         outputStream.write(dataBuffer,0,readBytes)

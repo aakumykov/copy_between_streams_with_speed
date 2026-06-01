@@ -276,6 +276,22 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
+    fun c2() {
+        prepareSourceAndTargetFiles(testData(1000))
+
+        sourceFileStream.use { sS ->
+            targetFileStream.use { tS ->
+                copyBetweenStreamsWithSpeed2(
+                    inputStream = sS,
+                    outputStream = tS,
+                    speedBytesPerSec = 9000,
+                    debug = true
+                )
+            }
+        }
+    }
+
+    @Test
     fun size_1000_speed_9000() {
         copyDataSimple(size = 1000, speed = 9000, printDebug = true)
     }
