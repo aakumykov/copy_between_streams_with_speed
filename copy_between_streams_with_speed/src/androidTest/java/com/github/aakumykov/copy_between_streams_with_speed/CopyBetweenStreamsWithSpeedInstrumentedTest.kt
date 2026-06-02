@@ -299,21 +299,45 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun CBSWS2() {
-        val data_size_list = listOf(1000, 2000, 3000)
+        val dataSize = 1_000_000
+        val speed = 753_000
+        prepareSourceAndTargetFiles(testData(dataSize))
+        sourceFileStream.use { sS ->
+            targetFileStream.use { tS ->
+                copyBetweenStreamsWithSpeed2(
+                    inputStream = sS,
+                    outputStream = tS,
+                    speedBytesPerSec = speed,
+                    logLevel = 2,
+                    prefix = "Данные $dataSize байт"
+                )
+            }
+        }
+    }
+
+    @Test
+    fun test_multiple_size_and_speed() {
+
+        val list = 1..10
+        val sizeMultiplier = 1..10
         val speed = 10_000
 
-        data_size_list.forEach { size ->
-            println("---------- CBSWS: данные: $size байт -----------")
-            prepareSourceAndTargetFiles(testData(size))
+        list.forEach { i ->
+            sizeMultiplier.forEach { sm ->
+                val dataSize = i * sm
 
-            sourceFileStream.use { sS ->
-                targetFileStream.use { tS ->
-                    copyBetweenStreamsWithSpeed2(
-                        inputStream = sS,
-                        outputStream = tS,
-                        speedBytesPerSec = speed,
-                        logLevel = 2
-                    )
+                prepareSourceAndTargetFiles(testData(dataSize))
+
+                sourceFileStream.use { sS ->
+                    targetFileStream.use { tS ->
+                        copyBetweenStreamsWithSpeed2(
+                            inputStream = sS,
+                            outputStream = tS,
+                            speedBytesPerSec = speed,
+                            logLevel = 2,
+                            prefix = "Данные ${dataSize} байт"
+                        )
+                    }
                 }
             }
         }

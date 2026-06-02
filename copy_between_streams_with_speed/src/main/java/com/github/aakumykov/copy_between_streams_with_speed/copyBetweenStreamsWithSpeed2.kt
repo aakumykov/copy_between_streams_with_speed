@@ -4,7 +4,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
 import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 
 val shortRandomId: String get() = UUID.randomUUID().toString().split("-")[0]
 
@@ -17,7 +16,8 @@ fun copyBetweenStreamsWithSpeed2(
     speedBytesPerSec: Int = -1,
     stepsPerSecond: Int = 10,
     logLevel: Int = 0,
-    tag: String = "CBSWS"
+    tag: String = "CBSWS",
+    prefix: String = ""
 ) {
     fun printlnDebug(text: String) { if (logLevel >= 3) println("[$tag] $text") }
     fun printDebug(text: String) { if (logLevel >= 3) print("[$tag] $text") }
@@ -73,6 +73,7 @@ fun copyBetweenStreamsWithSpeed2(
     val speedPercent = ((realSpeed.toDouble() / speedBytesPerSec) * 100).roundToInt()
     printlnDebug("Реальная скорость $realSpeed байт/с (${speedPercent}%)")
 
-    printlnInfo("Заданная скорость: $speedBytesPerSec байт/с, реальная: $realSpeed (${speedPercent}%)")
+    val realPrefix = if (prefix.isNotEmpty()) "${prefix}, " else prefix
+    printlnInfo("${realPrefix}скорость: $speedBytesPerSec байт/с, реальная: $realSpeed (${speedPercent}%)")
 }
 
