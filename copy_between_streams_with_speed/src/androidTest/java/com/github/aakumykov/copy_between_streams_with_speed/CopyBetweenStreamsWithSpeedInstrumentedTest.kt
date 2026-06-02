@@ -303,7 +303,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val speed = 10_000
 
         data_size_list.forEach { size ->
-            println("---------- CBSWS2: данные: $size байт -----------")
+            println("---------- CBSWS: данные: $size байт -----------")
             prepareSourceAndTargetFiles(testData(size))
 
             sourceFileStream.use { sS ->
@@ -312,12 +312,10 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                         inputStream = sS,
                         outputStream = tS,
                         speedBytesPerSec = speed,
-                        debug = true
+                        logLevel = 2
                     )
                 }
             }
-
-            println("CBSWS2:")
         }
     }
 

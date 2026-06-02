@@ -8,15 +8,26 @@ import kotlin.math.roundToLong
 
 val shortRandomId: String get() = UUID.randomUUID().toString().split("-")[0]
 
+/**
+ * @param logLevel 0 - No, 1 - Error, 2 - Info, 3 - Debug
+ */
 fun copyBetweenStreamsWithSpeed2(
     inputStream: InputStream,
     outputStream: OutputStream,
     speedBytesPerSec: Int = -1,
     stepsPerSecond: Int = 10,
-    debug: Boolean = false
+    logLevel: Int = 0,
+    tag: String = "CBSWS"
 ) {
-    fun printlnDebug(text: String, tag: String = "CBSWS2") { if (debug) println("[$tag] $text") }
-    fun printDebug(text: String, tag: String = "CBSWS2") { if (debug) print("[$tag] $text") }
+    fun printlnDebug(text: String) { if (logLevel >= 3) println("[$tag] $text") }
+    fun printDebug(text: String) { if (logLevel >= 3) print("[$tag] $text") }
+
+    fun printlnInfo(text: String) { if (logLevel >= 2) println("[$tag] $text") }
+    fun printInfo(text: String) { if (logLevel >= 2) print("[$tag] $text") }
+
+    fun printlnError(text: String) { if (logLevel >= 1) println("[$tag] $text") }
+    fun printError(text: String) { if (logLevel >= 1) print("[$tag] $text") }
+
 
     val copyingPieceBytes = speedBytesPerSec / stepsPerSecond
     val timeForStep = 1000 / stepsPerSecond
@@ -61,5 +72,7 @@ fun copyBetweenStreamsWithSpeed2(
     val realSpeed = if (fullCopyingTimeMs > 0) (totalBytesCopied * 1000 / (fullCopyingTimeMs)) else -1
     val speedPercent = ((realSpeed.toDouble() / speedBytesPerSec) * 100).roundToInt()
     printlnDebug("Реальная скорость $realSpeed байт/с (${speedPercent}%)")
+
+    printlnInfo("Заданная скорость: $speedBytesPerSec байт/с, реальная: $realSpeed (${speedPercent}%)")
 }
 
