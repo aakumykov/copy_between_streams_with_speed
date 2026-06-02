@@ -2,7 +2,11 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.UUID
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
+
+val shortRandomId: String get() = UUID.randomUUID().toString().split("-")[0]
 
 fun copyBetweenStreamsWithSpeed2(
     inputStream: InputStream,
@@ -38,7 +42,7 @@ fun copyBetweenStreamsWithSpeed2(
 
         outputStream.write(readBytes)
         val pieceTime = System.currentTimeMillis() - startTime
-        printDebug("Время, затраченное на копирование $readBytes байт - $pieceTime мс")
+        printDebug("(${shortRandomId}) Время, затраченное на копирование $readBytes байт - $pieceTime мс")
 
         val sleepLackTime = timeForStep - pieceTime
         if (sleepLackTime > 0) {
@@ -52,10 +56,10 @@ fun copyBetweenStreamsWithSpeed2(
     printlnDebug("Всего байт скопировано: $totalBytesCopied")
 
     val fullCopyingTimeMs = System.currentTimeMillis() - fullCopyingStartTime
-    val fullCopyingTimeSec = (fullCopyingTimeMs.toDouble() / 1000).roundToLong()
-    printlnDebug("Всего затрачено времени: ${fullCopyingTimeSec}с")
+    printlnDebug("Всего затрачено времени: ${fullCopyingTimeMs} мс")
 
-    val realSpeed = if (fullCopyingTimeSec > 0) (totalBytesCopied / (fullCopyingTimeSec)) else -1
-    printlnDebug("Реальная скорость $realSpeed байт/с")
+    val realSpeed = if (fullCopyingTimeMs > 0) (totalBytesCopied * 1000 / (fullCopyingTimeMs)) else -1
+    val speedPercent = ((realSpeed.toDouble() / speedBytesPerSec) * 100).roundToInt()
+    printlnDebug("Реальная скорость $realSpeed байт/с (${speedPercent}%)")
 }
 

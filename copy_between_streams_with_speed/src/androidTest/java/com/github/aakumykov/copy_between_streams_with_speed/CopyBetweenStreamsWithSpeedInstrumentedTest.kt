@@ -299,13 +299,13 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun CBSWS2() {
-        listOf(
-//            1000, 2000, 3000
-            100_000
-        ).forEach { size ->
-            println("=== CBSWS2: данные: $size байт ===")
+        val data_size_list = listOf(1000, 2000, 3000)
+        val speed = 10_000
+
+        data_size_list.forEach { size ->
+            println("---------- CBSWS2: данные: $size байт -----------")
             prepareSourceAndTargetFiles(testData(size))
-            val speed = 10_000
+
             sourceFileStream.use { sS ->
                 targetFileStream.use { tS ->
                     copyBetweenStreamsWithSpeed2(
@@ -316,6 +316,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     )
                 }
             }
+
+            println("CBSWS2:")
         }
     }
 
