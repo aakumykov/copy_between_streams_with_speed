@@ -298,17 +298,23 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
-    fun c2() {
-        prepareSourceAndTargetFiles(testData(1000))
-
-        sourceFileStream.use { sS ->
-            targetFileStream.use { tS ->
-                copyBetweenStreamsWithSpeed2(
-                    inputStream = sS,
-                    outputStream = tS,
-                    speedBytesPerSec = 9000,
-                    debug = true
-                )
+    fun CBSWS2() {
+        listOf(
+//            1000, 2000, 3000
+            100_000
+        ).forEach { size ->
+            println("=== CBSWS2: данные: $size байт ===")
+            prepareSourceAndTargetFiles(testData(size))
+            val speed = 10_000
+            sourceFileStream.use { sS ->
+                targetFileStream.use { tS ->
+                    copyBetweenStreamsWithSpeed2(
+                        inputStream = sS,
+                        outputStream = tS,
+                        speedBytesPerSec = speed,
+                        debug = true
+                    )
+                }
             }
         }
     }

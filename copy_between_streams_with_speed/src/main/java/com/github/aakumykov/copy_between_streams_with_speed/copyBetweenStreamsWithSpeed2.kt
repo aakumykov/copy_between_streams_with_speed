@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import java.io.InputStream
 import java.io.OutputStream
+import kotlin.math.roundToLong
 
 fun copyBetweenStreamsWithSpeed2(
     inputStream: InputStream,
@@ -10,15 +11,15 @@ fun copyBetweenStreamsWithSpeed2(
     stepsPerSecond: Int = 10,
     debug: Boolean = false
 ) {
-    fun printDebug(text: String, tag: String = "CBSWS2") { if (debug) println("[$tag] $text") }
+    fun printlnDebug(text: String, tag: String = "CBSWS2") { if (debug) println("[$tag] $text") }
+    fun printDebug(text: String, tag: String = "CBSWS2") { if (debug) print("[$tag] $text") }
 
     val copyingPieceBytes = speedBytesPerSec / stepsPerSecond
     val timeForStep = 1000 / stepsPerSecond
 
-    printDebug("Копирование данных со скоростью $speedBytesPerSec байт/с")
-    printDebug("за $stepsPerSecond шагов в секунду")
-    printDebug("частями по $copyingPieceBytes байт.")
-    printDebug("Времени на 1 шаг: $timeForStep мс")
+    printlnDebug("Копирование данных со скоростью $speedBytesPerSec байт/с")
+    printDebug("За $stepsPerSecond шагов в секунду"); printlnDebug("частями по $copyingPieceBytes байт.")
+    printlnDebug("Времени на 1 шаг: $timeForStep мс")
 
     var totalBytesCopied: Int = 0
     var readBytes: Int
@@ -41,17 +42,20 @@ fun copyBetweenStreamsWithSpeed2(
 
         val sleepLackTime = timeForStep - pieceTime
         if (sleepLackTime > 0) {
-            printDebug(" досыпаем $sleepLackTime мс...")
+            printlnDebug(" досыпаем $sleepLackTime мс...")
             Thread.sleep(sleepLackTime)
         }
 
 
     }
 
-    val fullCopyingTime = System.currentTimeMillis() - fullCopyingStartTime
-    printDebug("Всего затрачено ${millisecondsToDHMSN(fullCopyingTime)}")
+    printlnDebug("Всего байт скопировано: $totalBytesCopied")
 
-    val realSpeed = totalBytesCopied / fullCopyingTime.toDouble()
-    printDebug("Реальная скорость $realSpeed байт/с")
+    val fullCopyingTimeMs = System.currentTimeMillis() - fullCopyingStartTime
+    val fullCopyingTimeSec = (fullCopyingTimeMs.toDouble() / 1000).roundToLong()
+    printlnDebug("Всего затрачено времени: ${fullCopyingTimeSec}с")
+
+    val realSpeed = if (fullCopyingTimeSec > 0) (totalBytesCopied / (fullCopyingTimeSec)) else -1
+    printlnDebug("Реальная скорость $realSpeed байт/с")
 }
 
