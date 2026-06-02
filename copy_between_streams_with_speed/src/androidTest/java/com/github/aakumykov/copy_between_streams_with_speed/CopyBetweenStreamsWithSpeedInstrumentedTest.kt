@@ -13,8 +13,11 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
+import kotlin.time.Duration.Companion.milliseconds
 
 @RunWith(AndroidJUnit4::class)
 class CopyBetweenStreamsWithSpeedInstrumentedTest {
@@ -272,6 +275,25 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val percent = percent(realTimeMs, estimatedTimeMs)
 
         println("RESULT: estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
+    }
+
+    @Test
+    fun sprintf_test() {
+        repeat(5) {
+            System.currentTimeMillis().milliseconds.toComponents { days, hours, minutes, seconds, nanoseconds ->
+                println(
+                    String.format(
+                        Locale.getDefault(),
+                        "%02d дней, %02d часов, %02d минут, %02d секунд, %02d миллисекунд",
+                        days,
+                        hours,
+                        minutes,
+                        seconds,
+                        (nanoseconds.toDouble() / 1_000_000).roundToLong()
+                    )
+                )
+            }
+        }
     }
 
 
