@@ -2,7 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed.ext
 
 import java.util.Locale
 
-fun Float.roundToDigits(n: Int): String {
+internal fun Float.roundToFloatingDigits(n: Int): String {
     return String.format(
         Locale.getDefault(),
         "%.${n}f",
@@ -10,7 +10,7 @@ fun Float.roundToDigits(n: Int): String {
     )
 }
 
-fun Double.roundToDigits(n: Int): String {
+internal fun Double.roundToFloatingDigits(n: Int): String {
     return String.format(
         Locale.getDefault(),
         "%.${n}f",

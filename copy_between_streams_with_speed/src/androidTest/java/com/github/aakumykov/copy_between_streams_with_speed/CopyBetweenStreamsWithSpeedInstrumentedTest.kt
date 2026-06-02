@@ -2,7 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToDigits
+import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.estimateTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -299,8 +299,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun CBSWS2() {
-        val dataSize = 1_000_000
-        val speed = 753_000
+        val dataSize = 1000_000
+        val speed = 170_000
         prepareSourceAndTargetFiles(testData(dataSize))
         sourceFileStream.use { sS ->
             targetFileStream.use { tS ->
@@ -308,8 +308,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     inputStream = sS,
                     outputStream = tS,
                     speedBytesPerSec = speed,
-                    logLevel = 2,
-                    prefix = "Данные $dataSize байт"
+                    logLevel = 3,
+                    dataSize = dataSize
                 )
             }
         }
@@ -335,7 +335,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                             outputStream = tS,
                             speedBytesPerSec = speed,
                             logLevel = 2,
-                            prefix = "Данные ${dataSize} байт"
+                            dataSize = dataSize
                         )
                     }
                 }
@@ -388,7 +388,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             else -> ""
         }
 
-        println("RESULT: size: $size, speed: $speed, est: $estimatedTimeMs, real: $realTimeMs ${anomalySign}(${percent.roundToDigits(2)}%)")
+        println("RESULT: size: $size, speed: $speed, est: $estimatedTimeMs, real: $realTimeMs ${anomalySign}(${percent.roundToFloatingDigits(2)}%)")
     }
 
     @Test
