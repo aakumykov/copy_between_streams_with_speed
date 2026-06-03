@@ -75,7 +75,8 @@ fun copyBetweenStreamsWithSpeed2(
     val fullCopyingTimeMs = System.currentTimeMillis() - fullCopyingStartTime
     printlnInfo("Ожидаемое время: ${estimatedTimeMs} мс, реальное время: ${fullCopyingTimeMs.toDouble()} мс (${percentOf(fullCopyingTimeMs, estimatedTimeMs)}%)")
 
-    val realSpeed = if (fullCopyingTimeMs > 0) (bytesCopiedTotal * 1000 / (fullCopyingTimeMs)) else -1
+    val fullCopyingTimeNanos = fullCopyingTimeMs * 1000
+    val realSpeedBytesPerNanosecond: Double = if (fullCopyingTimeNanos > 0L) (bytesCopiedTotal / fullCopyingTimeNanos).toDouble() else -1.toDouble()
     printlnInfo("Заданная скорость ${speedBytesPerSec}, реальная скорость $realSpeed байт/с (${percentOf(realSpeed, speedBytesPerSec.toLong())}%)")
 }
 
