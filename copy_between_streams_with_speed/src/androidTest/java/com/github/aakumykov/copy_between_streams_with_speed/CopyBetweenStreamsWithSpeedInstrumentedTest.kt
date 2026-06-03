@@ -308,7 +308,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     inputStream = sS,
                     outputStream = tS,
                     speedBytesPerSec = speed,
-                    logLevel = 3,
+                    logLevel = 1,
                     dataSize = dataSize
                 )
             }

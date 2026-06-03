@@ -9,7 +9,7 @@ import kotlin.math.roundToInt
 val shortRandomId: String get() = UUID.randomUUID().toString().split("-")[0]
 
 /**
- * @param logLevel 0 - No, 1 - Error, 2 - Info, 3 - Debug
+ * @param logLevel 0 - No, 1 - Info, 2 - Debug
  */
 fun copyBetweenStreamsWithSpeed2(
     inputStream: InputStream,
@@ -20,14 +20,11 @@ fun copyBetweenStreamsWithSpeed2(
     tag: String = "CBSWS",
     dataSize: Int? = null
 ) {
-    fun printlnDebug(text: String) { if (logLevel >= 3) println("[$tag] $text") }
-    fun printDebug(text: String) { if (logLevel >= 3) print("[$tag] $text") }
+    fun printlnDebug(text: String) { if (logLevel >= 2) println("[$tag] $text") }
+    fun printDebug(text: String) { if (logLevel >= 2) print("[$tag] $text") }
 
-    fun printlnInfo(text: String) { if (logLevel >= 2) println("[$tag] $text") }
-    fun printInfo(text: String) { if (logLevel >= 2) print("[$tag] $text") }
-
-    fun printlnError(text: String) { if (logLevel >= 1) println("[$tag] $text") }
-    fun printError(text: String) { if (logLevel >= 1) print("[$tag] $text") }
+    fun printlnInfo(text: String) { if (logLevel >= 1) println("[$tag] $text") }
+    fun printInfo(text: String) { if (logLevel >= 1) print("[$tag] $text") }
 
     val dataSizeLogPrefix = if (null != dataSize) "Данные: $dataSize байт, " else ""
 
