@@ -5,6 +5,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 val shortRandomId: String get() = UUID.randomUUID().toString().split("-")[0]
 
@@ -21,65 +22,60 @@ fun copyBetweenStreamsWithSpeed2(
     dataSize: Int? = null
 ) {
     fun printlnDebug(text: String) { if (logLevel >= 2) println("[$tag] $text") }
-    fun printDebug(text: String) { if (logLevel >= 2) print("[$tag] $text") }
-
     fun printlnInfo(text: String) { if (logLevel >= 1) println("[$tag] $text") }
-    fun printInfo(text: String) { if (logLevel >= 1) print("[$tag] $text") }
-
-    val dataSizeLogPrefix = if (null != dataSize) "Данные: $dataSize байт, " else ""
-
-    val amountNeedToBeCopiedBeforeSleep = (speedBytesPerSec / stepsPerSecond)
-    val amountToCopyingAtOnce = amountNeedToBeCopiedBeforeSleep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     val timeForStep = 1000 / stepsPerSecond
+    val dataSizeForStep = (speedBytesPerSec / stepsPerSecond)
+    val copyingPieceSize = dataSizeForStep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
-    printlnDebug("${dataSizeLogPrefix}скорость $speedBytesPerSec байт/с")
-    printlnDebug("$stepsPerSecond шагов в секунду, $amountNeedToBeCopiedBeforeSleep байт за шаг, времени на 1 шаг: $timeForStep мс")
-    printlnDebug("Ожидаемое время: ${((dataSize ?: -1)/speedBytesPerSec.toDouble()).roundToFloatingDigits(3)} с")
-    printlnDebug("Размер \"черпачка\": $amountToCopyingAtOnce байт")
+    printlnDebug("")
+    printlnDebug("dataSize: $dataSize bytes")
+    printlnDebug("speed: $speedBytesPerSec bytes/sec")
 
-    val buffer = ByteArray(amountToCopyingAtOnce)
-    var totalBytesCopied = 0
-    var bytesCopiedBeforeSleep = 0
+    printlnDebug("timeForStep: $timeForStep ms")
+    printlnDebug("dataSizeForStep: $dataSizeForStep bytes")
+    printlnDebug("copyingPieceSize: $copyingPieceSize bytes")
+    printlnDebug("")
+
+    var bytesCopiedTotal = 0
+    var bytesCopiedForStep = 0
     var readBytes: Int
+    val buffer = ByteArray(copyingPieceSize)
     var debugCounter = 1
 
     val fullCopyingStartTime = System.currentTimeMillis()
 
-    while (true) {
-        val startTime = System.currentTimeMillis()
 
-        readBytes = inputStream.read(buffer, 0, amountToCopyingAtOnce)
+    while (true) {
+        val stepStartTime = System.currentTimeMillis()
+
+        readBytes = inputStream.read(buffer, 0, copyingPieceSize)
         if (-1 == readBytes) break
         outputStream.write(readBytes)
 
-        bytesCopiedBeforeSleep += readBytes
-        totalBytesCopied += readBytes
+        bytesCopiedForStep += readBytes
+        bytesCopiedTotal += readBytes
 
-        val pieceTime = System.currentTimeMillis() - startTime
-        printlnDebug("(${debugCounter++}) Время, затраченное на копирование $readBytes байт - $pieceTime мс")
+        if (bytesCopiedForStep >= dataSizeForStep) {
 
-        if (bytesCopiedBeforeSleep >= amountNeedToBeCopiedBeforeSleep) {
-
-            val sleepLackTime = timeForStep - (System.currentTimeMillis() - startTime)
-            if (sleepLackTime > 0) {
-                printlnDebug(" досыпаем $sleepLackTime мс...")
-                Thread.sleep(sleepLackTime)
+            val stepTime = System.currentTimeMillis() - stepStartTime
+            val sleepingLackTime = timeForStep - stepTime
+            if (sleepingLackTime > 0) {
+                printlnDebug("${debugCounter++}) скопировано $bytesCopiedForStep за $stepTime мс, досыпаем $sleepingLackTime мс...")
+                Thread.sleep(sleepingLackTime)
             }
-
-            bytesCopiedBeforeSleep = 0
+            bytesCopiedForStep = 0
         }
     }
 
-    printlnDebug("Всего байт скопировано: $totalBytesCopied")
+    printlnDebug("")
+    printlnInfo("Всего байт скопировано: $bytesCopiedTotal")
 
+    val estimatedTimeMs = (((dataSize ?: -1)/speedBytesPerSec.toFloat())*1000).roundToLong()
     val fullCopyingTimeMs = System.currentTimeMillis() - fullCopyingStartTime
-    printlnDebug("Всего затрачено времени: ${fullCopyingTimeMs.toDouble()/1000} мс")
+    printlnInfo("Ожидаемое время: ${estimatedTimeMs} мс, реальное время: ${fullCopyingTimeMs.toDouble()} мс (${percentOf(fullCopyingTimeMs, estimatedTimeMs)}%)")
 
-    val realSpeed = if (fullCopyingTimeMs > 0) (totalBytesCopied * 1000 / (fullCopyingTimeMs)) else -1
-    val speedPercent = ((realSpeed.toDouble() / speedBytesPerSec) * 100).roundToInt()
-    printlnDebug("Реальная скорость $realSpeed байт/с (${speedPercent}%)")
-
-    printlnInfo("${dataSizeLogPrefix}скорость: $speedBytesPerSec байт/с, реальная: $realSpeed (${speedPercent}%)")
+    val realSpeed = if (fullCopyingTimeMs > 0) (bytesCopiedTotal * 1000 / (fullCopyingTimeMs)) else -1
+    printlnInfo("Заданная скорость ${speedBytesPerSec}, реальная скорость $realSpeed байт/с (${percentOf(realSpeed, speedBytesPerSec.toLong())}%)")
 }
 

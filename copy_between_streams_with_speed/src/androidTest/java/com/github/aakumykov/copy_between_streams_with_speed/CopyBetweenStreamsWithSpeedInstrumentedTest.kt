@@ -300,7 +300,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     @Test
     fun CBSWS2() {
         val dataSize = 1000_000
-        val speed = 8192
+        val speed = 700_000
         prepareSourceAndTargetFiles(testData(dataSize))
         sourceFileStream.use { sS ->
             targetFileStream.use { tS ->
@@ -308,7 +308,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     inputStream = sS,
                     outputStream = tS,
                     speedBytesPerSec = speed,
-                    logLevel = 1,
+                    logLevel = 2,
                     dataSize = dataSize
                 )
             }
