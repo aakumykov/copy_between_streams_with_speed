@@ -1,13 +1,10 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
-import kotlin.math.roundToInt
 import kotlin.math.roundToLong
-
-val shortRandomId: String get() = UUID.randomUUID().toString().split("-")[0]
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * @param logLevel 0 - No, 1 - Info, 2 - Debug
@@ -71,12 +68,14 @@ fun copyBetweenStreamsWithSpeed2(
     printlnDebug("")
     printlnInfo("Всего байт скопировано: $bytesCopiedTotal")
 
-    val estimatedTimeMs = (((dataSize ?: -1)/speedBytesPerSec.toFloat())*1000).roundToLong()
-    val fullCopyingTimeMs = System.currentTimeMillis() - fullCopyingStartTime
-    printlnInfo("Ожидаемое время: ${estimatedTimeMs} мс, реальное время: ${fullCopyingTimeMs.toDouble()} мс (${percentOf(fullCopyingTimeMs, estimatedTimeMs)}%)")
+    val estimatedTimeNs = (((dataSize ?: -1)/speedBytesPerSec.toFloat())*1000).roundToLong().milliseconds.inWholeNanoseconds
+    val fullCopyingTimeNs = (System.currentTimeMillis() - fullCopyingStartTime).milliseconds.inWholeNanoseconds
+    printlnInfo("Ожидаемое время: $estimatedTimeNs нс, реальное время: $fullCopyingTimeNs нс (${percentOf(fullCopyingTimeNs, estimatedTimeNs)}%)")
 
-    val fullCopyingTimeNanos = fullCopyingTimeMs * 1000
-    val realSpeedBytesPerNanosecond: Double = if (fullCopyingTimeNanos > 0L) (bytesCopiedTotal / fullCopyingTimeNanos).toDouble() else -1.toDouble()
-    printlnInfo("Заданная скорость ${speedBytesPerSec}, реальная скорость $realSpeed байт/с (${percentOf(realSpeed, speedBytesPerSec.toLong())}%)")
+
+    val realSpeedBytesPerNanosecond: Double = if (fullCopyingTimeNs > 0L) {
+        (bytesCopiedTotal.toDouble() / fullCopyingTimeNs) } else { (-1).toDouble() }
+    val realSpeedBytesPerSecond = realSpeedBytesPerNanosecond * 1_000_000
+    printlnInfo("Заданная скорость ${speedBytesPerSec}, реальная скорость $realSpeedBytesPerSecond байт/с (${percentOf(realSpeedBytesPerSecond, speedBytesPerSec.toDouble())}%)")
 }
 
