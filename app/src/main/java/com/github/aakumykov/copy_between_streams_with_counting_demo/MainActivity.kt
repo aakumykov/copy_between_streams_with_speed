@@ -16,8 +16,8 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.e
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getStringFromPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeStringInPreferences
-import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.file_lister_navigator_selector.file_lister.SimpleSortingMode
 import com.github.aakumykov.file_lister_navigator_selector.file_selector.FileSelector
 import com.github.aakumykov.file_lister_navigator_selector.fs_item.FSItem
@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import kotlin.math.roundToInt
 
 class MainActivity :
     AppCompatActivity(),
