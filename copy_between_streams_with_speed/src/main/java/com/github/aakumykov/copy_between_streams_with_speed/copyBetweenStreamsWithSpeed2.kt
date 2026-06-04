@@ -72,20 +72,25 @@ fun copyBetweenStreamsWithSpeed2(
     printlnInfo("Всего байт скопировано: ${humanReadableByteCount(bytesCopiedTotal)}")
 
     if (null != preKnownInputDataSizeBytes) {
-        val requestedSpeedBytesPerNs: Float = speedBytesPerSec.toFloat() / 1_000_000_000
+        val NANOSECONDS_IN_SECOND = 1_000_000_000
+
+        val requestedSpeedBytesPerNs: Float = speedBytesPerSec.toFloat() / NANOSECONDS_IN_SECOND
 
         val estimatedTimeNs: Long = (preKnownInputDataSizeBytes/requestedSpeedBytesPerNs).roundToLong()
         // realCopyingTimeNs может быть ноль!
         val realCopyingTimeNs: Long = (System.currentTimeMillis() - fullCopyingStartTime).milliseconds.inWholeNanoseconds
 
-        val realSpeedBytesPerNs: Float = if (realCopyingTimeNs > 0) preKnownInputDataSizeBytes / realCopyingTimeNs.toFloat() else -1F
-
         printlnInfo("Ожидаемое время: $estimatedTimeNs нс, " +
                 "реальное время: $realCopyingTimeNs нс " +
                 "(${percentOf(realCopyingTimeNs, estimatedTimeNs)}%)")
 
-        printlnInfo("Заданная скорость ${requestedSpeedBytesPerNs} байт/нс, " +
-                "реальная скорость $realSpeedBytesPerNs байт/нс " +
+        val realSpeedBytesPerNs: Float = if (realCopyingTimeNs > 0) preKnownInputDataSizeBytes / realCopyingTimeNs.toFloat() else -1F
+
+        val requestedSpeedBytesPerSec: Long = (requestedSpeedBytesPerNs * NANOSECONDS_IN_SECOND).roundToLong()
+        val realSpeedBytesPerSec: Long = (realSpeedBytesPerNs * NANOSECONDS_IN_SECOND).roundToLong()
+
+        printlnInfo("Заданная скорость ${humanReadableByteCount(requestedSpeedBytesPerSec)}/с, " +
+                "реальная скорость ${humanReadableByteCount(realSpeedBytesPerSec)}/с " +
                 "(${percentOf(realSpeedBytesPerNs, requestedSpeedBytesPerNs)}%)")
     }
 }
