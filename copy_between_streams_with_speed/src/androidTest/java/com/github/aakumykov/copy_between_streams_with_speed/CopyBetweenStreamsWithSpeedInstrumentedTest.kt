@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.estimateTimeMs
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
@@ -296,12 +297,45 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         }
     }
 
+    @Test
+    fun test_megabytes() {
+        val BYTES_IN_MEGABITE = 1_000_000
+        val BYTES_IN_KILOBYTE = 1_000
+
+        val logPrefix = "test_megabytes"
+
+        repeatFromTo(1,10) { sizeMultiplier ->
+            val sizeMb = sizeMultiplier * BYTES_IN_MEGABITE
+
+            repeatFromTo(1,6) { speedMultiplier ->
+                val speedKb = speedMultiplier * 1000
+
+                println("${logPrefix}: ----- data ${humanReadableByteCount(sizeMb)}, speed ${humanReadableByteCount(speedKb)}/c -----")
+
+                prepareSourceAndTargetFiles(testData(sizeMb))
+
+                sourceFileStream.use { sS ->
+                    targetFileStream.use { tS ->
+                        copyBetweenStreamsWithSpeed2(
+                            inputStream = sS,
+                            outputStream = tS,
+                            speedBytesPerSec = speedKb * BYTES_IN_KILOBYTE,
+                            logLevel = 1,
+                            logPrefix = logPrefix,
+                            preKnownInputDataSizeBytes = sizeMb * BYTES_IN_MEGABITE
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun CBSWS2() {
         val dataSize = 10_000_000
         val speed = 5_000_000
         val repeats = 1
+        val logLevel = 1
 
         repeat(repeats) {
             prepareSourceAndTargetFiles(testData(dataSize))
@@ -311,7 +345,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                         inputStream = sS,
                         outputStream = tS,
                         speedBytesPerSec = speed,
-                        logLevel = 2,
+                        logLevel = logLevel,
                         preKnownInputDataSizeBytes = dataSize
                     )
                 }

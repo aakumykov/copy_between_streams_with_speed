@@ -15,7 +15,7 @@ fun copyBetweenStreamsWithSpeed2(
     outputStream: OutputStream,
     speedBytesPerSec: Int = -1, // FIXME: обрабатывать ситуацию, когда скорость не ограничена.
 
-    stepsPerSecond: Int = 10,
+    stepsPerSecond: Int = 100,
 
     logLevel: Int = 0,
     logPrefix: String = "CBSWS",
@@ -77,7 +77,7 @@ fun copyBetweenStreamsWithSpeed2(
         val requestedSpeedBytesPerNs: Float = speedBytesPerSec.toFloat() / NANOSECONDS_IN_SECOND
 
         val estimatedTimeNs: Long = (preKnownInputDataSizeBytes/requestedSpeedBytesPerNs).roundToLong()
-        // realCopyingTimeNs может быть ноль!
+        // realCopyingTimeNs может быть ноль(!)
         val realCopyingTimeNs: Long = (System.currentTimeMillis() - fullCopyingStartTime).milliseconds.inWholeNanoseconds
 
         printlnInfo("Ожидаемое время: $estimatedTimeNs нс, " +
