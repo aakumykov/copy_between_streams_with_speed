@@ -299,8 +299,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun CBSWS2() {
-        val dataSize = 1000
-        val speed = 500000
+        val dataSize = 10_000_000
+        val speed = 5_000_000
         val repeats = 1
 
         repeat(repeats) {

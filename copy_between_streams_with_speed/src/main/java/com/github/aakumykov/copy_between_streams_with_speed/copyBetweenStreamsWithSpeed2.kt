@@ -1,5 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
+import com.github.aakumykov.copy_between_streams_with_speed.utils.percentOf
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.math.roundToLong
@@ -27,12 +29,12 @@ fun copyBetweenStreamsWithSpeed2(
     val copyingPieceSize = dataSizeForStep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     printlnDebug("")
-    printlnDebug("dataSize: $preKnownInputDataSizeBytes bytes")
-    printlnDebug("speed: $speedBytesPerSec bytes/sec")
+    printlnDebug("dataSize: ${humanReadableByteCount(preKnownInputDataSizeBytes)}")
+    printlnDebug("speed: ${humanReadableByteCount(speedBytesPerSec)}/s")
 
     printlnDebug("timeForStep: $timeForStep ms")
-    printlnDebug("dataSizeForStep: $dataSizeForStep bytes")
-    printlnDebug("copyingPieceSize: $copyingPieceSize bytes")
+    printlnDebug("dataSizeForStep: ${humanReadableByteCount(dataSizeForStep)}")
+    printlnDebug("copyingPieceSize: ${humanReadableByteCount(copyingPieceSize)}")
     printlnDebug("")
 
     var bytesCopiedTotal = 0
@@ -67,7 +69,7 @@ fun copyBetweenStreamsWithSpeed2(
     }
 
     printlnDebug("")
-    printlnInfo("Всего байт скопировано: $bytesCopiedTotal")
+    printlnInfo("Всего байт скопировано: ${humanReadableByteCount(bytesCopiedTotal)}")
 
     if (null != preKnownInputDataSizeBytes) {
         val requestedSpeedBytesPerNs: Float = speedBytesPerSec.toFloat() / 1_000_000_000
