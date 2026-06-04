@@ -2,7 +2,6 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.UUID
 import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -12,21 +11,23 @@ import kotlin.time.Duration.Companion.milliseconds
 fun copyBetweenStreamsWithSpeed2(
     inputStream: InputStream,
     outputStream: OutputStream,
-    speedBytesPerSec: Int = -1,
+    speedBytesPerSec: Int = -1, // FIXME: обрабатывать ситуацию, когда скорость не ограничена.
+
     stepsPerSecond: Int = 10,
+
     logLevel: Int = 0,
-    tag: String = "CBSWS",
-    dataSize: Int? = null
+    logPrefix: String = "CBSWS",
+    preKnownInputDataSizeBytes: Int? = null
 ) {
-    fun printlnDebug(text: String) { if (logLevel >= 2) println("[$tag] $text") }
-    fun printlnInfo(text: String) { if (logLevel >= 1) println("[$tag] $text") }
+    fun printlnDebug(text: String) { if (logLevel >= 2) println("[$logPrefix] $text") }
+    fun printlnInfo(text: String) { if (logLevel >= 1) println("[$logPrefix] $text") }
 
     val timeForStep = 1000 / stepsPerSecond
-    val dataSizeForStep = (speedBytesPerSec / stepsPerSecond)
+    val dataSizeForStep = (speedBytesPerSec / stepsPerSecond)//.let { if (it < DEFAULT_BUFFER_SIZE) }
     val copyingPieceSize = dataSizeForStep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     printlnDebug("")
-    printlnDebug("dataSize: $dataSize bytes")
+    printlnDebug("dataSize: $preKnownInputDataSizeBytes bytes")
     printlnDebug("speed: $speedBytesPerSec bytes/sec")
 
     printlnDebug("timeForStep: $timeForStep ms")
@@ -68,14 +69,22 @@ fun copyBetweenStreamsWithSpeed2(
     printlnDebug("")
     printlnInfo("Всего байт скопировано: $bytesCopiedTotal")
 
-    val estimatedTimeNs = (((dataSize ?: -1)/speedBytesPerSec.toFloat())*1000).roundToLong().milliseconds.inWholeNanoseconds
-    val fullCopyingTimeNs = (System.currentTimeMillis() - fullCopyingStartTime).milliseconds.inWholeNanoseconds
-    printlnInfo("Ожидаемое время: $estimatedTimeNs нс, реальное время: $fullCopyingTimeNs нс (${percentOf(fullCopyingTimeNs, estimatedTimeNs)}%)")
+    if (null != preKnownInputDataSizeBytes) {
+        val requestedSpeedBytesPerNs: Float = speedBytesPerSec.toFloat() / 1_000_000_000
 
+        val estimatedTimeNs: Long = (preKnownInputDataSizeBytes/requestedSpeedBytesPerNs).roundToLong()
+        // realCopyingTimeNs может быть ноль!
+        val realCopyingTimeNs: Long = (System.currentTimeMillis() - fullCopyingStartTime).milliseconds.inWholeNanoseconds
 
-    val realSpeedBytesPerNanosecond: Double = if (fullCopyingTimeNs > 0L) {
-        (bytesCopiedTotal.toDouble() / fullCopyingTimeNs) } else { (-1).toDouble() }
-    val realSpeedBytesPerSecond = realSpeedBytesPerNanosecond * 1_000_000
-    printlnInfo("Заданная скорость ${speedBytesPerSec}, реальная скорость $realSpeedBytesPerSecond байт/с (${percentOf(realSpeedBytesPerSecond, speedBytesPerSec.toDouble())}%)")
+        val realSpeedBytesPerNs: Float = if (realCopyingTimeNs > 0) preKnownInputDataSizeBytes / realCopyingTimeNs.toFloat() else -1F
+
+        printlnInfo("Ожидаемое время: $estimatedTimeNs нс, " +
+                "реальное время: $realCopyingTimeNs нс " +
+                "(${percentOf(realCopyingTimeNs, estimatedTimeNs)}%)")
+
+        printlnInfo("Заданная скорость ${requestedSpeedBytesPerNs} байт/нс, " +
+                "реальная скорость $realSpeedBytesPerNs байт/нс " +
+                "(${percentOf(realSpeedBytesPerNs, requestedSpeedBytesPerNs)}%)")
+    }
 }
 
