@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.estimateTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
+import com.github.aakumykov.copy_between_streams_with_speed.utils.millisecondsToDHMSN
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
@@ -297,6 +298,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         }
     }
 
+
     @Test
     fun data_1mbit_speed_900kbit(){
         doCopy(
@@ -307,6 +309,23 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         )
     }
 
+    @Test
+    fun data_1_mbit_speed_1_10_mbit(){
+        val speedMBitS = 3
+        for(i in speedMBitS..speedMBitS) {
+            println("data_1_mbit_speed_1_10_mbit: ~~~~~~~~~ $i ~~~~~~~~~")
+            doCopy(
+                dataSizeBytes = 1000_000,
+                speedBytesPerSec = i * 1000_000,
+                logPrefix = "data_1_mbit_speed_1_10_mbit",
+                logLevel = 1,
+                finishCallback = { transferredBytes, timeElapsedMs ->
+                    println("transferredBytes: $transferredBytes (${humanReadableByteCount(transferredBytes)}), " +
+                            "timeElapsedMs: $timeElapsedMs (${millisecondsToDHMSN(timeElapsedMs)})")
+                }
+            )
+        }
+    }
 
     @Test
     fun run_test_1mb_several_times() {
@@ -389,9 +408,16 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-    fun doCopy(dataSizeBytes: Int, speedBytesPerSec: Int, logPrefix: String, logLevel: Int = 1) {
-//        println("----- ${logPrefix}: ${humanReadableByteCount(speedBytesPerSec)}/с -----")
+    fun doCopy(
+        dataSizeBytes: Int,
+        speedBytesPerSec: Int,
+        logPrefix: String,
+        logLevel: Int = 1,
+        progressCallback: ((transferredBytes:Long, speedBytesPerSec:Long) -> Unit)? = null,
+        finishCallback: ((transferredBytes:Long, timeElapsedMs:Long) -> Unit)? = null,
+    ) {
         prepareSourceAndTargetFiles(testData(dataSizeBytes))
+
         sourceFileStream.use { sS ->
             targetFileStream.use { tS ->
                 copyBetweenStreamsWithSpeed2(
@@ -400,11 +426,14 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     speedBytesPerSec = speedBytesPerSec,
                     logLevel = logLevel,
                     logPrefix = logPrefix,
-                    preKnownInputDataSizeBytes = dataSizeBytes
+                    preKnownInputDataSizeBytes = dataSizeBytes,
+                    progressCallback = progressCallback,
+                    finishCallback = finishCallback,
                 )
             }
         }
     }
+
 
     @Test
     fun test_megabytes() {
@@ -439,6 +468,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         }
     }
 
+
     @Test
     fun CBSWS2() {
         val dataSize = 10_000_000
@@ -461,6 +491,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             }
         }
     }
+
 
     @Test
     fun test_multiple_size_and_speed() {
@@ -489,6 +520,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             }
         }
     }
+
 
     @Test
     fun size_1000_speed_9000() {
