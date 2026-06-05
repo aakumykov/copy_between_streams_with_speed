@@ -318,9 +318,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 dataSizeBytes = 1000_000,
                 speedBytesPerSec = i * 1000_000,
                 logPrefix = "data_1_mbit_speed_1_10_mbit",
-                logLevel = 1,
+                logLevel = 2,
                 finishCallback = { transferredBytes, timeElapsedMs ->
-                    println("transferredBytes: $transferredBytes (${humanReadableByteCount(transferredBytes)}), " +
+                    println("[ФИНИШ] transferredBytes: $transferredBytes (${humanReadableByteCount(transferredBytes)}), " +
                             "timeElapsedMs: $timeElapsedMs (${millisecondsToDHMSN(timeElapsedMs)})")
                 }
             )
