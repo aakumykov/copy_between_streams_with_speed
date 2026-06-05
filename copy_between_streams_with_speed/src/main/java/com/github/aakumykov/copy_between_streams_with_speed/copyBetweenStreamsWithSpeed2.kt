@@ -59,8 +59,10 @@ fun copyBetweenStreamsWithSpeed2(
 
         if (bytesCopiedForStep >= dataSizeForStep) {
 
+            val bytesOverrunPercentage: Float = (bytesCopiedForStep.toFloat() / dataSizeForStep)
+
             val stepTime = System.currentTimeMillis() - stepStartTime
-            val sleepingLackTime = timeForStep - stepTime
+            val sleepingLackTime = (bytesOverrunPercentage * timeForStep - stepTime).roundToLong()
             if (sleepingLackTime > 0) {
                 printlnDebug("${debugCounter++}) скопировано $bytesCopiedForStep за $stepTime мс, досыпаем $sleepingLackTime мс...")
                 Thread.sleep(sleepingLackTime)
