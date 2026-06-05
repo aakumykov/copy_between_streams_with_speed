@@ -10,7 +10,7 @@ fun humanReadableByteCount(
     floatingDigits: Int = 3,
     locale: Locale = Locale.getDefault(),
     sizeNames: String = "BKMGTPE",
-    decimalNotation: Boolean = false
+    decimalNotation: Boolean = true
 ): String {
     val base = if (decimalNotation) 1000 else 1024
     if (bytes < base) return "$bytes ${sizeNames[0]}"
@@ -30,7 +30,7 @@ fun humanReadableByteCount(
     floatingDigits: Int = 3,
     locale: Locale = Locale.getDefault(),
     sizeNames: String = "BKMGTPE",
-    decimalNotation: Boolean = false
+    decimalNotation: Boolean = true
 ): String {
     return if (null == bytes) "NO_DATA_SIZE"
     else humanReadableByteCount(bytes.toLong(), floatingDigits, locale, sizeNames, decimalNotation)

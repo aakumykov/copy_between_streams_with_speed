@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percentOf
 import java.io.InputStream
@@ -69,7 +70,7 @@ fun copyBetweenStreamsWithSpeed2(
     }
 
     printlnDebug("")
-    printlnInfo("Всего байт скопировано: ${humanReadableByteCount(bytesCopiedTotal)}")
+    printlnDebug("Всего байт скопировано: ${humanReadableByteCount(bytesCopiedTotal)}")
 
     if (null != preKnownInputDataSizeBytes) {
         val NANOSECONDS_IN_SECOND = 1_000_000_000
@@ -80,7 +81,7 @@ fun copyBetweenStreamsWithSpeed2(
         // realCopyingTimeNs может быть ноль(!)
         val realCopyingTimeNs: Long = (System.currentTimeMillis() - fullCopyingStartTime).milliseconds.inWholeNanoseconds
 
-        printlnInfo("Ожидаемое время: $estimatedTimeNs нс, " +
+        printlnDebug("Ожидаемое время: $estimatedTimeNs нс, " +
                 "реальное время: $realCopyingTimeNs нс " +
                 "(${percentOf(realCopyingTimeNs, estimatedTimeNs)}%)")
 
@@ -88,10 +89,13 @@ fun copyBetweenStreamsWithSpeed2(
 
         val requestedSpeedBytesPerSec: Long = (requestedSpeedBytesPerNs * NANOSECONDS_IN_SECOND).roundToLong()
         val realSpeedBytesPerSec: Long = (realSpeedBytesPerNs * NANOSECONDS_IN_SECOND).roundToLong()
+        val speedPercents: Float = percentOf(realSpeedBytesPerNs, requestedSpeedBytesPerNs)
+        val speedPercentsAccent = speedPercents.roundToLong().let { if (it !in 81..<120) "-----> " else "" }
 
-        printlnInfo("Заданная скорость ${humanReadableByteCount(requestedSpeedBytesPerSec)}/с, " +
+        printlnInfo("Размер: ${humanReadableByteCount(preKnownInputDataSizeBytes)}," +
+                "заданная скорость ${humanReadableByteCount(requestedSpeedBytesPerSec)}/с, " +
                 "реальная скорость ${humanReadableByteCount(realSpeedBytesPerSec)}/с " +
-                "(${percentOf(realSpeedBytesPerNs, requestedSpeedBytesPerNs)}%)")
+                "${speedPercentsAccent}(${speedPercents.roundToFloatingDigits(3)}%)")
     }
 }
 

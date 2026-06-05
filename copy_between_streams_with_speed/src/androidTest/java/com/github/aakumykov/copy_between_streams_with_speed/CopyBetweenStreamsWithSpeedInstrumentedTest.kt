@@ -298,6 +298,115 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
     @Test
+    fun data_1mbit_speed_900kbit(){
+        doCopy(
+            dataSizeBytes = 1000_000,
+            speedBytesPerSec = 900_000,
+            logPrefix = "data_1mbit_speed_900kbit",
+            logLevel = 2
+        )
+    }
+
+
+    @Test
+    fun run_test_1mb_several_times() {
+        repeat(4) { i ->
+            println("------------ запуск $i ------------")
+            test_1mb_with_diff_speeds()
+        }
+    }
+
+    @Test
+    fun test_1mb_with_diff_speeds() {
+        val size = 1_000_000
+        val logPrefix = "test_1mb_with_diff_speeds"
+
+        listOf(10, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000).forEach { speedBase ->
+            println("------ база скорости $speedBase ----")
+            for (i in 1..10) {
+                val speed = i * speedBase * 1000
+                doCopy(
+                    dataSizeBytes = size,
+                    speedBytesPerSec = speed,
+                    logPrefix = logPrefix
+                )
+            }
+        }
+    }
+
+
+    @Test
+    fun run_test_2mb_several_times() {
+        repeat(4) { i ->
+            println("------------ запуск $i ------------")
+            test_2mb_with_diff_speeds()
+        }
+    }
+
+    @Test
+    fun test_2mb_with_diff_speeds() {
+        val size = 1_000_000
+        val logPrefix = "test_2mb_with_diff_speeds"
+
+        listOf(10, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000).forEach { speedBase ->
+            println("------ база скорости $speedBase ----")
+            for (i in 1..10) {
+                val speed = i * speedBase * 1000
+                doCopy(
+                    dataSizeBytes = size,
+                    speedBytesPerSec = speed,
+                    logPrefix = logPrefix
+                )
+            }
+        }
+    }
+
+
+    @Test
+    fun run_test_10mb_several_times() {
+        repeat(4) { i ->
+            println("------------ запуск $i ------------")
+            test_10mb_with_diff_speeds()
+        }
+    }
+
+    @Test
+    fun test_10mb_with_diff_speeds() {
+        val size = 1_000_000
+        val logPrefix = "test_10mb_with_diff_speeds"
+
+        listOf(10, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000).forEach { speedBase ->
+            println("------ база скорости $speedBase ----")
+            for (i in 1..10) {
+                val speed = i * speedBase * 1000
+                doCopy(
+                    dataSizeBytes = size,
+                    speedBytesPerSec = speed,
+                    logPrefix = logPrefix
+                )
+            }
+        }
+    }
+
+
+    fun doCopy(dataSizeBytes: Int, speedBytesPerSec: Int, logPrefix: String, logLevel: Int = 1) {
+//        println("----- ${logPrefix}: ${humanReadableByteCount(speedBytesPerSec)}/с -----")
+        prepareSourceAndTargetFiles(testData(dataSizeBytes))
+        sourceFileStream.use { sS ->
+            targetFileStream.use { tS ->
+                copyBetweenStreamsWithSpeed2(
+                    inputStream = sS,
+                    outputStream = tS,
+                    speedBytesPerSec = speedBytesPerSec,
+                    logLevel = logLevel,
+                    logPrefix = logPrefix,
+                    preKnownInputDataSizeBytes = dataSizeBytes
+                )
+            }
+        }
+    }
+
+    @Test
     fun test_megabytes() {
         val BYTES_IN_MEGABITE = 1_000_000
         val BYTES_IN_KILOBYTE = 1_000
