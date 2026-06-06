@@ -4,9 +4,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.estimateTimeMs
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadable
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.millisecondsToDHMSN
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
+import com.github.aakumykov.copy_between_streams_with_speed.utils.percentOf
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
 import org.junit.Assert
@@ -311,17 +313,33 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun data_1_mbit_speed_1_10_mbit(){
-        val speedMBitS = 3
-        for(i in speedMBitS..speedMBitS) {
+        val dataSize = 1000_000
+
+        val from = 1
+        val to = 10
+
+        for(i in from..to) {
             println("data_1_mbit_speed_1_10_mbit: ~~~~~~~~~ $i ~~~~~~~~~")
+            val speedBytesPerSec = i * 1000_000
+            val estimatedTimeMs = estimateTimeMs(dataSize,speedBytesPerSec)
             doCopy(
-                dataSizeBytes = 1000_000,
-                speedBytesPerSec = i * 1000_000,
+                dataSizeBytes = dataSize,
+                speedBytesPerSec = speedBytesPerSec,
                 logPrefix = "data_1_mbit_speed_1_10_mbit",
-                logLevel = 2,
-                finishCallback = { transferredBytes, timeElapsedMs ->
-                    println("[ФИНИШ] transferredBytes: $transferredBytes (${humanReadableByteCount(transferredBytes)}), " +
-                            "timeElapsedMs: $timeElapsedMs (${millisecondsToDHMSN(timeElapsedMs)})")
+                logLevel = 1,
+                finishCallback = { transferredBytes, timeElapsedMs, realSpeedBytesPerSec ->
+                    println("[ФИНИШ] подано   данных: $dataSize (${dataSize.humanReadable})")
+                    println("[ФИНИШ] передано данных: $transferredBytes (${transferredBytes.humanReadable})")
+
+                    println("[ФИНИШ] расчётное время: $estimatedTimeMs мс (${millisecondsToDHMSN(estimatedTimeMs)})")
+                    println("[ФИНИШ] реальное  время: $timeElapsedMs мс (${millisecondsToDHMSN(timeElapsedMs)})")
+
+//                    println("[ФИНИШ] заданная скорость: ${humanReadableByteCount(speedBytesPerSec, floatingDigits = 9)}/с")
+//                    println("[ФИНИШ] реальная скорость: ${humanReadableByteCount(realSpeedBytesPerSec, floatingDigits = 9)}/с")
+
+                    println("[ФИНИШ] заданная скорость: $speedBytesPerSec байт/с (${humanReadableByteCount(speedBytesPerSec, floatingDigits = 6)}/с)")
+                    println("[ФИНИШ] реальная скорость: $realSpeedBytesPerSec байт/с (${humanReadableByteCount(realSpeedBytesPerSec, floatingDigits = 6)}/с)")
+                    println("[ФИНИШ] процент:  ${percentOf(realSpeedBytesPerSec, speedBytesPerSec.toLong())}%")
                 }
             )
         }
@@ -414,7 +432,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         logPrefix: String,
         logLevel: Int = 1,
         progressCallback: ((transferredBytes:Long, speedBytesPerSec:Long) -> Unit)? = null,
-        finishCallback: ((transferredBytes:Long, timeElapsedMs:Long) -> Unit)? = null,
+        finishCallback: ((transferredBytes:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null,
     ) {
         prepareSourceAndTargetFiles(testData(dataSizeBytes))
 

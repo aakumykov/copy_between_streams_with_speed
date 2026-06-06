@@ -14,7 +14,7 @@ fun humanReadableByteCount(
 ): String {
     val base = if (decimalNotation) 1000 else 1024
     if (bytes < base) return "$bytes ${sizeNames[0]}"
-    val exp = (ln(bytes.toDouble()) / ln(1024.0)).toInt()
+    val exp = (ln(bytes.toDouble()) / ln(base.toFloat())).toInt()
     val pre = sizeNames[exp]
     val suffix = if (decimalNotation) "bit" else "B"
     return String.format(

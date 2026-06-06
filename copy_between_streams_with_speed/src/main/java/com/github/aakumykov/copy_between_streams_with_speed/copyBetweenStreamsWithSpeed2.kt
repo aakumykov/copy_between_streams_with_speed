@@ -1,6 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadable
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percentOf
 import java.io.InputStream
@@ -17,7 +18,7 @@ fun copyBetweenStreamsWithSpeed2(
     speedBytesPerSec: Int = -1, // FIXME: обрабатывать ситуацию, когда скорость не ограничена.
 
     progressCallback: ((transferredBytes:Long, speedBytesPerSec:Long) -> Unit)? = null,
-    finishCallback: ((transferredBytes:Long, timeElapsedMs:Long) -> Unit)? = null,
+    finishCallback: ((transferredBytes:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null,
 
     stepsPerSecond: Int = 100,
 
@@ -82,6 +83,10 @@ fun copyBetweenStreamsWithSpeed2(
 
     val realCopyingDurationMs: Long = System.currentTimeMillis() - fullCopyingStartTime
 
+    val realSpeedBytesPerSec: Long = (
+            bytesCopiedTotal / (realCopyingDurationMs.toFloat()/1000)
+    ).roundToLong()
+
     printlnDebug("")
     printlnDebug("Всего байт скопировано: ${humanReadableByteCount(bytesCopiedTotal)}")
 
@@ -92,8 +97,8 @@ fun copyBetweenStreamsWithSpeed2(
         // realCopyingTimeNs может быть ноль(!)
         val realCopyingDurationNs: Long = realCopyingDurationMs.milliseconds.inWholeNanoseconds
 
-        printlnDebug("Ожидаемое время: $estimatedTimeNs нс, " +
-                "реальное время: $realCopyingDurationNs нс " +
+        printlnDebug("Ожидаемое время: ${estimatedTimeNs.humanReadable} нс, " +
+                "реальное время: ${realCopyingDurationNs.humanReadable} нс " +
                 "(${percentOf(realCopyingDurationNs, estimatedTimeNs)}%)")
 
         val realSpeedBytesPerNs: Float = if (realCopyingDurationNs > 0) preKnownInputDataSizeBytes / realCopyingDurationNs.toFloat() else -1F
@@ -109,6 +114,10 @@ fun copyBetweenStreamsWithSpeed2(
                 "${speedPercentsAccent}(${speedPercents.roundToFloatingDigits(3)}%)")
     }
 
-    finishCallback?.invoke(bytesCopiedTotal, realCopyingDurationMs)
+    finishCallback?.invoke(
+        bytesCopiedTotal,
+        realCopyingDurationMs,
+        realSpeedBytesPerSec
+    )
 }
 
