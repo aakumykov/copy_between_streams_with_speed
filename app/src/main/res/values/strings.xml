@@ -8,12 +8,4 @@
     <string name="speed">Скорость: %1$n %2$s/с</string>
     <string name="estimatedTime">Ожидаемое время:\n%1$f с</string>
     <string name="realTime">Реальное время:\n%1$f с</string>
-    <string name="size_bytes">Байт</string>
-    <string name="size_kilobytes_bytes">Килобайт</string>
-    <string name="size_megabytes_bytes">Мегабайт</string>
-    <string name="speed_bytes">Байт/с</string>
-    <string name="speed_kilobytes_bytes">Килобайт/с</string>
-    <string name="speed_megabytes_bytes">Мегабайт/с</string>
-    <string name="button_start">Старт</string>
-    <string name="button_stop">Стоп</string>
 </resources>
