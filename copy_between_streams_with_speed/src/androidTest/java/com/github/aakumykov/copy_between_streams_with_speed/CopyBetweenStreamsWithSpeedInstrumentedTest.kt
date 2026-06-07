@@ -311,6 +311,37 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         )
     }
 
+
+    @Test
+    fun data_1mbit_speed_100kbit(){
+        doCopy(
+            dataSizeBytes = 1000_000,
+            speedBytesPerSec = 100_000,
+            logPrefix = "data_1mbit_speed_100kbit",
+            logLevel = 1
+        )
+    }
+
+    @Test
+    fun data_1mbit_speed_1mbit(){
+        doCopy(
+            dataSizeBytes = 1000_000,
+            speedBytesPerSec = 1000_000,
+            logPrefix = "data_1mbit_speed_1mbit",
+            logLevel = 1
+        )
+    }
+
+    @Test
+    fun data_10mbit_speed_10mbit(){
+        doCopy(
+            dataSizeBytes = 10_000_000,
+            speedBytesPerSec = 10_000_000,
+            logPrefix = "data_10mbit_speed_10mbit",
+            logLevel = 1
+        )
+    }
+
     @Test
     fun data_1_mbit_speed_1_10_mbit(){
         val dataSize = 1000_000
