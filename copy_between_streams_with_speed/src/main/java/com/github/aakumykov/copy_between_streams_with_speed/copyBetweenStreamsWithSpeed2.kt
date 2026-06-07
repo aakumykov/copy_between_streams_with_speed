@@ -97,7 +97,7 @@ fun copyBetweenStreamsWithSpeed2(
         // realCopyingTimeNs может быть ноль(!)
         val realCopyingDurationNs: Long = realCopyingDurationMs.milliseconds.inWholeNanoseconds
 
-        printlnDebug("Ожидаемое время: ${estimatedTimeNs.humanReadable} нс, " +
+        printlnInfo("Ожидаемое время: ${estimatedTimeNs.humanReadable} нс, " +
                 "реальное время: ${realCopyingDurationNs.humanReadable} нс " +
                 "(${percentOf(realCopyingDurationNs, estimatedTimeNs)}%)")
 
