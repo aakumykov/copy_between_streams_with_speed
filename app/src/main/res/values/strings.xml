@@ -8,4 +8,9 @@
     <string name="speed">Скорость: %1$n %2$s/с</string>
     <string name="estimatedTime">Ожидаемое время:\n%1$f с</string>
     <string name="realTime">Реальное время:\n%1$f с</string>
+    <string name="size_selector_label">Размер данных: %1$s</string>
+    <string name="speed_selector_label">Скорость: %1$s/с</string>
+    <string name="start_button">Старт</string>
+    <string name="stop_button">Стоп</string>
+
 </resources>

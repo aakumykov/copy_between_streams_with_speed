@@ -190,7 +190,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 println("totalBytesTransferred: $totalBytesTransferred, speed: $speed")
             },
             discretizationHz = discretizationHz,
-            speedBytesPerSecond = speedByteSec,
+            speed = speedByteSec,
             printDebug = false
         )
 
@@ -208,7 +208,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                speedBytesPerSecond = 0
+                speed = 0
             )
         }
     }
@@ -221,7 +221,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                speedBytesPerSecond = 10,
+                speed = 10,
                 discretizationHz = 20
             )
         }
@@ -237,7 +237,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                speedBytesPerSecond = speed,
+                speed = speed,
                 discretizationHz = discretization,
                 printDebug = true
             )

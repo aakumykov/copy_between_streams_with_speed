@@ -9,7 +9,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Copy_between_streams_with_speed" >
 
-        <activity android:name="com.github.aakumykov.copy_between_streams_with_counting_demo.MainActivity"
+        <activity android:name="com.github.aakumykov.copy_between_streams_with_counting_demo.DemoActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -10,7 +10,7 @@ import kotlin.math.roundToLong
 /**
  * @param inputStream
  * @param outputStream
- * @param speedBytesPerSecond Must be greater than 0 or -1 to disable speed control.
+ * @param speed Must be greater than 0 or -1 to disable speed control.
  * @param discretizationHz Count of parts data transfer will be splat within second to achieve
  * more smooth process. [progressCallback] will be called same times.
  * @param bufferSizeBytes Default is [DEFAULT_BUFFER_SIZE]
@@ -21,7 +21,7 @@ import kotlin.math.roundToLong
 fun copyBetweenStreamsWithSpeed(
     inputStream: InputStream,
     outputStream: OutputStream,
-    speedBytesPerSecond: Int = -1,
+    speed: Int = -1,
     discretizationHz: Int = 10,
     bufferSizeBytes: Int = DEFAULT_BUFFER_SIZE,
     progressCallback: ((totalBytesTransferred:Long, speed:Int) -> Unit)? = null,
@@ -79,28 +79,28 @@ fun copyBetweenStreamsWithSpeed(
 
     plnDebug("inputStream = $inputStream, " +
             "outputStream = $outputStream, " +
-            "speedBytesPerSecond = $speedBytesPerSecond, " +
+            "speedBytesPerSecond = $speed, " +
             "discretizationHz = $discretizationHz, " +
             "bufferSizeBytes = $bufferSizeBytes, " +
             "progressCallback = $progressCallback, " +
             "finishCallback = $finishCallback, " +
             "printDebug = $printDebug")
 
-    if (0 == speedBytesPerSecond)
+    if (0 == speed)
         throw IllegalArgumentException("Speed cannot be zero.")
 
-    if (-1 != speedBytesPerSecond && discretizationHz > speedBytesPerSecond)
-        throw IllegalArgumentException("Data transfer discretization per second ($discretizationHz) cannot be grater than speed per second ($speedBytesPerSecond)")
+    if (-1 != speed && discretizationHz > speed)
+        throw IllegalArgumentException("Data transfer discretization per second ($discretizationHz) cannot be grater than speed per second ($speed)")
 
     val operationPortionSize = calcOperationPortionSize(
-        speedBytesPerSecond = speedBytesPerSecond,
+        speedBytesPerSecond = speed,
         transferStepsPerSecond = discretizationHz,
         bufferSize = bufferSizeBytes
     )
     plnDebug("operationPortionSize: $operationPortionSize")
 
     val dataSizeNeedToBeTransferredBeforeSleep = calcDataSizeNeedToBeTransferredBeforeSleep(
-        speedBytesPerSecond = speedBytesPerSecond,
+        speedBytesPerSecond = speed,
         transferStepsPerSecond = discretizationHz,
         bufferSize = bufferSizeBytes
     )
@@ -134,7 +134,7 @@ fun copyBetweenStreamsWithSpeed(
             steps = discretizationHz
         )
 
-        val isSpeedLimited = -1 != speedBytesPerSecond
+        val isSpeedLimited = -1 != speed
 
         if (isSpeedLimited) {
             val isTime2sleep = bytesTransferredBeforeSleep >= dataSizeNeedToBeTransferredBeforeSleep
