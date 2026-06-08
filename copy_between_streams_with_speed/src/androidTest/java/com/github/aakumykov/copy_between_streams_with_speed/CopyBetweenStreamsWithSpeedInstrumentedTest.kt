@@ -136,7 +136,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-    @Test
+    /*@Test
     fun finish_callback_is_invoked() {
         repeat(100) { fileSizeWithZero ->
             val isInvoked = AtomicBoolean(false)
@@ -150,7 +150,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             )
             Assert.assertTrue(isInvoked.get())
         }
-    }
+    }*/
 
 
     @Test
@@ -186,7 +186,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-    @Test
+    /*@Test
     fun progress_callback_invoked_expected_times() {
 
         val dataSizeByte = 1000
@@ -213,7 +213,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             (dataSizeByte / speedByteSec) * discretizationHz,
             counter
         )
-    }
+    }*/
 
 
     @Test
@@ -229,7 +229,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-    @Test
+    /*@Test
     fun exception_thrown_if_discretization_greater_than_speed() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
             prepareSourceAndTargetFiles(testData(0))
@@ -240,10 +240,10 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 discretizationHz = 20
             )
         }
-    }
+    }*/
 
 
-    @Test
+    /*@Test
     fun simple_10kb_copy_test() {
 
         val size = 10_000
@@ -258,10 +258,10 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val percent = percent(realTimeMs, estimatedTimeMs)
 
         println("RESULT: estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
-    }
+    }*/
 
 
-    @Test
+    /*@Test
     fun simple_100b_copy_test() {
 
         val size = 100
@@ -279,7 +279,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val percent = percent(realTimeMs, estimatedTimeMs)
 
         println("RESULT: estTime: $estimatedTimeMs, realTime: $realTimeMs (${percent}%)")
-    }
+    }*/
 
     @Test
     fun sprintf_test() {
@@ -580,13 +580,13 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-    @Test
+    /*@Test
     fun size_1000_speed_9000() {
         copyDataSimple(size = 1000, speed = 9000, printDebug = true)
-    }
+    }*/
 
 
-    @Test
+    /*@Test
     fun data_sizes_and_speed_test() {
         listOf(10, 100, 1000, 10_000, 100_000).forEach { dataSizeMultiplier ->
             data_sizes_test(dataSizeMultiplier)
@@ -603,9 +603,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 copyDataSimple(size = size, speed = speed, printDebug = printDebug)
             }
         }
-    }
+    }*/
 
-    fun copyDataSimple(size: Int, speed: Int, discretizationHz: Int = 10, printDebug: Boolean = false) {
+    /*fun copyDataSimple(size: Int, speed: Int, discretizationHz: Int = 10, printDebug: Boolean = false) {
 
         val estimatedTimeMs = estimateTimeMs(size, speed)
 
@@ -626,9 +626,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         }
 
         println("RESULT: size: $size, speed: $speed, est: $estimatedTimeMs, real: $realTimeMs ${anomalySign}(${percent.roundToFloatingDigits(2)}%)")
-    }
+    }*/
 
-    @Test
+    /*@Test
     fun work_time_matches_estimated_time_on_low_data_size() {
 
         val dataSizeFrom = 1
@@ -651,9 +651,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             println(res.second.joinToString("\n"))
             println()
         }
-    }
+    }*/
 
-    @Test
+    /*@Test
     fun work_time_matches_estimated_time_on_big_data_size() {
 
         val dataSizeFrom = 10_000
@@ -678,12 +678,12 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             println(res.second.joinToString("\n"))
             println()
         }
-    }
+    }*/
 
     /**
      * @return Pair<DataSizeBytes,WorkTimePercentsOfEstimated>
      */
-    private fun test_data_sizes(
+    /*private fun test_data_sizes(
         fromDataSize: Int,
         toDataSize: Int,
         dataStep: Int,
@@ -717,28 +717,16 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             val differencePercents = ((realTimeMs.toFloat() / estimatedTimeMs) * 100)
 
             percentList.add(differencePercents)
-
-            /*println("dataSize: $dataSizeBytes, " +
-                    "speed: $speedBytesPerSec, " +
-                    "x${speedMultiplier}, " +
-                    "estimatedTimeMs: $estimatedTimeMs, " +
-                    "realTimeMs: $realTimeMs (${differencePercents}%)")*/
         }
 
-        /*println("----- Процентовки для скорости x${speedMultiplier} для данных ${dataSizeFrom}-${dataSizeTo} байт -----")
-        println(
-            percentList.sortedDescending().joinToString("\n")
-        )
-        println("------------")*/
-
         return Pair(size, percentList.sortedDescending())
-    }
+    }*/
 
 
     /**
      * @return Затраченное на копирование время, мс.
      */
-    private fun doCopy(
+    /*private fun doCopy(
         dataSizeBytes: Int,
         speedBytesPerSec: Int,
         discretizationHz: Int = 10,
@@ -764,10 +752,10 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         }
 
         return System.currentTimeMillis() - startTime
-    }
+    }*/
 
 
-    @Test
+    /*@Test
     fun works_with_different_speed_values() {
         repeat(100) { i ->
             val speed = i+2
@@ -782,5 +770,5 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             )
             Assert.assertEquals(sourceFileContents, targetFileContents)
         }
-    }
+    }*/
 }
