@@ -580,6 +580,23 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
+    @Test
+    fun no_speed_limit() {
+        val dataSize = 1_000
+        prepareSourceAndTargetFiles(testData(dataSize))
+        sourceFileStream.use { sS ->
+            targetFileStream.use { tS ->
+                copyBetweenStreamsWithSpeed2(
+                    inputStream = sS,
+                    outputStream = tS,
+                    speed = 5_000,
+                    logLevel = 2,
+                    preKnownInputDataSizeBytes = dataSize
+                )
+            }
+        }
+    }
+
     /*@Test
     fun size_1000_speed_9000() {
         copyDataSimple(size = 1000, speed = 9000, printDebug = true)
