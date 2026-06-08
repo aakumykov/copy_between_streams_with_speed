@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivityDemoBinding
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed2
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadable
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,7 +53,7 @@ class DemoActivity : AppCompatActivity() {
 
     private var currentInputStream: InputStream? = null
 
-    fun onStartButtonClicked() {
+    private fun onStartButtonClicked() {
         val dataSize = binding.sizeSeekBar.progress
         val speed = binding.speedSeekBar.progress
 
@@ -69,10 +70,15 @@ class DemoActivity : AppCompatActivity() {
                         inputStream = inputStream,
                         outputStream = outputStream,
                         speed = speed,
-                        logLevel = 1,
+                        logLevel = 2,
                         progressCallback = { transferred, speed ->
                             val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
                             showProgress(percent)
+                        },
+                        finishCallback = { transferredBytes: Long, timeElapsedMs: Long, speedBytesPerSec:Long ->
+                            showInfo("Передано ${humanReadableByteCount(transferredBytes)}\n" +
+                                    "за ${(timeElapsedMs.toFloat()/1000)} с,\n" +
+                                    "скорость: ${humanReadableByteCount(speedBytesPerSec)}/с")
                         }
                     )
                 }
@@ -80,13 +86,19 @@ class DemoActivity : AppCompatActivity() {
         }
     }
 
-    fun showProgress(value: Int) {
+    private fun onStopButtonClicked() {
+        currentInputStream?.close()
+    }
+
+    private fun showProgress(value: Int) {
         lifecycleScope.launch {
             binding.progressBar.progress = value
         }
     }
 
-    fun onStopButtonClicked() {
-        currentInputStream?.close()
+    private fun showInfo(text: String) {
+        lifecycleScope.launch {
+            binding.infoView.text = text
+        }
     }
 }
