@@ -36,13 +36,13 @@ class DemoActivity : AppCompatActivity() {
     private fun prepareButtons() {
         binding.sizeSeekBar.apply {
             setProgressLabelProvider { progress ->
-                val humanSize = humanReadableByteCount(progress.toLong())
+                val humanSize = humanReadableByteCount(progress.toLong(), decimalNotation = false)
                 getString(R.string.size_selector_label, humanSize)
             }
         }
         binding.speedSeekBar.apply {
             setProgressLabelProvider { progress ->
-                val humanSize = humanReadableByteCount(progress.toLong())
+                val humanSize = humanReadableByteCount(progress.toLong(), decimalNotation = false)
                 getString(R.string.speed_selector_label, humanSize)
             }
         }
