@@ -12,7 +12,7 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * @param logLevel 0 - No, 1 - Info, 2 - Debug
  */
-fun copyBetweenStreamsWithSpeed2(
+fun copyBetweenStreamsWithSpeed(
     inputStream: InputStream,
     outputStream: OutputStream,
     speed: Int = -1, // FIXME: обрабатывать ситуацию, когда скорость не ограничена.
