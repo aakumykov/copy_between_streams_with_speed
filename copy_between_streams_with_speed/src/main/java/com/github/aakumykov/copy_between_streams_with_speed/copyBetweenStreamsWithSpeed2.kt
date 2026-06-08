@@ -32,7 +32,7 @@ fun copyBetweenStreamsWithSpeed2(
     fun printlnInfo(text: String) { if (logLevel >= 1) println("[$logPrefix] $text") }
 
     val timeForStep = 1000 / stepsPerSecond
-    val dataSizeForStep = (speed / stepsPerSecond)//.let { if (it < DEFAULT_BUFFER_SIZE) }
+    val dataSizeForStep = if (-1 != speed) (speed / stepsPerSecond) else DEFAULT_BUFFER_SIZE
     val copyingPieceSize = dataSizeForStep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     printlnDebug("")
@@ -62,13 +62,14 @@ fun copyBetweenStreamsWithSpeed2(
         bytesCopiedForStep += readBytes
         bytesCopiedTotal += readBytes
 
-        if (bytesCopiedForStep >= dataSizeForStep) {
+        if (-1 != speed && bytesCopiedForStep >= dataSizeForStep) {
 
             val bytesOverrunPercentage: Float = (bytesCopiedForStep.toFloat() / dataSizeForStep)
 
             val stepTime = System.currentTimeMillis()
             val stepDuration = stepTime - stepStartTime
-            val sleepingLackTime = (bytesOverrunPercentage * timeForStep - stepDuration).roundToLong()
+            val sleepingLackTime =
+                (bytesOverrunPercentage * timeForStep - stepDuration).roundToLong()
             if (sleepingLackTime > 0) {
                 printlnDebug("${debugCounter++}) скопировано $bytesCopiedForStep за $stepDuration мс, досыпаем $sleepingLackTime мс...")
                 Thread.sleep(sleepingLackTime)
@@ -93,7 +94,7 @@ fun copyBetweenStreamsWithSpeed2(
     if (null != preKnownInputDataSizeBytes) {
         val requestedSpeedBytesPerNs: Float = speed.toFloat() / nanosecondsInSecond
 
-        val estimatedTimeNs: Long = (preKnownInputDataSizeBytes/requestedSpeedBytesPerNs).roundToLong()
+        val estimatedTimeNs: Long = if (-1 != speed) (preKnownInputDataSizeBytes/requestedSpeedBytesPerNs).roundToLong() else -1
         // realCopyingTimeNs может быть ноль(!)
         val realCopyingDurationNs: Long = realCopyingDurationMs.milliseconds.inWholeNanoseconds
 
