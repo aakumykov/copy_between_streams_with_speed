@@ -122,7 +122,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
             prepareSourceAndTargetFiles(testData(fileSizeWithZero))
 
-            copyBetweenStreamsWithSpeed(
+            copyBetweenStreamsWithSpeed2(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream
             )
@@ -159,7 +159,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             val nonZeroFileSize = i+1
             val isInvoked = AtomicBoolean(false)
             prepareSourceAndTargetFiles(testData(nonZeroFileSize))
-            copyBetweenStreamsWithSpeed(
+            copyBetweenStreamsWithSpeed2(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 progressCallback = { _,_ ->
@@ -175,7 +175,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     fun progress_callback_not_invoked_on_zero_file_size() {
         val isInvoked = AtomicBoolean(false)
         prepareSourceAndTargetFiles(testData(0))
-        copyBetweenStreamsWithSpeed(
+        copyBetweenStreamsWithSpeed2(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
             progressCallback = { _,_ ->
@@ -220,7 +220,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     fun exception_thrown_on_zero_speed_argument() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
             prepareSourceAndTargetFiles(testData(0))
-            copyBetweenStreamsWithSpeed(
+            copyBetweenStreamsWithSpeed2(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speed = 0
@@ -478,7 +478,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
         sourceFileStream.use { sS ->
             targetFileStream.use { tS ->
-                copyBetweenStreamsWithSpeed(
+                copyBetweenStreamsWithSpeed2(
                     inputStream = sS,
                     outputStream = tS,
                     speed = speedBytesPerSec,
@@ -512,7 +512,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
                 sourceFileStream.use { sS ->
                     targetFileStream.use { tS ->
-                        copyBetweenStreamsWithSpeed(
+                        copyBetweenStreamsWithSpeed2(
                             inputStream = sS,
                             outputStream = tS,
                             speed = speedKb * BYTES_IN_KILOBYTE,
@@ -538,7 +538,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             prepareSourceAndTargetFiles(testData(dataSize))
             sourceFileStream.use { sS ->
                 targetFileStream.use { tS ->
-                    copyBetweenStreamsWithSpeed(
+                    copyBetweenStreamsWithSpeed2(
                         inputStream = sS,
                         outputStream = tS,
                         speed = speed,
@@ -566,7 +566,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
                 sourceFileStream.use { sS ->
                     targetFileStream.use { tS ->
-                        copyBetweenStreamsWithSpeed(
+                        copyBetweenStreamsWithSpeed2(
                             inputStream = sS,
                             outputStream = tS,
                             speed = speed,
