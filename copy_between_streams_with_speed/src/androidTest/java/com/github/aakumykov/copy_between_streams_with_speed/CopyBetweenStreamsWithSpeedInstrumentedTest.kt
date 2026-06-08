@@ -343,36 +343,45 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
     @Test
-    fun data_1_mbit_speed_1_10_mbit(){
-        val dataSize = 1000_000
+    fun data_size_with_speed_test(){
 
-        val from = 1
-        val to = 10
+        val dataSize = 12_000_000
+        val speedBytesPerSec = 12_000_000
+        val logTag = "data_size_with_speed_test"
 
-        for(i in from..to) {
-            println("data_1_mbit_speed_1_10_mbit: ~~~~~~~~~ $i ~~~~~~~~~")
-            val speedBytesPerSec = i * 1000_000
-            val estimatedTimeMs = estimateTimeMs(dataSize,speedBytesPerSec)
-            doCopy(
-                dataSizeBytes = dataSize,
-                speedBytesPerSec = speedBytesPerSec,
-                logPrefix = "data_1_mbit_speed_1_10_mbit",
-                logLevel = 1,
-                finishCallback = { transferredBytes, timeElapsedMs, realSpeedBytesPerSec ->
-                    println("[ФИНИШ] подано   данных: $dataSize (${dataSize.humanReadable})")
-                    println("[ФИНИШ] передано данных: $transferredBytes (${transferredBytes.humanReadable})")
+        val estimatedTimeMs = estimateTimeMs(dataSize,speedBytesPerSec)
 
-                    println("[ФИНИШ] расчётное время: $estimatedTimeMs мс (${millisecondsToDHMSN(estimatedTimeMs)})")
-                    println("[ФИНИШ] реальное  время: $timeElapsedMs мс (${millisecondsToDHMSN(timeElapsedMs)})")
+        println("$logTag данные: ${humanReadableByteCount(dataSize)}, скорость: ${humanReadableByteCount(speedBytesPerSec)}/c, оценочное время: ${estimatedTimeMs.humanReadable}")
 
-//                    println("[ФИНИШ] заданная скорость: ${humanReadableByteCount(speedBytesPerSec, floatingDigits = 9)}/с")
-//                    println("[ФИНИШ] реальная скорость: ${humanReadableByteCount(realSpeedBytesPerSec, floatingDigits = 9)}/с")
+        doCopy(
+            dataSizeBytes = dataSize,
+            speedBytesPerSec = speedBytesPerSec,
+            logPrefix = logTag,
+            logLevel = 1,
+            finishCallback = { transferredBytes, timeElapsedMs, realSpeedBytesPerSec ->
+                println("$logTag [ФИНИШ] подано   данных: $dataSize (${dataSize.humanReadable})")
+                println("$logTag [ФИНИШ] передано данных: $transferredBytes (${transferredBytes.humanReadable})")
 
-                    println("[ФИНИШ] заданная скорость: $speedBytesPerSec байт/с (${humanReadableByteCount(speedBytesPerSec, floatingDigits = 6)}/с)")
-                    println("[ФИНИШ] реальная скорость: $realSpeedBytesPerSec байт/с (${humanReadableByteCount(realSpeedBytesPerSec, floatingDigits = 6)}/с)")
-                    println("[ФИНИШ] процент:  ${percentOf(realSpeedBytesPerSec, speedBytesPerSec.toLong())}%")
+                println("$logTag [ФИНИШ] расчётное время: $estimatedTimeMs мс (${millisecondsToDHMSN(estimatedTimeMs)})")
+                println("$logTag [ФИНИШ] реальное  время: $timeElapsedMs мс (${millisecondsToDHMSN(timeElapsedMs)})")
+
+                println("$logTag [ФИНИШ] заданная скорость: $speedBytesPerSec байт/с (${humanReadableByteCount(speedBytesPerSec, floatingDigits = 3)}/с)")
+                println("$logTag [ФИНИШ] реальная скорость: $realSpeedBytesPerSec байт/с [${humanReadableByteCount(realSpeedBytesPerSec, floatingDigits = 3)}/с] -= ${percentOf(realSpeedBytesPerSec, speedBytesPerSec.toLong())}% =-")
+            }
+        )
+    }
+
+    @Test
+    fun simple_stream_to_stream_copy() {
+        val dataSizeMb = 10 * 1024 * 1024
+        repeat(5) { i ->
+            println("simple_stream_to_stream_copy: повторение-${i+1}")
+            prepareSourceAndTargetFiles(testData(dataSizeMb))
+            sourceFileStream.use { sourceFileStream ->
+                targetFileStream.use { targetFileStream ->
+                    sourceFileStream.copyTo(targetFileStream)
                 }
-            )
+            }
         }
     }
 
