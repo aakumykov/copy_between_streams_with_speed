@@ -346,7 +346,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     fun data_size_with_speed_test(){
 
         val dataSize = 12_000_000
-        val speedBytesPerSec = 12_000_000
+        val speedBytesPerSec = 1_000_000
         val logTag = "data_size_with_speed_test"
 
         val estimatedTimeMs = estimateTimeMs(dataSize,speedBytesPerSec)
@@ -481,7 +481,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 copyBetweenStreamsWithSpeed2(
                     inputStream = sS,
                     outputStream = tS,
-                    speedBytesPerSec = speedBytesPerSec,
+                    speed = speedBytesPerSec,
                     logLevel = logLevel,
                     logPrefix = logPrefix,
                     preKnownInputDataSizeBytes = dataSizeBytes,
@@ -515,7 +515,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                         copyBetweenStreamsWithSpeed2(
                             inputStream = sS,
                             outputStream = tS,
-                            speedBytesPerSec = speedKb * BYTES_IN_KILOBYTE,
+                            speed = speedKb * BYTES_IN_KILOBYTE,
                             logLevel = 1,
                             logPrefix = logPrefix,
                             preKnownInputDataSizeBytes = sizeMb * BYTES_IN_MEGABITE
@@ -541,7 +541,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     copyBetweenStreamsWithSpeed2(
                         inputStream = sS,
                         outputStream = tS,
-                        speedBytesPerSec = speed,
+                        speed = speed,
                         logLevel = logLevel,
                         preKnownInputDataSizeBytes = dataSize
                     )
@@ -569,7 +569,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                         copyBetweenStreamsWithSpeed2(
                             inputStream = sS,
                             outputStream = tS,
-                            speedBytesPerSec = speed,
+                            speed = speed,
                             logLevel = 2,
                             preKnownInputDataSizeBytes = dataSize
                         )

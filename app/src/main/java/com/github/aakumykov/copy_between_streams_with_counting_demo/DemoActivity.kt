@@ -8,7 +8,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivityDemoBinding
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed
+import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed2
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -65,14 +65,15 @@ class DemoActivity : AppCompatActivity() {
             sourceFile.inputStream().use { inputStream ->
                 this@DemoActivity.currentInputStream = inputStream
                 targetFile.outputStream().use { outputStream ->
-                    copyBetweenStreamsWithSpeed(
+                    copyBetweenStreamsWithSpeed2(
                         inputStream = inputStream,
                         outputStream = outputStream,
                         speed = speed,
+                        logLevel = 1,
                         progressCallback = { transferred, speed ->
                             val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
                             showProgress(percent)
-                        },
+                        }
                     )
                 }
             }

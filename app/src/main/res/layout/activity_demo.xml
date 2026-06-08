@@ -4,15 +4,15 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingTop="12dp"
     android:id="@+id/main">
 
     <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
         android:id="@+id/sizeSeekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:layout_weight="0"
-        app:max="1000000"
+        app:max="12000000"
         app:progress="1" />
 
     <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput

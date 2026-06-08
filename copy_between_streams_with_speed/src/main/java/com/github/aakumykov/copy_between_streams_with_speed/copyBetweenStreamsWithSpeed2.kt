@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.milliseconds
 fun copyBetweenStreamsWithSpeed2(
     inputStream: InputStream,
     outputStream: OutputStream,
-    speedBytesPerSec: Int = -1, // FIXME: обрабатывать ситуацию, когда скорость не ограничена.
+    speed: Int = -1, // FIXME: обрабатывать ситуацию, когда скорость не ограничена.
 
     progressCallback: ((transferredBytes:Long, speedBytesPerSec:Long) -> Unit)? = null,
     finishCallback: ((transferredBytes:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null,
@@ -32,12 +32,12 @@ fun copyBetweenStreamsWithSpeed2(
     fun printlnInfo(text: String) { if (logLevel >= 1) println("[$logPrefix] $text") }
 
     val timeForStep = 1000 / stepsPerSecond
-    val dataSizeForStep = (speedBytesPerSec / stepsPerSecond)//.let { if (it < DEFAULT_BUFFER_SIZE) }
+    val dataSizeForStep = (speed / stepsPerSecond)//.let { if (it < DEFAULT_BUFFER_SIZE) }
     val copyingPieceSize = dataSizeForStep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     printlnDebug("")
     printlnDebug("dataSize: ${humanReadableByteCount(preKnownInputDataSizeBytes)}")
-    printlnDebug("speed: ${humanReadableByteCount(speedBytesPerSec)}/s")
+    printlnDebug("speed: ${humanReadableByteCount(speed)}/s")
 
     printlnDebug("timeForStep: $timeForStep ms")
     printlnDebug("dataSizeForStep: ${humanReadableByteCount(dataSizeForStep)}")
@@ -91,7 +91,7 @@ fun copyBetweenStreamsWithSpeed2(
     printlnDebug("Всего байт скопировано: ${humanReadableByteCount(bytesCopiedTotal)}")
 
     if (null != preKnownInputDataSizeBytes) {
-        val requestedSpeedBytesPerNs: Float = speedBytesPerSec.toFloat() / nanosecondsInSecond
+        val requestedSpeedBytesPerNs: Float = speed.toFloat() / nanosecondsInSecond
 
         val estimatedTimeNs: Long = (preKnownInputDataSizeBytes/requestedSpeedBytesPerNs).roundToLong()
         // realCopyingTimeNs может быть ноль(!)
