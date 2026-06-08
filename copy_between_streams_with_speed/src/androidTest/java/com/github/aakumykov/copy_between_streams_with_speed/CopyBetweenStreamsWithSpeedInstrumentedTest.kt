@@ -220,7 +220,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed2(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                speed = 0
+                speedBytesPerSec = 0
             )
         }
     }
@@ -478,10 +478,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 copyBetweenStreamsWithSpeed2(
                     inputStream = sS,
                     outputStream = tS,
-                    speed = speedBytesPerSec,
-                    logLevel = logLevel,
-                    logPrefix = logPrefix,
-                    preKnownInputDataSizeBytes = dataSizeBytes,
+                    speedBytesPerSec = speedBytesPerSec,
                     progressCallback = progressCallback,
                     finishCallback = finishCallback,
                 )
@@ -512,10 +509,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                         copyBetweenStreamsWithSpeed2(
                             inputStream = sS,
                             outputStream = tS,
-                            speed = speedKb * BYTES_IN_KILOBYTE,
-                            logLevel = 1,
-                            logPrefix = logPrefix,
-                            preKnownInputDataSizeBytes = sizeMb * BYTES_IN_MEGABITE
+                            speedBytesPerSec = speedKb * BYTES_IN_KILOBYTE,
                         )
                     }
                 }
@@ -538,9 +532,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     copyBetweenStreamsWithSpeed2(
                         inputStream = sS,
                         outputStream = tS,
-                        speed = speed,
-                        logLevel = logLevel,
-                        preKnownInputDataSizeBytes = dataSize
+                        speedBytesPerSec = speed,
                     )
                 }
             }
@@ -566,9 +558,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                         copyBetweenStreamsWithSpeed2(
                             inputStream = sS,
                             outputStream = tS,
-                            speed = speed,
-                            logLevel = 2,
-                            preKnownInputDataSizeBytes = dataSize
+                            speedBytesPerSec = speed,
                         )
                     }
                 }
@@ -587,8 +577,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 copyBetweenStreamsWithSpeed2(
                     inputStream = sS,
                     outputStream = tS,
-                    logLevel = 1,
-                    preKnownInputDataSizeBytes = size
                 )
             }
         }

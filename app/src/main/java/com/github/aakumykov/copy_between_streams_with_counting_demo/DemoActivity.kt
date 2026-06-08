@@ -77,7 +77,7 @@ class DemoActivity : AppCompatActivity() {
                     copyBetweenStreamsWithSpeed2(
                         inputStream = inputStream,
                         outputStream = outputStream,
-                        speed = speed,
+                        speedBytesPerSec = speed,
                         logLevel = 2,
                         progressCallback = { transferred, speed ->
                             val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
