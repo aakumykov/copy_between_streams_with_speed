@@ -2,12 +2,10 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.estimateTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadable
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.millisecondsToDHMSN
-import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percentOf
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
@@ -19,7 +17,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -27,7 +24,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     /**
-    План теста:
+    План теста:no
     А) Обычная работа:
     - файл копируется, содержимое совпадает, с размером 0 до Н байт
       [source_file_is_copied_to_target_file];
@@ -582,16 +579,16 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun no_speed_limit() {
-        val dataSize = 1_000
-        prepareSourceAndTargetFiles(testData(dataSize))
+        val size = 1_000_000
+
+        prepareSourceAndTargetFiles(testData(size))
         sourceFileStream.use { sS ->
             targetFileStream.use { tS ->
                 copyBetweenStreamsWithSpeed2(
                     inputStream = sS,
                     outputStream = tS,
-                    speed = 5_000,
-                    logLevel = 2,
-                    preKnownInputDataSizeBytes = dataSize
+                    logLevel = 1,
+                    preKnownInputDataSizeBytes = size
                 )
             }
         }
