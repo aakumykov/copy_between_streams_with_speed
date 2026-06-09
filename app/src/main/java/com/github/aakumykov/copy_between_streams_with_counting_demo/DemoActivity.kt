@@ -78,8 +78,7 @@ class DemoActivity : AppCompatActivity() {
                         inputStream = inputStream,
                         outputStream = outputStream,
                         speedBytesPerSec = speed,
-                        logLevel = 2,
-                        progressCallback = { transferred, speed ->
+                        progressCallback = { transferred, _ ->
                             val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
                             showProgress(percent)
                         },
