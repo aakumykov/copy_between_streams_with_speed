@@ -14,7 +14,7 @@ fun copyBetweenStreamsWithSpeed2(
 ) {
     val isSpeedLimited: Boolean = -1 != speedBytesPerSec
 
-    val timeForStep = 1000 / dataTransferStepsPerSecond
+    val timeForStepMs = 1000 / dataTransferStepsPerSecond
     val dataSizeForStep = if (isSpeedLimited) (speedBytesPerSec / dataTransferStepsPerSecond) else DEFAULT_BUFFER_SIZE
     val copyingPieceSize = dataSizeForStep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
@@ -39,14 +39,15 @@ fun copyBetweenStreamsWithSpeed2(
 
             val bytesOverrunPercentage: Float = (bytesCopiedForStep.toFloat() / dataSizeForStep)
 
-            val stepTime = System.currentTimeMillis()
-            val stepDuration = stepTime - stepStartTime
-            val sleepingLackTime = (bytesOverrunPercentage * timeForStep - stepDuration).roundToLong()
+            val stepFinishTime = System.currentTimeMillis()
+            val stepDurationMs = stepFinishTime - stepStartTime
+            val sleepingLackTimeFloat: Float = (bytesOverrunPercentage * timeForStepMs - stepDurationMs)
+            val sleepingLackTime: Long = sleepingLackTimeFloat.roundToLong()
             if (sleepingLackTime > 0) {
                 Thread.sleep(sleepingLackTime)
             }
 
-            val stepSpeedBytesPerSec:Long = (bytesCopiedForStep.toFloat() / stepTime).roundToLong()
+            val stepSpeedBytesPerSec:Long = (bytesCopiedForStep.toFloat() / stepDurationMs).roundToLong()
             progressCallback?.invoke(bytesCopiedTotal, stepSpeedBytesPerSec)
 
             bytesCopiedForStep = 0
