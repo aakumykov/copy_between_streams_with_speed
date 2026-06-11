@@ -14,46 +14,47 @@ fun copyBetweenStreamsWithSpeed2(
 ) {
     val isSpeedLimited: Boolean = -1 != speedBytesPerSec
 
-    val timeForStep = 1000 / dataTransferStepsPerSecond
-    val dataSizeForStep = if (isSpeedLimited) (speedBytesPerSec / dataTransferStepsPerSecond) else DEFAULT_BUFFER_SIZE
-    val copyingPieceSize = dataSizeForStep.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
+    val timeForStepMs = 1000 / dataTransferStepsPerSecond
+    val dataSizeForStepBytes = if (isSpeedLimited) (speedBytesPerSec / dataTransferStepsPerSecond) else DEFAULT_BUFFER_SIZE
+    val copyingPieceSizeBytes = dataSizeForStepBytes.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     var bytesCopiedTotal: Long = 0
     var bytesCopiedForStep: Long = 0
     var readBytes: Int
-    val buffer = ByteArray(copyingPieceSize)
+    val buffer = ByteArray(copyingPieceSizeBytes)
 
-    val fullCopyingStartTime = System.currentTimeMillis()
+    val fullCopyingStartTimeMs = System.currentTimeMillis()
 
     while (true) {
         val stepStartTime = System.currentTimeMillis()
 
-        readBytes = inputStream.read(buffer, 0, copyingPieceSize)
+        readBytes = inputStream.read(buffer, 0, copyingPieceSizeBytes)
         if (-1 == readBytes) break
         outputStream.write(readBytes)
 
         bytesCopiedForStep += readBytes
         bytesCopiedTotal += readBytes
 
-        if (isSpeedLimited && bytesCopiedForStep >= dataSizeForStep) {
+        if (isSpeedLimited && bytesCopiedForStep >= dataSizeForStepBytes) {
 
-            val bytesOverrunPercentage: Float = (bytesCopiedForStep.toFloat() / dataSizeForStep)
+            val bytesOverrunPercentage: Float = (bytesCopiedForStep.toFloat() / dataSizeForStepBytes)
 
-            val stepTime = System.currentTimeMillis()
-            val stepDuration = stepTime - stepStartTime
-            val sleepingLackTime = (bytesOverrunPercentage * timeForStep - stepDuration).roundToLong()
-            if (sleepingLackTime > 0) {
-                Thread.sleep(sleepingLackTime)
+            val stepTimeMs = System.currentTimeMillis()
+            val stepDurationMs = stepTimeMs - stepStartTime
+            val sleepingLackTimeMs = (bytesOverrunPercentage * timeForStepMs - stepDurationMs).roundToLong()
+            if (sleepingLackTimeMs > 0) {
+                Thread.sleep(sleepingLackTimeMs)
             }
 
-            val stepSpeedBytesPerSec:Long = (bytesCopiedForStep.toFloat() / stepTime).roundToLong()
+            // FIXME: вместо stepTimeMs должно быть stepDurationMs
+            val stepSpeedBytesPerSec:Long = (bytesCopiedForStep.toFloat() / stepTimeMs).roundToLong()
             progressCallback?.invoke(bytesCopiedTotal, stepSpeedBytesPerSec)
 
             bytesCopiedForStep = 0
         }
     }
 
-    val realCopyingDurationMs: Long = System.currentTimeMillis() - fullCopyingStartTime
+    val realCopyingDurationMs: Long = System.currentTimeMillis() - fullCopyingStartTimeMs
 
     val realSpeedBytesPerSec: Long = (
             bytesCopiedTotal / (realCopyingDurationMs.toFloat()/1000)
