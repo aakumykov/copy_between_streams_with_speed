@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.1"
+agp = "8.13.0"
 cloud_authenticator = "0.0.11-alpha"
 constraintlayoutCore = "1.1.1"
 coreKtx = "1.12.0"
