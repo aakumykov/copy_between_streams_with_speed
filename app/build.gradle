@@ -42,7 +42,6 @@ dependencies {
     implementation libs.androidx.appcompat
     implementation libs.androidx.core.ktx
     implementation libs.androidx.preference.ktx
-    implementation libs.core.ktx
 
     testImplementation libs.junit
     androidTestImplementation libs.androidx.espresso.core
@@ -52,10 +51,10 @@ dependencies {
     implementation libs.local.file.lister.navigator.selector
     implementation libs.storage.access.helper
     implementation libs.cloud.authenticator
+    implementation libs.seek.bar.with.text.input
 
     implementation libs.okhttp
     implementation libs.okio
 
-    implementation project(':seek_bar_with_text_input')
     implementation project(':copy_between_streams_with_speed')
 }

@@ -9,10 +9,8 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/abcdef" />
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/copy_between_streams_with_speed" />
-            <option value="$PROJECT_DIR$/seek_bar_with_text_input" />
           </set>
         </option>
       </GradleProjectSettings>

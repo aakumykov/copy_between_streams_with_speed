@@ -32,6 +32,7 @@ class DemoActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        "".apply {  }
         prepareButtons()
         restoreValues()
     }
