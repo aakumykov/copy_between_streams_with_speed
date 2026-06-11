@@ -27,3 +27,4 @@ rootProject.name = "copy_between_streams_with_speed"
 include ':copy_between_streams_with_speed'
 include ':seek_bar_with_text_input'
 include ':app'
+include ':abcdef'
