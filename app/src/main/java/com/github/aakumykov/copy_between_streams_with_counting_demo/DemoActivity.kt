@@ -10,7 +10,7 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getIntFromPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed2
+import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,7 +75,7 @@ class DemoActivity : AppCompatActivity() {
             sourceFile.inputStream().use { inputStream ->
                 this@DemoActivity.currentInputStream = inputStream
                 targetFile.outputStream().use { outputStream ->
-                    copyBetweenStreamsWithSpeed2(
+                    copyBetweenStreamsWithSpeed(
                         inputStream = inputStream,
                         outputStream = outputStream,
                         speedBytesPerSec = speed,
