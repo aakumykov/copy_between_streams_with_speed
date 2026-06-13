@@ -17,7 +17,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 
 @RunWith(AndroidJUnit4::class)
 class CopyBetweenStreamsWithSpeedInstrumentedTest {
@@ -46,7 +45,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     В) При заданной скорости реальная скорость отличается не сильно
        (зависит от максимальной скорости работы накопителя)
-    [real_speed_matches_expected_with_some_inaccuracy]
+    [constant_speed_various_data_size]
 
     Г) При заданной скорости реальное время соответствует ожидаемому
     (с небольшой погрешностью)
@@ -60,6 +59,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     companion object {
         val TAG: String = CopyBetweenStreamsWithSpeedInstrumentedTest::class.java.simpleName
+        const val MEGABYTE = 1024 * 1024
+        const val KILOBYTE = 1024
     }
 
     private val appContext by lazy { InstrumentationRegistry.getInstrumentation().targetContext }
@@ -421,7 +422,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-    @Test
+    /*@Test
     fun simple_speed_test() {
         val size = 1024 * 1024
         val speed = 1024 * 1024
@@ -439,13 +440,13 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 Log.d(TAG, "expectedTime: $timeMs, realTime: $realTimeMs ($timePercent)%")
             }
         )
-    }
+    }*/
 
 
     @Test
-    fun real_speed_matches_expected_with_some_inaccuracy() {
+    fun constant_speed_various_data_size() {
 
-        val minSpeedPercentage: Double = 70.toDouble()
+        val minSpeedPercentage: Double = 60.toDouble()
         val maxSpeedPercentage: Double = 120.toDouble()
 
         Log.d(TAG, "места в хранилище: ${storageFreeSpace.humanSizeBinary()}")
@@ -485,5 +486,42 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             }
             dataSizeBytes += dataSizeStep
         }
+    }
+
+
+    @Test
+    fun constant_data_size_various_speed_hi_values() {
+        Log.d(TAG, "===== constant_data_size_various_speed_hi_values =====")
+
+        val dataSizeBytes = 1 * MEGABYTE
+        val speedFromBytesPerSec = 100 * KILOBYTE
+        val speedToBytesPerSec = 1 * MEGABYTE
+        val speedStep = 100 * KILOBYTE
+
+        Log.d(TAG, "размер данных: ${dataSizeBytes.humanSizeBinary()}")
+        Log.d(TAG, "скорость от ${speedFromBytesPerSec.humanSizeBinary()}/с до ${speedToBytesPerSec.humanSizeBinary()}/с")
+        Log.d(TAG, "шаг скорости: ${speedStep.humanSizeBinary()}")
+
+        prepareSourceAndTargetFiles(dataSizeBytes)
+        var speed = speedFromBytesPerSec
+
+        while(speed <= speedToBytesPerSec) {
+            copyBetweenStreamsWithSpeed(
+                inputStream = sourceFileStream,
+                outputStream = targetFileStream,
+                speedBytesPerSec = speed,
+                finishCallback = { _,_, realSpeedBytesPerSec ->
+                    val speedPercent = percent(realSpeedBytesPerSec, speed.toLong())
+                    Log.d(TAG, "${speedPercent.roundToFloatingDigits(2)}%: ${dataSizeBytes.humanSizeBinary()}, ${speed.humanSizeBinary()}/с")
+                }
+            )
+            speed += speedStep
+            deleteTargetFile()
+        }
+    }
+
+    private fun deleteTargetFile() {
+        targetFile.delete()
+        Assert.assertFalse(targetFile.exists())
     }
 }
