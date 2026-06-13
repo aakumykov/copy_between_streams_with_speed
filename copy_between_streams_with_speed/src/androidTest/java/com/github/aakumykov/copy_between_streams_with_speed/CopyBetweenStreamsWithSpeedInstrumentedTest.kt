@@ -1,7 +1,9 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
 import org.junit.Assert
@@ -11,12 +13,13 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.roundToLong
 
 @RunWith(AndroidJUnit4::class)
 class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     /**
-    План теста:no
+    План теста:
     А) Обычная работа:
     - файл копируется, содержимое совпадает, с размером 0 до Н байт
       [source_file_is_copied_to_target_file];
@@ -37,47 +40,52 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
      - нулевая скорость
        [exception_thrown_on_zero_speed_argument];
 
-     - значение дискретизации выше значения скорости
-       [exception_thrown_if_discretization_greater_than_speed];
+    В) При заданной скоростиреальная скорость отдичается не сильно
+       (зависит от максимальной скорости работы накопителя)
+    [real_speed_matches_expected_speed_on_low_data_size]
 
-    В) При заданной скорости реальное время соответствует ожидаемому
+    Г) При заданной скорости реальное время соответствует ожидаемому
     (с небольшой погрешностью)
     [work_time_matches_estimated_time_on_low_data_size]
     [work_time_matches_estimated_time_on_big_data_size]
 
-    Г) Разные значения других аргументов:
+    Д) Разные значения других аргументов:
      - скорости [works_with_different_speed_values];
      - частота дискретизации
     */
 
     companion object {
+        val TAG: String = CopyBetweenStreamsWithSpeedInstrumentedTest::class.java.simpleName
         const val DEFAULT_DATA_SIZE = 1024
     }
 
     private val appContext by lazy { InstrumentationRegistry.getInstrumentation().targetContext }
     private val testsDir: File = appContext.cacheDir
 
-    private val sourceDir: File get() = testsDir
-    private val targetDir: File get() = testsDir
+    private val sourceDir: File = testsDir
+    private val targetDir: File = testsDir
 
     private val sourceFileName = "the_source.file"
     private val targetFileName = "the_target.file"
 
-    private val sourceFile get() = File(sourceDir, sourceFileName)
-    private val targetFile get() = File(targetDir, targetFileName)
+    private val sourceFile = File(sourceDir, sourceFileName)
+    private val targetFile = File(targetDir, targetFileName)
 
-    private val sourceFileContents: String get() = sourceFile.readBytes().joinToString("")
-    private val targetFileContents: String get() = targetFile.readBytes().joinToString("")
+    private val sourceFileContents: String get() = fileContents(sourceFile)
+    private val targetFileContents: String get() = fileContents(targetFile)
 
     private val sourceFileStream: InputStream get() = sourceFile.inputStream()
     private val targetFileStream: OutputStream get() = targetFile.outputStream()
 
 
+    private fun fileContents(file: File): String = file.readBytes().asString
+
+    val ByteArray.asString: String get() = this.joinToString("")
+
     private fun testData(size: Int = DEFAULT_DATA_SIZE): ByteArray {
         return random.nextBytes(size).apply {
             Assert.assertEquals(size, this.size)
         }
-
     }
 
     private fun prepareSourceAndTargetFiles(testData: ByteArray) {
@@ -94,34 +102,61 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
         sourceFile.createNewFile()
         Assert.assertTrue(sourceFile.exists())
+        Assert.assertEquals(0L, sourceFile.length())
 
         targetFile.createNewFile()
         Assert.assertTrue(targetFile.exists())
+        Assert.assertEquals(0L, targetFile.length())
 
         sourceFile.writeBytes(testData)
         Assert.assertEquals(testData.size.toLong(), sourceFile.length())
-
-        Assert.assertEquals(0L, targetFile.length())
+        Assert.assertEquals(testData.asString, sourceFileContents)
     }
 
+
+    @Test
+    fun test_of_this_test_system() {
+        val size = 10
+        val testData = testData(size)
+        prepareSourceAndTargetFiles(testData)
+
+        sourceFileStream.copyTo(targetFileStream)
+
+        Assert.assertEquals(
+            size.toLong(),
+            targetFile.length()
+        )
+        Assert.assertEquals(
+            testData.asString,
+            targetFileContents
+        )
+        Assert.assertEquals(
+            sourceFileContents,
+            targetFileContents
+        )
+    }
 
 
     @Test
     fun source_file_is_copied_to_target_file() {
         repeat(100) { fileSizeWithZero ->
-            println("размер фйла: $fileSizeWithZero")
-            prepareSourceAndTargetFiles(testData(fileSizeWithZero))
+            println("размер данных: $fileSizeWithZero")
+            val testData = testData(fileSizeWithZero)
+            prepareSourceAndTargetFiles(testData)
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
-                outputStream = targetFileStream
+                outputStream = targetFileStream,
+                speedBytesPerSec = 100
             )
+            // Проверяю, что после работы функции copyBetweenStreamsWithSpeed
+            // исходный и конечный файлы содержат верные данные.
             Assert.assertEquals(
-                sourceFile.length(),
-                targetFile.length()
-            )
-            Assert.assertEquals(
-                sourceFileContents,
+                testData.asString,
                 targetFileContents
+            )
+            Assert.assertEquals(
+                testData.asString,
+                sourceFileContents
             )
         }
     }
@@ -208,7 +243,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-   /* @Test
+    @Test
     fun exception_thrown_on_zero_speed_argument() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
             prepareSourceAndTargetFiles(testData(0))
@@ -216,20 +251,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = 0
-            )
-        }
-    }*/
-
-
-    @Test
-    fun exception_thrown_if_discretization_greater_than_speed() {
-        Assert.assertThrows(IllegalArgumentException::class.java) {
-            prepareSourceAndTargetFiles(testData(0))
-            copyBetweenStreamsWithSpeed(
-                inputStream = sourceFileStream,
-                outputStream = targetFileStream,
-                speedBytesPerSec = 10,
-                dataTransferStepsPerSecond = 20
             )
         }
     }
@@ -374,5 +395,56 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
             Assert.assertEquals(sourceFileContents, targetFileContents)
         }
+    }
+
+
+    @Test
+    fun simple_speed_test() {
+        val size = 1024
+        val speed = size / 2
+        val timeMs = (size.toFloat() / speed).roundToLong() * 1000
+        prepareSourceAndTargetFiles(testData(size))
+        copyBetweenStreamsWithSpeed(
+            sourceFileStream,
+            targetFileStream,
+            speedBytesPerSec = speed,
+            finishCallback = { _,realTimeMs,realSpeed ->
+                val speedPercent = percent(realSpeed, speed.toLong())
+                val timePercent = percent(realTimeMs, timeMs)
+                Log.d(TAG, "size: $size")
+                Log.d(TAG, "speed: $speed, realSpeed: $realSpeed ($speedPercent)%")
+                Log.d(TAG, "expectedTime: $timeMs, realTime: $realTimeMs ($timePercent)%")
+            }
+        )
+    }
+
+
+    @Test
+    fun real_speed_matches_expected_speed_on_low_data_size() {
+        listOf(
+//            1, 10, 100, 1000, 10_000, 100_000, 1000_000
+            100_000
+        ).forEach { sizeMultiplier ->
+            println("----- множитель размера: $sizeMultiplier -----")
+            repeat(2) { i ->
+                val dataSize = (i+1) * sizeMultiplier
+                val expectedSpeed = sizeMultiplier * 10
+                testRealSpeed(dataSize, expectedSpeed)
+            }
+        }
+    }
+
+    private fun testRealSpeed(dataSize: Int, expectedSpeed: Int) {
+        prepareSourceAndTargetFiles(testData(dataSize))
+        copyBetweenStreamsWithSpeed(
+            sourceFileStream,
+            targetFileStream,
+            speedBytesPerSec = expectedSpeed,
+            finishCallback = { _,_,realSpeedBytesPerSec ->
+                val speedPercentage = percent(realSpeedBytesPerSec, expectedSpeed.toLong())
+                println("данные: $dataSize, скорость: $expectedSpeed, реальная скорость: $realSpeedBytesPerSec ($speedPercentage)%")
+                Assert.assertTrue(speedPercentage >= 80.toDouble() && speedPercentage <= 110)
+            }
+        )
     }
 }

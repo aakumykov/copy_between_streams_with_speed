@@ -25,29 +25,31 @@ fun copyBetweenStreamsWithSpeed(
 ) {
     val isSpeedLimited: Boolean = speedBytesPerSec > 0
 
-    if (isSpeedLimited && dataTransferStepsPerSecond > speedBytesPerSec)
-        throw IllegalArgumentException("dataTransferStepsPerSecond ($dataTransferStepsPerSecond) cannot be grater than speedBytesPerSec ($speedBytesPerSec)")
+    val stepsPerSecond = if (dataTransferStepsPerSecond > speedBytesPerSec) speedBytesPerSec else dataTransferStepsPerSecond
 
-    val timeForStepMs = 1000 / dataTransferStepsPerSecond
-    val dataSizeForStepBytes = if (isSpeedLimited) (speedBytesPerSec / dataTransferStepsPerSecond) else DEFAULT_BUFFER_SIZE
+    if (0 == speedBytesPerSec)
+        throw IllegalArgumentException("Speed cannot be zero")
+
+    val timeForStepMs = 1000 / stepsPerSecond
+    val dataSizeForStepBytes = if (isSpeedLimited) (speedBytesPerSec / stepsPerSecond) else DEFAULT_BUFFER_SIZE
     val copyingPieceSizeBytes = dataSizeForStepBytes.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     var bytesCopiedTotal: Long = 0
     var bytesCopiedForStep: Long = 0
-    var readBytes: Int
-    val buffer = ByteArray(copyingPieceSizeBytes)
+    var readBytesCount: Int
+    val dataBuffer = ByteArray(copyingPieceSizeBytes)
 
     val fullCopyingStartTimeMs = System.currentTimeMillis()
 
     while (true) {
         val stepStartTimeMs = System.currentTimeMillis()
 
-        readBytes = inputStream.read(buffer, 0, copyingPieceSizeBytes)
-        if (-1 == readBytes) break
-        outputStream.write(readBytes)
+        readBytesCount = inputStream.read(dataBuffer, 0, copyingPieceSizeBytes)
+        if (-1 == readBytesCount) break
+        outputStream.write(dataBuffer)
 
-        bytesCopiedForStep += readBytes
-        bytesCopiedTotal += readBytes
+        bytesCopiedForStep += readBytesCount
+        bytesCopiedTotal += readBytesCount
 
         if (bytesCopiedForStep >= dataSizeForStepBytes) {
 
@@ -61,7 +63,7 @@ fun copyBetweenStreamsWithSpeed(
             }
 
             // FIXME: вместо stepTimeMs должно быть stepDurationMs
-            val stepSpeedBytesPerSec:Long = (bytesCopiedForStep.toFloat() / stepFinishTimeMs).roundToLong()
+            val stepSpeedBytesPerSec:Long = (bytesCopiedForStep.toFloat() / stepDurationMs).roundToLong()
             progressCallback?.invoke(bytesCopiedTotal, stepSpeedBytesPerSec)
 
             bytesCopiedForStep = 0
