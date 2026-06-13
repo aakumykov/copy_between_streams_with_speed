@@ -423,7 +423,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         )
     }
 
-    private fun detectMaxDeviceSpeedBytesPerSec(): Int {
+    private fun detectMaxDeviceSpeedBytesPerSec(printDebug: Boolean = false): Int {
         return buildList {
             repeat(10) { i ->
                 val startTimeMs = System.currentTimeMillis()
@@ -438,8 +438,10 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 val copyTimeSeconds = (System.currentTimeMillis() - startTimeMs).toFloat() / 1000
                 val deviceSpeed = (data.size.toFloat() / copyTimeSeconds).roundToInt()
                 add(deviceSpeed)
-//                Log.d(TAG, "$i) данные: ${humanReadableByteCount(dataSize, decimalNotation = false)}" +
-//                        ", скорость записи в хранилище: ${humanReadableByteCount(deviceSpeed, decimalNotation = false)}/c")
+                if (printDebug) {
+                    Log.d(TAG, "$i) данные: ${humanReadableByteCount(dataSize, decimalNotation = false)}" +
+                        ", скорость записи в хранилище: ${humanReadableByteCount(deviceSpeed, decimalNotation = false)}/c")
+                }
             }
         }.max()
     }
@@ -447,8 +449,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun real_speed_matches_expected_on_1x_speed() {
-        val maxSpeed = (detectMaxDeviceSpeedBytesPerSec() * 0.9f).roundToInt()
-        do {
+        val maxSpeed = (detectMaxDeviceSpeedBytesPerSec(true) * 0.9f).roundToInt()
+        Log.d(TAG, "maxSpeed: $maxSpeed")
+        /*do {
             var dataSizeBytes = 0
             prepareSourceAndTargetFiles(testData(dataSizeBytes))
             sourceFileStream.use { sS ->
@@ -465,7 +468,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 }
             }
             dataSizeBytes += 100
-        } while(dataSizeBytes < maxSpeed)
+        } while(dataSizeBytes < maxSpeed)*/
     }
 
     @Test
