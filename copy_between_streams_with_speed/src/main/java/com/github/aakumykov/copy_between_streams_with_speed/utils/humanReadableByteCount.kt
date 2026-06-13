@@ -1,6 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed.utils
 
 
+import kotlinx.coroutines.flow.flow
 import java.util.Locale
 import kotlin.math.ln
 import kotlin.math.pow
@@ -34,4 +35,34 @@ fun humanReadableByteCount(
 ): String {
     return if (null == bytes) "NO_DATA_SIZE"
     else humanReadableByteCount(bytes.toLong(), floatingDigits, locale, sizeNames, decimalNotation)
+}
+
+fun Int.humanSizeBinary(
+    floatingDigits: Int = 2,
+    locale: Locale = Locale.getDefault(),
+    sizeNames: String = "BKMGTPE",
+    decimalNotation: Boolean = false
+): String {
+    return humanReadableByteCount(
+        bytes = this,
+        floatingDigits = 2,
+        locale = Locale.getDefault(),
+        sizeNames = "BKMGTPE",
+        decimalNotation = false
+    )
+}
+
+fun Long.humanSizeBinary(
+    floatingDigits: Int = 2,
+    locale: Locale = Locale.getDefault(),
+    sizeNames: String = "BKMGTPE",
+    decimalNotation: Boolean = false
+): String {
+    return humanReadableByteCount(
+        bytes = this,
+        floatingDigits = 2,
+        locale = Locale.getDefault(),
+        sizeNames = "BKMGTPE",
+        decimalNotation = false
+    )
 }

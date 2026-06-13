@@ -4,8 +4,9 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadable
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
@@ -16,7 +17,6 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -82,6 +82,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     private val sourceFileStream: InputStream get() = sourceFile.inputStream()
     private val targetFileStream: OutputStream get() = targetFile.outputStream()
 
+    private val storageFreeSpace: Long = appContext.cacheDir.usableSpace
 
     private fun fileContents(file: File): String = file.readBytes().asString
 
@@ -448,27 +449,45 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
-    fun real_speed_matches_expected_on_1x_speed() {
-        val maxSpeed = (detectMaxDeviceSpeedBytesPerSec(true) * 0.9f).roundToInt()
-        Log.d(TAG, "maxSpeed: $maxSpeed")
-        /*do {
-            var dataSizeBytes = 0
+    fun real_speed_matches_expected_with_some_inaccuracy() {
+
+        Log.d(TAG, "места в хранилище: ${storageFreeSpace.humanSizeBinary()}")
+
+        val expectedSpeedBytesPerSec = (detectMaxDeviceSpeedBytesPerSec(false) * 0.9f).roundToInt()
+        Log.d(TAG, "используемая скорость: ${expectedSpeedBytesPerSec.humanSizeBinary()}/с")
+
+        val maxDataSize = (expectedSpeedBytesPerSec * 10).toLong().coerceAtMost(storageFreeSpace)
+        Log.d(TAG, "максимальный размер данных: ${maxDataSize.humanSizeBinary()}")
+
+        val dataSizeStep = (expectedSpeedBytesPerSec.toFloat() / 10).roundToInt()
+        Log.d(TAG, "шаг данных: ${dataSizeStep.humanSizeBinary()}")
+
+        Assert.assertTrue(storageFreeSpace > dataSizeStep.toLong())
+
+        var dataSizeBytes = 0
+
+        while(dataSizeBytes < maxDataSize) {
             prepareSourceAndTargetFiles(testData(dataSizeBytes))
             sourceFileStream.use { sS ->
                 targetFileStream.use { tS ->
                     copyBetweenStreamsWithSpeed(
                         inputStream = sS,
                         outputStream = tS,
-                        speedBytesPerSec = maxSpeed,
-                        finishCallback = { _,_,speed ->
-                            Log.d(TAG, "Размер данных: ${humanReadableByteCount(dataSizeBytes, decimalNotation = false)}" +
-                                    ", скорость: ${humanReadableByteCount(speed, decimalNotation = false)}")
+                        speedBytesPerSec = expectedSpeedBytesPerSec,
+                        finishCallback = { _,_,realSpeedBytesPerSec ->
+                            val speedPercentage = percent(realSpeedBytesPerSec, expectedSpeedBytesPerSec.toLong())
+                            val isAnomaly = 0L != realSpeedBytesPerSec && speedPercentage !in 80.0..120.0
+                            val anomalyMark = if (isAnomaly) "АНОМАЛИЯ " else ""
+                            Log.d(TAG, "${anomalyMark}(${speedPercentage.roundToFloatingDigits(2)}%) данные: ${humanReadableByteCount(dataSizeBytes, decimalNotation = false)}" +
+                                    ", заданная скорость: ${humanReadableByteCount(expectedSpeedBytesPerSec, decimalNotation = false)}/с" +
+                                    ", реальная скорость: ${humanReadableByteCount(realSpeedBytesPerSec, decimalNotation = false)}")
+                            Assert.assertFalse(isAnomaly)
                         }
                     )
                 }
             }
-            dataSizeBytes += 100
-        } while(dataSizeBytes < maxSpeed)*/
+            dataSizeBytes += dataSizeStep
+        }
     }
 
     @Test
@@ -495,7 +514,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 val speedPercentage = percent(realSpeedBytesPerSec, expectedSpeed.toLong())
                 val isAnomaly = speedPercentage <= 80.toDouble() || speedPercentage >= 110
                 val anomalySuffix = if (isAnomaly) " АНОМАЛИЯ" else ""
-                Log.d(TAG, "данные: ${dataSize.humanReadable}, скорость: ${expectedSpeed.humanReadable}, реальная скорость: ${realSpeedBytesPerSec.humanReadable} (${speedPercentage.roundToFloatingDigits(2)})%$anomalySuffix")
+                Log.d(TAG, "данные: ${dataSize.humanDecimalPlaces}, скорость: ${expectedSpeed.humanDecimalPlaces}, реальная скорость: ${realSpeedBytesPerSec.humanDecimalPlaces} (${speedPercentage.roundToFloatingDigits(2)})%$anomalySuffix")
 //                Assert.assertFalse(isAnomaly)
             }
         )
