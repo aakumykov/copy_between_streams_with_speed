@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
@@ -45,9 +44,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
      - нулевая скорость
        [exception_thrown_on_zero_speed_argument];
 
-    В) При заданной скоростиреальная скорость отдичается не сильно
+    В) При заданной скорости реальная скорость отличается не сильно
        (зависит от максимальной скорости работы накопителя)
-    [real_speed_matches_expected_speed_on_low_data_size]
+    [real_speed_matches_expected_with_some_inaccuracy]
 
     Г) При заданной скорости реальное время соответствует ожидаемому
     (с небольшой погрешностью)
@@ -61,7 +60,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     companion object {
         val TAG: String = CopyBetweenStreamsWithSpeedInstrumentedTest::class.java.simpleName
-        const val DEFAULT_DATA_SIZE = 1024
     }
 
     private val appContext by lazy { InstrumentationRegistry.getInstrumentation().targetContext }
@@ -88,13 +86,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     val ByteArray.asString: String get() = this.joinToString("")
 
-    private fun testData(size: Int = DEFAULT_DATA_SIZE): ByteArray {
-        return random.nextBytes(size).apply {
-            Assert.assertEquals(size, this.size)
-        }
-    }
 
-    private fun prepareSourceAndTargetFiles(testData: ByteArray) {
+    private fun prepareSourceAndTargetFiles(dataSizeBytes: Int) {
 
         //
         // -------- Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
@@ -114,27 +107,81 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         Assert.assertTrue(targetFile.exists())
         Assert.assertEquals(0L, targetFile.length())
 
-        sourceFile.writeBytes(testData)
-        Assert.assertEquals(testData.size.toLong(), sourceFile.length())
-        Assert.assertEquals(testData.asString, sourceFileContents)
+        writeTestDataToFile(sourceFile, dataSizeBytes)
+        Assert.assertEquals(dataSizeBytes.toLong(), sourceFile.length())
+    }
+
+    private fun writeTestDataToFile(file: File, dataSizeBytes: Int) {
+        val pieceSize = DEFAULT_BUFFER_SIZE
+        val mainSteps = dataSizeBytes / pieceSize
+        val additionalBytesCount = dataSizeBytes - (mainSteps * pieceSize)
+        file.outputStream().use { outputStream ->
+            repeat(mainSteps) {
+                outputStream.write(random.nextBytes(pieceSize))
+            }
+            outputStream.write(random.nextBytes(additionalBytesCount))
+        }
+    }
+
+    private val deviceStorageSpeedBytesPerSec: Int by lazy {
+        buildList {
+            repeat(10) { i ->
+                val startTimeMs = System.currentTimeMillis()
+                val dataSize = i * 1_000_000
+                prepareSourceAndTargetFiles(dataSize)
+                sourceFileStream.use { sS ->
+                    targetFileStream.use { tS ->
+                        sS.copyTo(tS)
+                    }
+                }
+                val copyTimeSeconds = (System.currentTimeMillis() - startTimeMs).toFloat() / 1000
+                val deviceSpeed = (dataSize.toFloat() / copyTimeSeconds).roundToInt()
+                add(deviceSpeed)
+            }
+        }.max()
+    }
+
+
+    /**
+     * @return Затраченное на копирование время, мс.
+     */
+    private fun doCopy(
+        dataSizeBytes: Int,
+        speedBytesPerSec: Int,
+        dataTransferStepsPerSecond: Int = 10,
+    ): Long {
+
+        println("doCopy(dataSizeBytes:$dataSizeBytes, speedBytesPerSec:$speedBytesPerSec, dataTransferStepsPerSecond:$dataTransferStepsPerSecond)")
+
+        prepareSourceAndTargetFiles(dataSizeBytes)
+
+        val startTime = System.currentTimeMillis()
+
+        sourceFileStream.use { inputStream ->
+            targetFileStream.use { outputStream ->
+                copyBetweenStreamsWithSpeed(
+                    inputStream = inputStream,
+                    outputStream = outputStream,
+                    speedBytesPerSec = speedBytesPerSec,
+                    dataTransferStepsPerSecond = dataTransferStepsPerSecond,
+                )
+            }
+        }
+
+        return System.currentTimeMillis() - startTime
     }
 
 
     @Test
     fun test_of_this_test_system() {
         val size = 10
-        val testData = testData(size)
-        prepareSourceAndTargetFiles(testData)
+        prepareSourceAndTargetFiles(size)
 
         sourceFileStream.copyTo(targetFileStream)
 
         Assert.assertEquals(
             size.toLong(),
             targetFile.length()
-        )
-        Assert.assertEquals(
-            testData.asString,
-            targetFileContents
         )
         Assert.assertEquals(
             sourceFileContents,
@@ -147,22 +194,23 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     fun source_file_is_copied_to_target_file() {
         repeat(100) { fileSizeWithZero ->
             println("размер данных: $fileSizeWithZero")
-            val testData = testData(fileSizeWithZero)
-            prepareSourceAndTargetFiles(testData)
+            prepareSourceAndTargetFiles(fileSizeWithZero)
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = 100
             )
-            // Проверяю, что после работы функции copyBetweenStreamsWithSpeed
-            // исходный и конечный файлы содержат верные данные.
             Assert.assertEquals(
-                testData.asString,
-                targetFileContents
+                fileSizeWithZero,
+                sourceFile.length()
             )
             Assert.assertEquals(
-                testData.asString,
-                sourceFileContents
+                fileSizeWithZero,
+                targetFile.length()
+            )
+            Assert.assertEquals(
+                sourceFileContents,
+                targetFileContents
             )
         }
     }
@@ -172,7 +220,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     fun finish_callback_is_invoked() {
         repeat(100) { fileSizeWithZero ->
             val isInvoked = AtomicBoolean(false)
-            prepareSourceAndTargetFiles(testData(fileSizeWithZero))
+            prepareSourceAndTargetFiles(fileSizeWithZero)
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
@@ -190,7 +238,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         repeat(10) { i ->
             val nonZeroFileSize = DEFAULT_BUFFER_SIZE * (i+1)
             val isInvoked = AtomicBoolean(false)
-            prepareSourceAndTargetFiles(testData(nonZeroFileSize))
+            prepareSourceAndTargetFiles(nonZeroFileSize)
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
@@ -207,7 +255,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     @Test
     fun progress_callback_not_invoked_on_zero_file_size() {
         val isInvoked = AtomicBoolean(false)
-        prepareSourceAndTargetFiles(testData(0))
+        prepareSourceAndTargetFiles(0)
         copyBetweenStreamsWithSpeed(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
@@ -229,7 +277,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
         var counter = 0
 
-        prepareSourceAndTargetFiles(testData(dataSizeByte))
+        prepareSourceAndTargetFiles(dataSizeByte)
 
         copyBetweenStreamsWithSpeed(
             inputStream = sourceFileStream,
@@ -252,7 +300,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     @Test
     fun exception_thrown_on_zero_speed_argument() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
-            prepareSourceAndTargetFiles(testData(0))
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
@@ -352,36 +399,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }
 
 
-    /**
-     * @return Затраченное на копирование время, мс.
-     */
-    private fun doCopy(
-        dataSizeBytes: Int,
-        speedBytesPerSec: Int,
-        dataTransferStepsPerSecond: Int = 10,
-    ): Long {
-
-        println("doCopy(dataSizeBytes:$dataSizeBytes, speedBytesPerSec:$speedBytesPerSec, dataTransferStepsPerSecond:$dataTransferStepsPerSecond)")
-
-        prepareSourceAndTargetFiles(testData(dataSizeBytes))
-
-        val startTime = System.currentTimeMillis()
-
-        sourceFileStream.use { inputStream ->
-            targetFileStream.use { outputStream ->
-                copyBetweenStreamsWithSpeed(
-                    inputStream = inputStream,
-                    outputStream = outputStream,
-                    speedBytesPerSec = speedBytesPerSec,
-                    dataTransferStepsPerSecond = dataTransferStepsPerSecond,
-                )
-            }
-        }
-
-        return System.currentTimeMillis() - startTime
-    }
-
-
     @Test
     fun works_with_different_speed_values() {
 
@@ -390,7 +407,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             val speedBytesPerSec = i+2
             val discretization = i+1
 
-            prepareSourceAndTargetFiles(testData(100))
+            prepareSourceAndTargetFiles(100)
 
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
@@ -409,7 +426,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         val size = 1024 * 1024
         val speed = 1024 * 1024
         val timeMs = (size.toFloat() / speed).roundToLong() * 1000
-        prepareSourceAndTargetFiles(testData(size))
+        prepareSourceAndTargetFiles(size)
         copyBetweenStreamsWithSpeed(
             sourceFileStream,
             targetFileStream,
@@ -424,36 +441,16 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         )
     }
 
-    private fun detectMaxDeviceSpeedBytesPerSec(printDebug: Boolean = false): Int {
-        return buildList {
-            repeat(10) { i ->
-                val startTimeMs = System.currentTimeMillis()
-                val dataSize = i * 1_000_000
-                val data = testData(dataSize)
-                prepareSourceAndTargetFiles(data)
-                sourceFileStream.use { sS ->
-                    targetFileStream.use { tS ->
-                        sS.copyTo(tS)
-                    }
-                }
-                val copyTimeSeconds = (System.currentTimeMillis() - startTimeMs).toFloat() / 1000
-                val deviceSpeed = (data.size.toFloat() / copyTimeSeconds).roundToInt()
-                add(deviceSpeed)
-                if (printDebug) {
-                    Log.d(TAG, "$i) данные: ${humanReadableByteCount(dataSize, decimalNotation = false)}" +
-                        ", скорость записи в хранилище: ${humanReadableByteCount(deviceSpeed, decimalNotation = false)}/c")
-                }
-            }
-        }.max()
-    }
-
 
     @Test
     fun real_speed_matches_expected_with_some_inaccuracy() {
 
+        val minSpeedPercentage: Double = 70.toDouble()
+        val maxSpeedPercentage: Double = 120.toDouble()
+
         Log.d(TAG, "места в хранилище: ${storageFreeSpace.humanSizeBinary()}")
 
-        val expectedSpeedBytesPerSec = (detectMaxDeviceSpeedBytesPerSec(false) * 0.9f).roundToInt()
+        val expectedSpeedBytesPerSec = (deviceStorageSpeedBytesPerSec * 0.9f).roundToInt()
         Log.d(TAG, "используемая скорость: ${expectedSpeedBytesPerSec.humanSizeBinary()}/с")
 
         val maxDataSize = (expectedSpeedBytesPerSec * 10).toLong().coerceAtMost(storageFreeSpace)
@@ -467,7 +464,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         var dataSizeBytes = 0
 
         while(dataSizeBytes < maxDataSize) {
-            prepareSourceAndTargetFiles(testData(dataSizeBytes))
+            prepareSourceAndTargetFiles(dataSizeBytes)
             sourceFileStream.use { sS ->
                 targetFileStream.use { tS ->
                     copyBetweenStreamsWithSpeed(
@@ -476,7 +473,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                         speedBytesPerSec = expectedSpeedBytesPerSec,
                         finishCallback = { _,_,realSpeedBytesPerSec ->
                             val speedPercentage = percent(realSpeedBytesPerSec, expectedSpeedBytesPerSec.toLong())
-                            val isAnomaly = 0L != realSpeedBytesPerSec && speedPercentage !in 80.0..120.0
+                            val isAnomaly = 0L != realSpeedBytesPerSec && speedPercentage !in minSpeedPercentage..maxSpeedPercentage
                             val anomalyMark = if (isAnomaly) "АНОМАЛИЯ " else ""
                             Log.d(TAG, "${anomalyMark}(${speedPercentage.roundToFloatingDigits(2)}%) данные: ${humanReadableByteCount(dataSizeBytes, decimalNotation = false)}" +
                                     ", заданная скорость: ${humanReadableByteCount(expectedSpeedBytesPerSec, decimalNotation = false)}/с" +
@@ -488,35 +485,5 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             }
             dataSizeBytes += dataSizeStep
         }
-    }
-
-    @Test
-    fun real_speed_matches_expected_speed_on_10x_speed() {
-        /*listOf(
-            1, 10, 100, 1000, 10_000, 100_000, 1000_000, 10_000_000
-        ).forEach { sizeMultiplier ->
-            Log.d(TAG, "----- множитель размера: $sizeMultiplier -----")
-            repeat(9) { i ->
-                val dataSize = (i+1) * sizeMultiplier
-                val expectedSpeed = dataSize * 10
-                testRealSpeed(dataSize, expectedSpeed)
-            }
-        }*/
-    }
-
-    private fun testRealSpeed(dataSize: Int, expectedSpeed: Int) {
-        prepareSourceAndTargetFiles(testData(dataSize))
-        copyBetweenStreamsWithSpeed(
-            sourceFileStream,
-            targetFileStream,
-            speedBytesPerSec = expectedSpeed,
-            finishCallback = { _,_,realSpeedBytesPerSec ->
-                val speedPercentage = percent(realSpeedBytesPerSec, expectedSpeed.toLong())
-                val isAnomaly = speedPercentage <= 80.toDouble() || speedPercentage >= 110
-                val anomalySuffix = if (isAnomaly) " АНОМАЛИЯ" else ""
-                Log.d(TAG, "данные: ${dataSize.humanDecimalPlaces}, скорость: ${expectedSpeed.humanDecimalPlaces}, реальная скорость: ${realSpeedBytesPerSec.humanDecimalPlaces} (${speedPercentage.roundToFloatingDigits(2)})%$anomalySuffix")
-//                Assert.assertFalse(isAnomaly)
-            }
-        )
     }
 }
