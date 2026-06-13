@@ -15,3 +15,5 @@
 .cxx
 local.properties
 /.kotlin/errors/
+/.kotlin/sessions/
+
