@@ -8,7 +8,7 @@ import kotlin.math.roundToLong
  * @param inputStream
  * @param outputStream
  * @param speedBytesPerSec Скорость в байт/с. Не ограничена, если меньше или равна нулю.
- * @param dataTransferStepsPerSecond Количество шагов в секунду, за которое нужно передать данные.
+ * @param stepsPerSecond Количество шагов в секунду, за которое нужно передать данные.
  * Это количество раз в секунду будет вызван [progressCallback].
  * Количество выдерживается не на 100% строго.
  * @param progressCallback
@@ -19,13 +19,13 @@ fun copyBetweenStreamsWithSpeed(
     inputStream: InputStream,
     outputStream: OutputStream,
     speedBytesPerSec: Int = -1,
-    dataTransferStepsPerSecond: Int = 100,
+    stepsPerSecond: Int = 100,
     progressCallback: ((transferredBytes:Long, speedBytesPerSec:Long) -> Unit)? = null,
     finishCallback: ((transferredBytes:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null,
 ) {
     val isSpeedLimited: Boolean = speedBytesPerSec > 0
 
-    val stepsPerSecond = if (dataTransferStepsPerSecond > speedBytesPerSec) speedBytesPerSec else dataTransferStepsPerSecond
+    val stepsPerSecond = if (stepsPerSecond > speedBytesPerSec) speedBytesPerSec else stepsPerSecond
 
     if (0 == speedBytesPerSec)
         throw IllegalArgumentException("Speed cannot be zero")

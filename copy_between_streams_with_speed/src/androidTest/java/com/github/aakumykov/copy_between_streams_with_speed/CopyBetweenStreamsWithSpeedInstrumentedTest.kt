@@ -59,8 +59,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     companion object {
         val TAG: String = CopyBetweenStreamsWithSpeedInstrumentedTest::class.java.simpleName
-        const val MEGABYTE = 1024 * 1024
-        const val KILOBYTE = 1024
     }
 
     private val appContext by lazy { InstrumentationRegistry.getInstrumentation().targetContext }
@@ -164,7 +162,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     inputStream = inputStream,
                     outputStream = outputStream,
                     speedBytesPerSec = speedBytesPerSec,
-                    dataTransferStepsPerSecond = dataTransferStepsPerSecond,
+                    stepsPerSecond = dataTransferStepsPerSecond,
                 )
             }
         }
@@ -243,7 +241,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                dataTransferStepsPerSecond = 10,
+                stepsPerSecond = 10,
                 progressCallback = { _,_ ->
                     isInvoked.set(true)
                 }
@@ -287,7 +285,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 counter++
                 println("totalBytesTransferred: $totalBytesTransferred, speed: $speed")
             },
-            dataTransferStepsPerSecond = dataTransferStepsPerSecond,
+            stepsPerSecond = dataTransferStepsPerSecond,
             speedBytesPerSec = speedByteSec,
         )
 
@@ -414,7 +412,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = speedBytesPerSec,
-                dataTransferStepsPerSecond = discretization,
+                stepsPerSecond = discretization,
             )
 
             Assert.assertEquals(sourceFileContents, targetFileContents)
@@ -490,14 +488,132 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
-    fun constant_data_size_various_speed_hi_values() {
+    fun test_100b_with_low_speeds() {
+        test_with_constant_size_and_various_speed(
+            dataSizeBytes = 100,
+            speedFromBytesPerSec = 1,
+            speedToBytesPerSec = 100,
+            speedStep = 10,
+        )
+    }
+
+    @Test
+    fun test_1kb_with_low_speeds() {
+        test_with_constant_size_and_various_speed(
+            dataSizeBytes = 1.kilobytes,
+            speedFromBytesPerSec = 1.kilobytes,
+            speedToBytesPerSec = 100.kilobytes,
+            speedStep = 10.kilobytes,
+        )
+    }
+
+    @Test
+    fun test_1mb_with_low_speeds() {
+        test_with_constant_size_and_various_speed(
+            dataSizeBytes = 1.megabytes,
+            speedFromBytesPerSec = 10.kilobytes,
+            speedToBytesPerSec = 100.kilobytes,
+            speedStep = 10.kilobytes,
+        )
+    }
+
+
+    @Test
+    fun test_1mb_with_medium_speeds() {
+        test_with_constant_size_and_various_speed(
+            dataSizeBytes = 1.megabytes,
+            speedFromBytesPerSec = 100.kilobytes,
+            speedToBytesPerSec = 1.megabytes,
+            speedStep = 100.kilobytes,
+        )
+    }
+
+
+    @Test
+    fun test_1mb_with_hi_speeds() {
+        val speedFrom = 100.kilobytes
+        val speedTo = deviceStorageSpeedBytesPerSec
+        val speedStep = (deviceStorageSpeedBytesPerSec - speedFrom) / 10
+
+        test_with_constant_size_and_various_speed(
+            dataSizeBytes = 1.megabytes,
+            speedFromBytesPerSec = speedFrom,
+            speedToBytesPerSec = speedTo,
+            speedStep = speedStep,
+        )
+    }
+
+    @Test
+    fun test_100mb_with_10mb_speed() {
+        test_size_with_speed(100.megabytes, 10.megabytes)
+    }
+
+    @Test
+    fun test_1mb_with_speed_2mb() {
+        test_size_with_speed(1.megabytes, 2.megabytes)
+    }
+
+
+    @Test
+    fun test_with_various_steps_from_1_to_10() {
+        val stepsFrom = 1
+        val stepsTo = 10
+        val stepForSteps = 1
+        repeat(stepsTo-stepsFrom){ i ->
+            val steps = (i+1) * stepsFrom + stepForSteps
+            test_size_with_speed_and_steps(1.megabytes, 2.megabytes, steps)
+        }
+    }
+
+    @Test
+    fun test_with_various_steps_from_10_to_100() {
+        val stepsFrom = 10
+        val stepsTo = 100
+        val stepForSteps = 10
+        repeat(stepsTo-stepsFrom){ i ->
+            val steps = (i+1) * stepsFrom + stepForSteps
+            test_size_with_speed_and_steps(1.megabytes, 2.megabytes, steps)
+        }
+    }
+
+
+    private fun test_size_with_speed(sizeBytes: Int, speedBytesPerSec: Int, stepsPerSecond: Int = 100) {
+        prepareSourceAndTargetFiles(sizeBytes)
+        copyBetweenStreamsWithSpeed(
+            inputStream = sourceFileStream,
+            outputStream = targetFileStream,
+            speedBytesPerSec = speedBytesPerSec,
+            stepsPerSecond = stepsPerSecond,
+            finishCallback = { _,_,speed ->
+                Log.d(TAG, "${speed.humanSizeBinary()}/с (${percent(speed,speedBytesPerSec.toLong()).roundToFloatingDigits(2)}%)")
+            }
+        )
+    }
+
+
+    private fun test_size_with_speed_and_steps(
+        sizeBytes: Int, speedBytesPerSec: Int, stepsPerSecond: Int = 100
+    ) {
+        prepareSourceAndTargetFiles(sizeBytes)
+        copyBetweenStreamsWithSpeed(
+            inputStream = sourceFileStream,
+            outputStream = targetFileStream,
+            speedBytesPerSec = speedBytesPerSec,
+            stepsPerSecond = stepsPerSecond,
+            finishCallback = { _,_,speed ->
+                Log.d(TAG, "${stepsPerSecond} шагов ${speed.humanSizeBinary()}/с (${percent(speed,speedBytesPerSec.toLong()).roundToFloatingDigits(2)}%)")
+            }
+        )
+    }
+
+
+    private fun test_with_constant_size_and_various_speed(
+        dataSizeBytes: Int,
+        speedFromBytesPerSec: Int,
+        speedToBytesPerSec: Int,
+        speedStep: Int
+    ) {
         Log.d(TAG, "===== constant_data_size_various_speed_hi_values =====")
-
-        val dataSizeBytes = 1 * MEGABYTE
-        val speedFromBytesPerSec = 100 * KILOBYTE
-        val speedToBytesPerSec = 1 * MEGABYTE
-        val speedStep = 100 * KILOBYTE
-
         Log.d(TAG, "размер данных: ${dataSizeBytes.humanSizeBinary()}")
         Log.d(TAG, "скорость от ${speedFromBytesPerSec.humanSizeBinary()}/с до ${speedToBytesPerSec.humanSizeBinary()}/с")
         Log.d(TAG, "шаг скорости: ${speedStep.humanSizeBinary()}")
@@ -525,3 +641,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         Assert.assertFalse(targetFile.exists())
     }
 }
+
+val Int.megabytes: Int get() = this * 1024 * 1024
+val Int.kilobytes: Int get() = this * 1024
