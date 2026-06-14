@@ -301,10 +301,24 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     @Test
     fun exception_thrown_on_zero_speed_argument() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
+            prepareSourceAndTargetFiles(1)
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = 0
+            )
+        }
+    }
+
+    @Test
+    fun exception_thrown_on_steps_greater_than_speed() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            prepareSourceAndTargetFiles(1)
+            copyBetweenStreamsWithSpeed(
+                inputStream = sourceFileStream,
+                outputStream = targetFileStream,
+                speedBytesPerSec = 10,
+                stepsPerSecond = 20
             )
         }
     }
@@ -679,6 +693,25 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     private fun deleteTargetFile() {
         targetFile.delete()
         Assert.assertFalse(targetFile.exists())
+    }
+
+    @Test
+    fun test_10mb_1mbs_9000_steps(){
+        Log.d(TAG, "===== test_10mb_1mbs_9000_steps =====")
+        val expectedSpeed = 1.megabytes
+        for (n in 1..10) {
+            val size = n.megabytes
+            prepareSourceAndTargetFiles(size)
+            copyBetweenStreamsWithSpeed(
+                inputStream = sourceFileStream,
+                outputStream = targetFileStream,
+                stepsPerSecond = 9000,
+                speedBytesPerSec = expectedSpeed,
+                finishCallback = { transferred,_,speed ->
+                    Log.d(TAG, "${transferred.humanSizeBinary()}, скорость: ${speed.humanSizeBinary()}/с (${percent(speed,expectedSpeed.toLong()).roundToFloatingDigits(2)}%)")
+                }
+            )
+        }
     }
 }
 
