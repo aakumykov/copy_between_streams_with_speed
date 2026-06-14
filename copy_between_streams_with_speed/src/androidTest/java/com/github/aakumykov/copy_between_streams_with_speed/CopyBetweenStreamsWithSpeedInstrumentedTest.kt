@@ -1,6 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
+import android.util.Log.i
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
@@ -15,6 +16,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.file.Files.size
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
@@ -558,10 +560,11 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     fun test_with_various_steps_from_1_to_10() {
         val stepsFrom = 1
         val stepsTo = 10
-        val stepForSteps = 1
-        repeat(stepsTo-stepsFrom){ i ->
-            val steps = (i+1) * stepsFrom + stepForSteps
+        val stepSize = 1
+        var steps = stepsFrom
+        while(steps <= stepsTo) {
             test_size_with_speed_and_steps(1.megabytes, 2.megabytes, steps)
+            steps += stepSize
         }
     }
 
@@ -569,10 +572,47 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     fun test_with_various_steps_from_10_to_100() {
         val stepsFrom = 10
         val stepsTo = 100
-        val stepForSteps = 10
-        repeat(stepsTo-stepsFrom){ i ->
-            val steps = (i+1) * stepsFrom + stepForSteps
+        val stepSize = 10
+        var steps = stepsFrom
+        while(steps <= stepsTo) {
             test_size_with_speed_and_steps(1.megabytes, 2.megabytes, steps)
+            steps += stepSize
+        }
+    }
+
+
+    @Test
+    fun test_with_various_steps_from_100_to_1000() {
+        val stepsFrom = 100
+        val stepsTo = 1000
+        val stepSize = 100
+        var steps = stepsFrom
+        while(steps <= stepsTo) {
+            test_size_with_speed_and_steps(1.megabytes, 2.megabytes, steps)
+            steps += stepSize
+        }
+    }
+
+    @Test
+    fun test_diff_steps_with_diff_size_and_constant_speed() {
+        val speed = 1.megabytes
+        for (nSize in 1..10) {
+            for(nSteps in 1..9) {
+                val steps = nSteps * 1
+                test_size_with_speed_and_steps(nSize.megabytes, speed, steps)
+            }
+            for(nSteps in 1..9) {
+                val steps = nSteps * 10
+                test_size_with_speed_and_steps(nSize.megabytes, speed, steps)
+            }
+            for(nSteps in 1..9) {
+                val steps = nSteps * 100
+                test_size_with_speed_and_steps(nSize.megabytes, speed, steps)
+            }
+            for(nSteps in 1..9) {
+                val steps = nSteps * 1000
+                test_size_with_speed_and_steps(nSize.megabytes, speed, steps)
+            }
         }
     }
 
@@ -601,7 +641,7 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             speedBytesPerSec = speedBytesPerSec,
             stepsPerSecond = stepsPerSecond,
             finishCallback = { _,_,speed ->
-                Log.d(TAG, "${stepsPerSecond} шагов ${speed.humanSizeBinary()}/с (${percent(speed,speedBytesPerSec.toLong()).roundToFloatingDigits(2)}%)")
+                Log.d(TAG, "[${sizeBytes.humanSizeBinary()}/${speedBytesPerSec.humanSizeBinary()}/с] ${stepsPerSecond} шагов --> ${percent(speed,speedBytesPerSec.toLong()).roundToFloatingDigits(2)}%")
             }
         )
     }
