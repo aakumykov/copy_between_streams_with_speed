@@ -28,8 +28,11 @@ fun copyBetweenStreamsWithSpeed(
 
 //    val stepsPerSecond = if (stepsPerSecond > speedBytesPerSec) speedBytesPerSec else stepsPerSecond
 
-    if (stepsPerSecond > speedBytesPerSec)
-        throw IllegalArgumentException("Steps per second ($stepsPerSecond) cannot be greater than speed bytes per second ($speedBytesPerSec)")
+    if (speedBytesPerSec > 0) {
+        if (stepsPerSecond > speedBytesPerSec) {
+            throw IllegalArgumentException("Steps per second ($stepsPerSecond) cannot be greater than speed bytes per second ($speedBytesPerSec)")
+        }
+    }
 
     if (0 == speedBytesPerSec)
         throw IllegalArgumentException("Speed cannot be zero")
