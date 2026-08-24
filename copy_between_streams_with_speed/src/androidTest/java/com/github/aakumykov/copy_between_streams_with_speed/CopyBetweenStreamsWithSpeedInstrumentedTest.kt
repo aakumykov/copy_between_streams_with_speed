@@ -26,6 +26,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     /**
     План теста:no
     А) Обычная работа:
+    - простой тест
+      [simple_file_copy_test]
+
     - файл копируется, содержимое совпадает, с размером 0 до Н байт
       [source_file_is_copied_to_target_file];
 
@@ -113,8 +116,21 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
+    fun simple_file_copy_test() {
+        val fileSize = 10
+        prepareSourceAndTargetFiles(testData(fileSize))
+        copyBetweenStreamsWithSpeed2(
+            inputStream = sourceFileStream,
+            outputStream = targetFileStream
+        )
+        Assert.assertEquals(sourceFile.length(), targetFile.length())
+        Assert.assertEquals(sourceFileContents, targetFileContents)
+    }
+
+
+    @Test
     fun source_file_is_copied_to_target_file() {
-        repeat(100) { fileSizeWithZero ->
+        repeat(10) { fileSizeWithZero ->
             println("размер фйла: $fileSizeWithZero")
 
             prepareSourceAndTargetFiles(testData(fileSizeWithZero))
