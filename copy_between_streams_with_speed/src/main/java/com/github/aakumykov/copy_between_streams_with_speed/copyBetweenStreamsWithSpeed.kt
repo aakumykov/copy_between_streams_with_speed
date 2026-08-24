@@ -42,7 +42,7 @@ fun copyBetweenStreamsWithSpeed(
     val copyingPieceSizeBytes = dataSizeForStepBytes.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     var bytesCopiedTotal: Long = 0
-    var bytesCopiedForStep: Long = 0
+    var bytesCopiedThisStep: Long = 0
     var readBytesCount: Int
     val dataBuffer = ByteArray(copyingPieceSizeBytes)
 
@@ -52,15 +52,16 @@ fun copyBetweenStreamsWithSpeed(
         val stepStartTimeMs = System.currentTimeMillis()
 
         readBytesCount = inputStream.read(dataBuffer, 0, copyingPieceSizeBytes)
-        if (-1 == readBytesCount) break
-        outputStream.write(dataBuffer)
+        if (-1 == readBytesCount) { break }
 
-        bytesCopiedForStep += readBytesCount
+        outputStream.write(dataBuffer, 0, readBytesCount)
+
+        bytesCopiedThisStep += readBytesCount
         bytesCopiedTotal += readBytesCount
 
-        if (bytesCopiedForStep >= dataSizeForStepBytes) {
+        if (bytesCopiedThisStep >= dataSizeForStepBytes) {
 
-            val bytesOverrunPercentage: Float = (bytesCopiedForStep.toFloat() / dataSizeForStepBytes)
+            val bytesOverrunPercentage: Float = (bytesCopiedThisStep.toFloat() / dataSizeForStepBytes)
 
             val stepFinishTimeMs = System.currentTimeMillis()
             val stepDurationMs = stepFinishTimeMs - stepStartTimeMs
@@ -70,10 +71,10 @@ fun copyBetweenStreamsWithSpeed(
             }
 
             // FIXME: вместо stepTimeMs должно быть stepDurationMs
-            val stepSpeedBytesPerSec:Long = (bytesCopiedForStep.toFloat() / stepDurationMs).roundToLong()
+            val stepSpeedBytesPerSec:Long = (bytesCopiedThisStep.toFloat() / stepDurationMs).roundToLong()
             progressCallback?.invoke(bytesCopiedTotal, stepSpeedBytesPerSec)
 
-            bytesCopiedForStep = 0
+            bytesCopiedThisStep = 0
         }
     }
 

@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -24,6 +23,10 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     /**
     План теста:
     А) Обычная работа:
+    - простой тест с минимумом аргументов, без ограничения скорости и с параметрами по умолчанию
+      [simple_file_copy_test_without_speed_limit];
+      [simple_file_copy_test_without_speed_limit_diff_sizes];
+
     - файл копируется, содержимое совпадает, с размером 0 до Н байт
       [source_file_is_copied_to_target_file];
 
@@ -186,6 +189,32 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             sourceFileContents,
             targetFileContents
         )
+    }
+
+    @Test
+    fun simple_file_copy_test_without_speed_limit() {
+        val fileSize = 10
+        prepareSourceAndTargetFiles(fileSize)
+        copyBetweenStreamsWithSpeed(
+            inputStream = sourceFileStream,
+            outputStream = targetFileStream,
+        )
+        Assert.assertEquals(sourceFile.length(), targetFile.length())
+        Assert.assertEquals(sourceFileContents, targetFileContents)
+    }
+
+
+    @Test
+    fun simple_file_copy_test_without_speed_limit_diff_sizes() {
+        repeat(100) { fileSizeThatCanBeZero ->
+            prepareSourceAndTargetFiles(fileSizeThatCanBeZero)
+            copyBetweenStreamsWithSpeed(
+                inputStream = sourceFileStream,
+                outputStream = targetFileStream,
+            )
+            Assert.assertEquals(sourceFile.length(), targetFile.length())
+            Assert.assertEquals(sourceFileContents, targetFileContents)
+        }
     }
 
 
