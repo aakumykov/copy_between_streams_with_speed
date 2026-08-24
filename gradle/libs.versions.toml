@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.2"
+agp = "9.2.1"
 cloud_authenticator = "0.0.11-alpha"
 coreKtx = "1.12.0"
 file_lister_navigator_selector = "21.1.0-alpha"
