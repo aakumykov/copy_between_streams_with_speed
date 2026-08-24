@@ -200,6 +200,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             outputStream = targetFileStream,
         )
         Assert.assertEquals(sourceFile.length(), targetFile.length())
+        Assert.assertEquals(fileSize.toLong(), sourceFile.length())
+        Assert.assertEquals(fileSize.toLong(), targetFile.length())
         Assert.assertEquals(sourceFileContents, targetFileContents)
     }
 
@@ -220,26 +222,18 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun source_file_is_copied_to_target_file() {
-        repeat(100) { fileSizeThatCanBeZero ->
-            println("размер данных: $fileSizeThatCanBeZero")
-            prepareSourceAndTargetFiles(fileSizeThatCanBeZero)
+        repeat(100) { sizeCanBeZero ->
+            println("размер данных: $sizeCanBeZero")
+            prepareSourceAndTargetFiles(sizeCanBeZero)
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = 100
             )
-            Assert.assertEquals(
-                fileSizeThatCanBeZero.toLong(),
-                sourceFile.length()
-            )
-            Assert.assertEquals(
-                fileSizeThatCanBeZero.toLong(),
-                targetFile.length()
-            )
-            Assert.assertEquals(
-                sourceFileContents,
-                targetFileContents
-            )
+            Assert.assertEquals(sourceFile.length(), targetFile.length())
+            Assert.assertEquals(sizeCanBeZero.toLong(), sourceFile.length())
+            Assert.assertEquals(sizeCanBeZero.toLong(), targetFile.length())
+            Assert.assertEquals(sourceFileContents, targetFileContents)
         }
     }
 
