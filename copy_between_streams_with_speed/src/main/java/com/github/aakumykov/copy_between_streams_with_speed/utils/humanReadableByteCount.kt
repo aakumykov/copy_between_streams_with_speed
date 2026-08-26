@@ -1,11 +1,12 @@
 package com.github.aakumykov.copy_between_streams_with_speed.utils
 
+
+import kotlinx.coroutines.flow.flow
 import java.util.Locale
 import kotlin.math.ln
 import kotlin.math.pow
 
-
-internal fun humanReadableByteCount(
+fun humanReadableByteCount(
     bytes: Long,
     floatingDigits: Int = 3,
     locale: Locale = Locale.getDefault(),
@@ -25,8 +26,7 @@ internal fun humanReadableByteCount(
     )
 }
 
-
-internal fun humanReadableByteCount(
+fun humanReadableByteCount(
     bytes: Int?,
     floatingDigits: Int = 3,
     locale: Locale = Locale.getDefault(),
@@ -37,8 +37,7 @@ internal fun humanReadableByteCount(
     else humanReadableByteCount(bytes.toLong(), floatingDigits, locale, sizeNames, decimalNotation)
 }
 
-
-internal fun Int.humanSizeBinary(
+fun Int.humanSizeBinary(
     floatingDigits: Int = 2,
     locale: Locale = Locale.getDefault(),
     sizeNames: String = "BKMGTPE",
@@ -53,8 +52,7 @@ internal fun Int.humanSizeBinary(
     )
 }
 
-
-internal fun Long.humanSizeBinary(
+fun Long.humanSizeBinary(
     floatingDigits: Int = 2,
     locale: Locale = Locale.getDefault(),
     sizeNames: String = "BKMGTPE",

@@ -4,7 +4,7 @@ import java.util.Locale
 import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.milliseconds
 
-internal fun millisecondsToDHMSN(time: Long): String = time.milliseconds.toComponents { days, hours, minutes, seconds, nanoseconds ->
+fun millisecondsToDHMSN(time: Long): String = time.milliseconds.toComponents { days, hours, minutes, seconds, nanoseconds ->
     String.format(
         Locale.getDefault(),
         "%02dд, %02dч, %02dм, %02dс, %02dмc",

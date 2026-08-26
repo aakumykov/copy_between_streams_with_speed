@@ -4,12 +4,12 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
-internal val Long.humanDecimalPlaces: String get() {
+val Long.humanDecimalPlaces: String get() {
     val symbols = DecimalFormatSymbols(Locale.getDefault()).apply { groupingSeparator = '_' }
     return (DecimalFormat("#,##0", symbols)).format(this)
 }
 
-internal val Int.humanDecimalPlaces: String get() {
+val Int.humanDecimalPlaces: String get() {
     val symbols = DecimalFormatSymbols(Locale.getDefault()).apply { groupingSeparator = '_' }
     return (DecimalFormat("#,##0", symbols)).format(this)
 }
