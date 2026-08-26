@@ -1,6 +1,5 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.util.Log
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.math.roundToLong
@@ -9,6 +8,9 @@ import kotlin.math.roundToLong
  * @param inputStream
  * @param outputStream
  * @param speedBytesPerSec Скорость в байт/с. Не ограничена, если меньше или равна нулю.
+ * @param bufferSizeMultiplierForSpeedCompensation Увеличитель размера буфера копирования.
+ * Позволяет компенсировать просадку скорости при её подсчёте. В указанное количество
+ * раз увеличивается [DEFAULT_BUFFER_SIZE].
  * @param stepsPerSecond Количество шагов в секунду, за которое нужно передать данные.
  * Не может быть больше [speedBytesPerSec].
  * Это количество раз в секунду будет вызван [progressCallback].
@@ -17,15 +19,19 @@ import kotlin.math.roundToLong
  * @param finishCallback
  */
 @Throws(IllegalArgumentException::class)
+// TODO: нужны новые тесты
 fun copyBetweenStreamsWithSpeed(
     inputStream: InputStream,
     outputStream: OutputStream,
     speedBytesPerSec: Int = -1,
+    bufferSizeMultiplierForSpeedCompensation: Int = 2,
     stepsPerSecond: Int = 100,
     progressCallback: ((transferredBytes:Long, speedBytesPerSec:Long) -> Unit)? = null,
     finishCallback: ((transferredBytes:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null,
 ) {
     val speedIsLimited: Boolean = speedBytesPerSec > 0
+
+    val bufferSize = bufferSizeMultiplierForSpeedCompensation * DEFAULT_BUFFER_SIZE
 
     if (speedIsLimited) {
         if (stepsPerSecond > speedBytesPerSec) {
@@ -39,8 +45,8 @@ fun copyBetweenStreamsWithSpeed(
     val timeForStepMs = if (speedIsLimited) {
         1000 / stepsPerSecond } else { 0 }
 
-    val dataSizeForStepBytes = if (speedIsLimited) (speedBytesPerSec / stepsPerSecond) else DEFAULT_BUFFER_SIZE
-    val copyingPieceSizeBytes = dataSizeForStepBytes.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
+    val dataSizeForStepBytes = if (speedIsLimited) (speedBytesPerSec / stepsPerSecond) else bufferSize
+    val copyingPieceSizeBytes = dataSizeForStepBytes.let { if (it > bufferSize) bufferSize else it }
 
     var bytesCopiedTotal: Long = 0
     var bytesCopiedThisStep: Long = 0
