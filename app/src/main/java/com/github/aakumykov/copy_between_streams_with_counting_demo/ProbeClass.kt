@@ -35,12 +35,7 @@ class ProbeClass(
                         copyBetweenStreamsWithSpeed(
                             inputStream = inputStream,
                             outputStream = outputStream,
-                            // Жёстко заданное количество
-                            // шагов в секунду (100)
-                            // являет бутылочное горлышко,
-                            // если скорость не задана,
-                            // так как размер буфера фиксирован.
-                            stepsPerSecond = 10_000
+//                            speedBytesPerSec = 1024 * 1024 * 10
                         )
                     }
                 }
