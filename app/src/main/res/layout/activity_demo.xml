@@ -42,6 +42,15 @@
         android:textColor="@color/white"
         android:text="@string/stop_button" />
 
+    <Button
+        android:id="@+id/probeButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:backgroundTint="#00ACC1"
+        android:textColor="@color/white"
+        android:text="Проба" />
+
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="match_parent"

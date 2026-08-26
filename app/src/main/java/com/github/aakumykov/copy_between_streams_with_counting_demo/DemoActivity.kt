@@ -54,6 +54,7 @@ class DemoActivity : AppCompatActivity() {
         }
         binding.startButton.setOnClickListener { onStartButtonClicked() }
         binding.stopButton.setOnClickListener { onStopButtonClicked() }
+        binding.probeButton.setOnClickListener { onProbeButtonClicked() }
     }
 
     private var currentInputStream: InputStream? = null
@@ -92,6 +93,14 @@ class DemoActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private val probeClass by lazy {
+        ProbeClass(this@DemoActivity, lifecycleScope)
+    }
+
+    private fun onProbeButtonClicked() {
+        probeClass.probe()
     }
 
     private fun onStopButtonClicked() {
