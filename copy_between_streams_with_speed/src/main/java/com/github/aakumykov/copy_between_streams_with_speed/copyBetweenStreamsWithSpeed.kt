@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.math.roundToLong
@@ -24,11 +25,9 @@ fun copyBetweenStreamsWithSpeed(
     progressCallback: ((transferredBytes:Long, speedBytesPerSec:Long) -> Unit)? = null,
     finishCallback: ((transferredBytes:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null,
 ) {
-    val isSpeedLimited: Boolean = speedBytesPerSec > 0
+    val speedIsLimited: Boolean = speedBytesPerSec > 0
 
-//    val stepsPerSecond = if (stepsPerSecond > speedBytesPerSec) speedBytesPerSec else stepsPerSecond
-
-    if (speedBytesPerSec > 0) {
+    if (speedIsLimited) {
         if (stepsPerSecond > speedBytesPerSec) {
             throw IllegalArgumentException("Steps per second ($stepsPerSecond) cannot be greater than speed bytes per second ($speedBytesPerSec)")
         }
@@ -37,8 +36,10 @@ fun copyBetweenStreamsWithSpeed(
     if (0 == speedBytesPerSec)
         throw IllegalArgumentException("Speed cannot be zero")
 
-    val timeForStepMs = 1000 / stepsPerSecond
-    val dataSizeForStepBytes = if (isSpeedLimited) (speedBytesPerSec / stepsPerSecond) else DEFAULT_BUFFER_SIZE
+    val timeForStepMs = if (speedIsLimited) {
+        1000 / stepsPerSecond } else { 0 }
+
+    val dataSizeForStepBytes = if (speedIsLimited) (speedBytesPerSec / stepsPerSecond) else DEFAULT_BUFFER_SIZE
     val copyingPieceSizeBytes = dataSizeForStepBytes.let { if (it > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else it }
 
     var bytesCopiedTotal: Long = 0
@@ -67,6 +68,7 @@ fun copyBetweenStreamsWithSpeed(
             val stepDurationMs = stepFinishTimeMs - stepStartTimeMs
             val sleepingLackTimeMs = (bytesOverrunPercentage * timeForStepMs - stepDurationMs).roundToLong()
             if (sleepingLackTimeMs > 0) {
+//                Log.d("copyBetweenStreamsWithSpeed", "sleeping $sleepingLackTimeMs ms")
                 Thread.sleep(sleepingLackTimeMs)
             }
 
