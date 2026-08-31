@@ -12,5 +12,7 @@
     <string name="speed_selector_label">Скорость: %1$s/с</string>
     <string name="start_button">Старт</string>
     <string name="stop_button">Стоп</string>
+    <string name="progress_debounce_label">Урежение сведений о прогрессе</string>
+    <string name="debounce_selector_label">Урежение уведомлений: %1$d</string>
 
 </resources>

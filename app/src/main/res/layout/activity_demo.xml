@@ -24,6 +24,15 @@
         app:max="12000000"
         app:progress="1" />
 
+    <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
+        android:id="@+id/progressDebounceSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        app:label="@string/progress_debounce_label"
+        app:max="1000"
+        app:progress="10" />
+
     <Button
         android:id="@+id/startButton"
         android:layout_width="match_parent"
