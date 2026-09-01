@@ -33,6 +33,8 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     - вызывается коллбек окончания работы
       [finish_callback_is_invoked];
 
+    // FIXME: работа коллбеков при малых объёмах данных
+
     - коллбек прогресса вызывается по крайней мере один раз, если размер не равен нулю
       [progress_callback_is_invoked_at_least_one_time_on_data_bugger_than_buffer_size];
 
