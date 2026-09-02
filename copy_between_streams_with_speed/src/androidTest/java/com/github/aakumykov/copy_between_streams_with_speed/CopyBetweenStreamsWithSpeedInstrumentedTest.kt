@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -35,8 +36,11 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     // FIXME: работа коллбеков при малых объёмах данных
 
-    - коллбек прогресса вызывается по крайней мере один раз, если размер не равен нулю
-      [progress_callback_is_invoked_at_least_one_time_on_data_bugger_than_buffer_size];
+    - коллбек прогресса вызывается по крайней мере один раз на объёмах данных, меньших размера буфера
+    [progress_callback_is_invoked_at_least_one_time_on_data_lower_than_buffer_size];
+
+    - коллбек прогресса вызывается по крайней мере один раз на объёмах данных, превышающих размер буфера
+      [progress_callback_is_invoked_at_least_one_time_on_data_bigger_than_buffer_size];
 
     - коллбек прогресса НЕ вызывается, если размер файла равен нулю
       [progress_callback_not_invoked_on_zero_file_size];
@@ -242,7 +246,9 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
     @Test
     fun finish_callback_is_invoked() {
-        repeat(100) { fileSizeWithZero ->
+        repeat(10) { i ->
+            val fileSizeWithZero = i * 10
+            println("finish_callback_is_invoked(), размер данных: ${humanReadableByteCount(fileSizeWithZero)}")
             val isInvoked = AtomicBoolean(false)
             prepareSourceAndTargetFiles(fileSizeWithZero)
             copyBetweenStreamsWithSpeed(
@@ -258,7 +264,36 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
 
 
     @Test
-    fun progress_callback_is_invoked_at_least_one_time_on_data_bugger_than_buffer_size() {
+    fun progress_callback_is_invoked_at_least_one_time_on_data_lower_than_buffer_size() {
+        val count = 10
+
+        var dataSize = 1
+        var n = 0
+
+        while(dataSize < DEFAULT_BUFFER_SIZE && n <= count) {
+
+            dataSize = (n++ + 1) * 10
+            println("progress_callback_is_invoked_at_least_one_time_on_data_lower_than_buffer_size(), размер данных: ${humanReadableByteCount(dataSize)}")
+
+            val isInvoked = AtomicBoolean(false)
+
+            prepareSourceAndTargetFiles(dataSize)
+            copyBetweenStreamsWithSpeed(
+                inputStream = sourceFileStream,
+                outputStream = targetFileStream,
+                stepsPerSecond = 10,
+                progressCallback = { _, _ ->
+                    isInvoked.set(true)
+                }
+            )
+
+            Assert.assertTrue(isInvoked.get())
+        }
+    }
+
+
+    @Test
+    fun progress_callback_is_invoked_at_least_one_time_on_data_bigger_than_buffer_size() {
         repeat(10) { i ->
             val nonZeroFileSize = DEFAULT_BUFFER_SIZE * (i+1)
             val isInvoked = AtomicBoolean(false)
