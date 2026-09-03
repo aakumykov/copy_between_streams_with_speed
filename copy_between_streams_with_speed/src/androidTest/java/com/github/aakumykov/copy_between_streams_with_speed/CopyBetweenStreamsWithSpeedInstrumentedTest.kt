@@ -18,8 +18,7 @@ import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
-@RunWith(AndroidJUnit4::class)
-class CopyBetweenStreamsWithSpeedInstrumentedTest {
+class CopyBetweenStreamsWithSpeedInstrumentedTest : TestBase() {
 
     /**
     План теста:
@@ -65,71 +64,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
      - скорости [works_with_different_speed_values];
      - частота дискретизации
     */
-
-    companion object {
-        val TAG: String = CopyBetweenStreamsWithSpeedInstrumentedTest::class.java.simpleName
-    }
-
-    private val appContext by lazy { InstrumentationRegistry.getInstrumentation().targetContext }
-    private val testsDir: File = appContext.cacheDir
-
-    private val sourceDir: File = testsDir
-    private val targetDir: File = testsDir
-
-    private val sourceFileName = "the_source.file"
-    private val targetFileName = "the_target.file"
-
-    private val sourceFile = File(sourceDir, sourceFileName)
-    private val targetFile = File(targetDir, targetFileName)
-
-    private val sourceFileContents: String get() = fileContents(sourceFile)
-    private val targetFileContents: String get() = fileContents(targetFile)
-
-    private val sourceFileStream: InputStream get() = sourceFile.inputStream()
-    private val targetFileStream: OutputStream get() = targetFile.outputStream()
-
-    private val storageFreeSpace: Long = appContext.cacheDir.usableSpace
-
-    private fun fileContents(file: File): String = file.readBytes().asString
-
-    val ByteArray.asString: String get() = this.joinToString("")
-
-
-    private fun prepareSourceAndTargetFiles(dataSizeBytes: Int) {
-
-        //
-        // -------- Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
-        //          поэтому производится здесь.
-        sourceFile.delete()
-        Assert.assertFalse(sourceFile.exists())
-
-        targetFile.delete()
-        Assert.assertFalse(targetFile.exists())
-        // ----------------------------------------------------------------------------------------
-
-        sourceFile.createNewFile()
-        Assert.assertTrue(sourceFile.exists())
-        Assert.assertEquals(0L, sourceFile.length())
-
-        targetFile.createNewFile()
-        Assert.assertTrue(targetFile.exists())
-        Assert.assertEquals(0L, targetFile.length())
-
-        writeTestDataToFile(sourceFile, dataSizeBytes)
-        Assert.assertEquals(dataSizeBytes.toLong(), sourceFile.length())
-    }
-
-    private fun writeTestDataToFile(file: File, dataSizeBytes: Int) {
-        val pieceSize = DEFAULT_BUFFER_SIZE
-        val mainSteps = dataSizeBytes / pieceSize
-        val additionalBytesCount = dataSizeBytes - (mainSteps * pieceSize)
-        file.outputStream().use { outputStream ->
-            repeat(mainSteps) {
-                outputStream.write(random.nextBytes(pieceSize))
-            }
-            outputStream.write(random.nextBytes(additionalBytesCount))
-        }
-    }
 
     private val deviceStorageSpeedBytesPerSec: Int by lazy {
         buildList {
@@ -781,6 +715,11 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 }
             )
         }
+    }
+
+
+    companion object {
+        val TAG: String = CopyBetweenStreamsWithSpeedInstrumentedTest::class.java.simpleName
     }
 }
 
