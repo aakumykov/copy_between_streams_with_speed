@@ -15,7 +15,6 @@ fun unlimitedSpeedCopyBetweenStreamsWithProgress(
     outputStream: OutputStream,
 ): Flow<Long> {
 
-    val progressReturnFrequency = 10
     val bufferSize = DEFAULT_BUFFER_SIZE
     val dataBuffer = ByteArray(bufferSize)
 
@@ -32,7 +31,5 @@ fun unlimitedSpeedCopyBetweenStreamsWithProgress(
         }
         close()
         awaitClose { }
-    }
-//        .sample((1000F / progressReturnFrequency).roundToLong())
-        .flowOn(Dispatchers.IO)
+    }.flowOn(Dispatchers.IO)
 }
