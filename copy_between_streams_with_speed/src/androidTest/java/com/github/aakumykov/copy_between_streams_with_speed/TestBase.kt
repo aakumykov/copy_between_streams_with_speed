@@ -39,27 +39,41 @@ abstract class TestBase {
 
 
     protected fun prepareSourceAndTargetFiles(dataSizeBytes: Int) {
+        prepareSourceFile(dataSizeBytes)
+        prepareTargetFile()
+    }
 
-        //
-        // -------- Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
-        //          поэтому производится здесь.
+
+    protected fun clearSourceFile() {
+        // Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
+        // поэтому производится здесь.
         sourceFile.delete()
         Assert.assertFalse(sourceFile.exists())
+    }
 
+    protected fun clearTargetFile() {
         targetFile.delete()
         Assert.assertFalse(targetFile.exists())
-        // ----------------------------------------------------------------------------------------
+    }
+
+    protected fun prepareSourceFile(dataSizeBytes: Int) {
+        clearSourceFile()
 
         sourceFile.createNewFile()
         Assert.assertTrue(sourceFile.exists())
         Assert.assertEquals(0L, sourceFile.length())
 
+        writeTestDataToFile(sourceFile, dataSizeBytes)
+        Assert.assertEquals(dataSizeBytes.toLong(), sourceFile.length())
+    }
+
+    protected fun prepareTargetFile() {
+        // Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
+        // поэтому производится здесь.
+        clearTargetFile()
         targetFile.createNewFile()
         Assert.assertTrue(targetFile.exists())
         Assert.assertEquals(0L, targetFile.length())
-
-        writeTestDataToFile(sourceFile, dataSizeBytes)
-        Assert.assertEquals(dataSizeBytes.toLong(), sourceFile.length())
     }
 
 

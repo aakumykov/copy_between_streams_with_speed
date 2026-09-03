@@ -23,13 +23,13 @@ class UnlimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() 
 
 
     @Test
-    fun flow_returns_progress_on_zero_data_size() = runBlocking {
+    fun flow_not_returns_progress_on_zero_data_size() = runBlocking {
         test_progress_list(0, 0)
     }
 
 
     @Test
-    fun flow_returns_progress_on_data_size_lower_than_buffer() = runBlocking {
+    fun flow_returns_progress_on_data_size_lower_than_buffer_size() = runBlocking {
         repeat(10) { i ->
             val size = i * 10 + random.nextInt(10)
             test_progress_list(size, 1)
