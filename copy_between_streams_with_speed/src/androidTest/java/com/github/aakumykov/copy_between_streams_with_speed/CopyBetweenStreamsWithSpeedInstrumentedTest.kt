@@ -171,7 +171,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                     inputStream = inputStream,
                     outputStream = outputStream,
                     speedBytesPerSec = speedBytesPerSec,
-                    stepsPerSecond = dataTransferStepsPerSecond,
                 )
             }
         }
@@ -281,7 +280,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                stepsPerSecond = 10,
                 progressCallback = { _, _ ->
                     isInvoked.set(true)
                 }
@@ -301,7 +299,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                stepsPerSecond = 10,
                 progressCallback = { _,_ ->
                     isInvoked.set(true)
                 }
@@ -345,7 +342,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 counter++
                 println("totalBytesTransferred: $totalBytesTransferred, speed: $speed")
             },
-            stepsPerSecond = dataTransferStepsPerSecond,
             speedBytesPerSec = speedByteSec,
         )
 
@@ -376,7 +372,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = 10,
-                stepsPerSecond = 20
             )
         }
     }
@@ -478,7 +473,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
         repeat(100) { i ->
 
             val speedBytesPerSec = i+2
-            val discretization = i+1
 
             prepareSourceAndTargetFiles(100)
 
@@ -486,7 +480,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = speedBytesPerSec,
-                stepsPerSecond = discretization,
             )
 
             Assert.assertEquals(sourceFileContents, targetFileContents)
@@ -707,13 +700,12 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
     }*/
 
 
-    private fun test_size_with_speed(sizeBytes: Int, speedBytesPerSec: Int, stepsPerSecond: Int = 100) {
+    private fun test_size_with_speed(sizeBytes: Int, speedBytesPerSec: Int) {
         prepareSourceAndTargetFiles(sizeBytes)
         copyBetweenStreamsWithSpeed(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
             speedBytesPerSec = speedBytesPerSec,
-            stepsPerSecond = stepsPerSecond,
             finishCallback = { _,_,speed ->
                 Log.d(TAG, "${speed.humanSizeBinary()}/с (${percent(speed,speedBytesPerSec.toLong()).roundToFloatingDigits(2)}%)")
             }
@@ -732,7 +724,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
             speedBytesPerSec = speedBytesPerSec,
-            stepsPerSecond = stepsPerSecond,
             finishCallback = { _,_,speed ->
                 Log.d(TAG, "[${sizeBytes.humanSizeBinary()}/${speedBytesPerSec.humanSizeBinary()}/с] ${stepsPerSecond} шагов --> ${percent(speed,speedBytesPerSec.toLong()).roundToFloatingDigits(2)}%")
             }
@@ -759,7 +750,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSec = speed,
-                stepsPerSecond = Math.min(100, speed),
                 finishCallback = { _,_, realSpeedBytesPerSec ->
                     val speedPercent = percent(realSpeedBytesPerSec, speed.toLong())
                     Log.d(TAG, "${speedPercent.roundToFloatingDigits(2)}%: ${dataSizeBytes.humanSizeBinary()}, ${speed.humanSizeBinary()}/с")
@@ -785,7 +775,6 @@ class CopyBetweenStreamsWithSpeedInstrumentedTest {
             copyBetweenStreamsWithSpeed(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                stepsPerSecond = 9000,
                 speedBytesPerSec = expectedSpeed,
                 finishCallback = { transferred,_,speed ->
                     Log.d(TAG, "${transferred.humanSizeBinary()}, скорость: ${speed.humanSizeBinary()}/с (${percent(speed,expectedSpeed.toLong()).roundToFloatingDigits(2)}%)")
