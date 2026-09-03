@@ -5,13 +5,13 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test
 
-class UnlimitedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
+class UnlimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     @Test
     fun file_copied() = runBlocking {
         val fileSize = 10
         prepareSourceAndTargetFiles(fileSize)
-        unlimitedCopyBetweenStreamsWithProgress(
+        unlimitedSpeedCopyBetweenStreamsWithProgress(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
         ).collect {  }
@@ -68,7 +68,7 @@ class UnlimitedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
         val progressList = mutableListOf<Long>()
 
-        unlimitedCopyBetweenStreamsWithProgress(
+        unlimitedSpeedCopyBetweenStreamsWithProgress(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
         ).collect { progressList.add(it) }
