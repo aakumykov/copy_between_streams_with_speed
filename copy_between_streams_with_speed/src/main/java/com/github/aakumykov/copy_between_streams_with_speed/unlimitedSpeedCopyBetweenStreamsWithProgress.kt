@@ -1,11 +1,9 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flowOn
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -31,5 +29,5 @@ fun unlimitedSpeedCopyBetweenStreamsWithProgress(
         }
         close()
         awaitClose { }
-    }.flowOn(Dispatchers.IO)
+    }
 }
