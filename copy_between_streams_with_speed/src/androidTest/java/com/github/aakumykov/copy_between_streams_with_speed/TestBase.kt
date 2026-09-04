@@ -38,7 +38,7 @@ abstract class TestBase {
     protected val ByteArray.asString: String get() = this.joinToString("")
 
 
-    protected fun prepareSourceAndTargetFiles(dataSizeBytes: Int) {
+    protected fun prepareSourceAndTargetFiles(dataSizeBytes: Int = 100) {
         prepareSourceFile(dataSizeBytes)
         prepareTargetFile()
     }

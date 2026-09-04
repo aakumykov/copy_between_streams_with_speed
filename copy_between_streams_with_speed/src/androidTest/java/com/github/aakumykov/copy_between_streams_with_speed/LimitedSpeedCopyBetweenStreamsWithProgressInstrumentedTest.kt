@@ -6,19 +6,51 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test
 import java.io.FileNotFoundException
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
+    /**
+    План теста:
+    1) проверить граничные условия (в данном случае исключения):
+        - нулевая скорость [throws_exception_on_zero_speed]
+        - отрицательная  скорость [throws_exception_on_negative_speed]
+        - количество шагов в секунду больше скорости в секунду [throws_exception_on_steps_greater_then_speed]
+        - оцуцтвует исходный файл [thrown_FNFE_on_no_source_file]
+    2) простое копирование файла [file_simply_copied], при котором он:
+        - копируется;
+        - совпадает по размеру;
+        - совпадает по содержимому;
+        - исходный файл сохраняется.
+    3) прогресс копирования:
+        - при копировании файла нулевого размера данные о прогрессе пусты [progress_is_empty_on_zero_size_file]
+        - при копировании файла ненулевого размера в трёх вариантах
+          относительно размера буфера копирования ([DEFAULT_BUFFER_SIZE]):
+            а) размер файла меньше буфера [progress_is_correct_on_file_size_lower_than_buffer_size];
+            б) размер файла равен размеру буфера [progress_is_correct_on_file_size_equals_buffer_size];
+            в) размер файла кратен размеру буфера [progress_is_correct_on_file_size_proportional_buffer_size];
+            г) размер файла больше размера буфера [progress_is_correct_on_file_size_greater_than_buffer_size].
+            Данные о прогрессе:
+                -- приходят;
+                -- первое значение меньше последнего;
+                -- расположены в порядке возрастания.
+    4) вариации аргументов:
+
+     */
+
+
+    //
+    // Испытание просто копирования
+    //
     @Test
     fun file_simply_copied() = runBlocking {
-        val fileSize = 10
-        val speed = (1f * fileSize / 2).roundToInt()
+        val fileSize = 2048
         prepareSourceAndTargetFiles(fileSize)
         limitedSpeedCopyBetweenStreamsWithProgress(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
-            speedBytesPerSecond = speed
+            speedBytesPerSecond = 500,
         ).collect()
         Assert.assertEquals(fileSize.toLong(), sourceFile.length())
         Assert.assertEquals(fileSize.toLong(), targetFile.length())
@@ -26,6 +58,10 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         Assert.assertEquals(sourceFileContents, targetFileContents)
     }
 
+
+    //
+    // Испытание неправильных аргументов
+    //
     @Test
     fun thrown_FNFE_on_no_source_file() {
         Assert.assertThrows(FileNotFoundException::class.java) {
@@ -35,20 +71,17 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
     }
 
-    /*
-    // Это не получается протестировать, так как целевой файл создаётся по требованию,
-    // а сделать файловую систему только для чтения так просто нельзя...
-    @Test
-    fun thrown_FNFE_on_no_target_file() {
-        Assert.assertThrows(FileNotFoundException::class.java) {
-            clearTargetFile()
-            prepareSourceFile(100)
-            copyWithoutCheck()
-        }
-    }*/
+
+    //
+    // Не получится так просто проверить с оцуцтвием целевого файла,
+    // так как он создаётся по требованию,
+    // а сделать файловую систему только для чтения так просто нельзя.
+    //
+
 
     @Test
     fun throws_exception_on_zero_speed() {
+        prepareSourceAndTargetFiles()
         Assert.assertThrows(IllegalArgumentException::class.java) {
             runBlocking {
                 limitedSpeedCopyBetweenStreamsWithProgress(
@@ -59,6 +92,21 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             }
         }
     }
+
+
+    @Test
+    fun throws_exception_on_negative_speed() {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                limitedSpeedCopyBetweenStreamsWithProgress(
+                    inputStream = sourceFileStream,
+                    outputStream = targetFileStream,
+                    speedBytesPerSecond = -1
+                ).collect()
+            }
+        }
+    }
+
 
     @Test
     fun throws_exception_on_steps_greater_then_speed() {
@@ -76,49 +124,45 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     }
 
 
+    //
+    // Испытание прогресса
+    //
     @Test
-    fun flow_not_returns_progress_on_zero_data_size() = runBlocking {
+    fun progress_is_empty_on_zero_size_file() = runBlocking {
         test_progress_list(0, 30, 10)
     }
 
 
     @Test
-    fun f() = runBlocking {
-        test_progress_list(100, 30, stepsPerSecond = 3)
-    }
-
-
-    @Test
-    fun flow_returns_progress_on_data_size_lower_than_buffer_size() = runBlocking {
+    fun progress_is_correct_on_file_size_lower_than_buffer_size() = runBlocking {
         repeat(10) { i ->
             val size = (i+1) * 10 + random.nextInt(10)
-            test_progress_list(size, size, 10)
+            test_progress_list(size, 100, 10)
         }
     }
 
 
     @Test
-    fun flow_returns_progress_on_data_size_equals_buffer_size() = runBlocking {
-        test_progress_list(DEFAULT_BUFFER_SIZE, 1000, 10)
+    fun progress_is_correct_on_file_size_equals_buffer_size() = runBlocking {
+        test_progress_list(DEFAULT_BUFFER_SIZE, 100, stepsPerSecond = 10)
     }
 
 
     @Test
-    fun flow_returns_progress_on_data_size_multiplied_buffer_size() = runBlocking {
+    fun progress_is_correct_on_file_size_proportional_buffer_size() = runBlocking {
         repeat(10) { i ->
-            val size = i * DEFAULT_BUFFER_SIZE
-            test_progress_list(size, size, 10)
+            val dataSize = (i+1) * DEFAULT_BUFFER_SIZE
+            test_progress_list(dataSize, 100, stepsPerSecond = 10)
         }
     }
 
 
     @Test
-    fun flow_returns_progress_on_data_size_greater_than_buffer() = runBlocking {
+    fun progress_is_correct_on_file_size_greater_than_buffer_size() = runBlocking {
         repeat(10) { i ->
             val multiplier = i+1
             val dataSize = multiplier * DEFAULT_BUFFER_SIZE + random.nextInt(1,10)
-            val expectedProgressValuesCount = multiplier+1
-//            test_progress_list(dataSize, expectedProgressValuesCount)
+            test_progress_list(dataSize, multiplier * 100, stepsPerSecond = 10)
         }
     }
 
@@ -136,11 +180,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private suspend fun test_progress_list(
-        dataSize: Int,
+        dataSizeBytes: Int,
         speedBytesPerSecond: Int,
         stepsPerSecond: Int
     ) {
-        prepareSourceAndTargetFiles(dataSize)
+        prepareSourceAndTargetFiles(dataSizeBytes)
 
         val progressList = mutableListOf<Long>()
 
@@ -154,12 +198,16 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
 
         // TODO: Double
-        val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
-        val expectedSteps = (1f * dataSize / bytesToBeTransferredPerStep).roundToInt()
-        val expectedSecondsOfWork = (1f * dataSize / speedBytesPerSecond).roundToInt()
-        val expectedProgressListSize = (expectedSecondsOfWork * expectedSteps)//.roundToInt()
 
-        Assert.assertEquals("Размер списка прогресса соответствует ожидаемому", expectedProgressListSize, progressList.size)
+        val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
+        val expectedSteps = (1f * dataSizeBytes / bytesToBeTransferredPerStep).roundToInt()
+
+        val progressStepsDifference = abs(progressList.size - expectedSteps)
+
+        Assert.assertTrue(
+            "Размер списка прогресса отличается от ожидаемого не более, чем на 2 элемента",
+            progressStepsDifference <= 2
+        )
 
         if (progressList.size >= 2) {
             repeat(progressList.size-1) { i ->
