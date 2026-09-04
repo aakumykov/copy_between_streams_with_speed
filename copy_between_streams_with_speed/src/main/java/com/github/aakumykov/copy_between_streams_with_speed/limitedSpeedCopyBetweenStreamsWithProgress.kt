@@ -48,7 +48,7 @@ fun limitedSpeedCopyBetweenStreamsWithProgress(
                 break
             }
 
-            outputStream.write(dataBuffer, 0, copyingDataPortion)
+            outputStream.write(dataBuffer, 0, readBytes)
             dataReadBeforeReportProgress += readBytes
             totalDataRead += readBytes
 
