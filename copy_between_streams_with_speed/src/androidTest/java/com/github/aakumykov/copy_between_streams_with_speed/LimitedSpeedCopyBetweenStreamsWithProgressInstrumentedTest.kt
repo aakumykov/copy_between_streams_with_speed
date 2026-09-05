@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log.i
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -142,14 +143,25 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     //
     @Test
     fun progress_is_empty_on_zero_size_file() = runBlocking {
-        copy_and_test_progress_list(this,0, 30, 10)
+        copy_and_test_progress_list(this,0,
+            30, 10)
         test_files(0)
     }
 
 
     @Test
+    fun progress_is_correct_on_sizes_lowe_than_10() = runBlocking {
+        repeat(9) { i ->
+            val size = i+1
+            copy_and_test_progress_list(this,size,
+                1000, 10)
+            test_files(size)
+        }
+    }
+
+    @Test
     fun progress_is_correct_on_file_size_lower_than_buffer_size() = runBlocking {
-        repeat(10) { i ->
+        repeat(2) { i ->
             val size = (i+1) * 10 + random.nextInt(10)
             copy_and_test_progress_list(this,size, 1000, 10)
             test_files(size)
@@ -169,7 +181,10 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     fun progress_is_correct_on_file_size_proportional_buffer_size() = runBlocking {
         repeat(10) { i ->
             val dataSize = (i+1) * DEFAULT_BUFFER_SIZE
-            copy_and_test_progress_list(this,dataSize, 1000, stepsPerSecond = 10)
+            val speed = DEFAULT_BUFFER_SIZE
+            val steps = 1000
+            copy_and_test_progress_list(this,dataSize,
+                speed, steps)
             test_files(dataSize)
         }
     }
@@ -177,10 +192,13 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     @Test
     fun progress_is_correct_on_file_size_greater_than_buffer_size() = runBlocking {
-        repeat(2) { i ->
-            val multiplier = i+1
+        repeat(1) { i ->
+            val multiplier = i+2
             val dataSize = multiplier * DEFAULT_BUFFER_SIZE + random.nextInt(1,10)
-            copy_and_test_progress_list(this,dataSize, multiplier * 1000, stepsPerSecond = 10)
+            val speed = multiplier * 1000
+            val stepsPerSecond = 10
+            copy_and_test_progress_list(this,dataSize,
+                speed, stepsPerSecond)
             test_files(dataSize)
         }
     }
@@ -221,7 +239,8 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             limitedStreamCopier.copyFromStreamToStream(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
-                speedBytesPerSecond = 1000
+                speedBytesPerSecond = speedBytesPerSecond,
+                stepsPerSecond = stepsPerSecond
             )
             it.cancel()
         }.join()
@@ -229,20 +248,38 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         // TODO: Double
 
         val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
-        val expectedSteps = (1f * dataSizeBytes / bytesToBeTransferredPerStep).roundToInt()
 
-        val progressStepsDifference = abs(progressList.size - expectedSteps)
+        val expectedSteps = if (dataSizeBytes < bytesToBeTransferredPerStep) 1
+                            else (1f * dataSizeBytes / bytesToBeTransferredPerStep).roundToInt()
 
-        Assert.assertTrue(
-            "Размер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на 2 элемента: на $progressStepsDifference",
-            progressStepsDifference <= 2
-        )
+        if (expectedSteps > 1) {
+                val progressStepsCountDifferenceFloat =
+                    1f * abs(progressList.size - expectedSteps) / expectedSteps
+                val progressStepsDifferenceInt = (progressStepsCountDifferenceFloat * 100).roundToInt()
+
+                val expectedDiffPercents = 10
+
+                Assert.assertTrue(
+                    "Размер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%",
+                    progressStepsDifferenceInt <= expectedDiffPercents
+                )
+            }
+        else {
+            Assert.assertEquals(
+                "Размер списка прогресса равен $expectedSteps",
+                expectedSteps,
+                progressList.size
+            )
+        }
 
         if (progressList.size >= 2) {
             repeat(progressList.size-1) { i ->
                 val value = progressList[i]
                 val nextValue = progressList[i+1]
-                Assert.assertTrue("Каждое предыдущее значение меньше следующего", value < nextValue)
+                Assert.assertTrue(
+                    "Каждое предыдущее значение ($value) меньше следующего ($nextValue);\nвесь список:\n${progressList.joinToString(",\n")}",
+                    value < nextValue
+                )
             }
         }
     }

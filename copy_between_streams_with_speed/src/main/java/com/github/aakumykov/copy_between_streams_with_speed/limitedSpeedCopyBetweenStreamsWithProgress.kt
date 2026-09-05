@@ -41,26 +41,32 @@ class LimitedStreamCopier: BasicStreamCopier() {
         val dataSizeToBeCopiedByStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
         // Если размер данных, который нужно скопировать за один шаг, больше размера буфера,
         // черпаю данные меньшим объёмом.
-        val copyingDataPortion = if (dataSizeToBeCopiedByStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else dataSizeToBeCopiedByStep
+        val operatingPortionSize = if (dataSizeToBeCopiedByStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else dataSizeToBeCopiedByStep
 
-        val dataBuffer = ByteArray(copyingDataPortion)
+        val dataBuffer = ByteArray(operatingPortionSize)
         var totalDataRead: Long = 0
-        var currentDataRead: Long = 0
+        var iterationDataRead: Long = 0
 
         while(true) {
-            val readBytes = inputStream.read(dataBuffer, 0, copyingDataPortion)
+            val readBytes = inputStream.read(dataBuffer, 0, operatingPortionSize)
+
             if (-1 == readBytes) {
-                _progressFlow.emit(totalDataRead)
                 break
             }
 
             outputStream.write(dataBuffer, 0, readBytes)
-            currentDataRead += readBytes
+
+            if (readBytes < operatingPortionSize) {
+                _progressFlow.emit(readBytes.toLong())
+                break
+            }
+
+            iterationDataRead += readBytes
             totalDataRead += readBytes
 
-            if (currentDataRead >= dataSizeToBeCopiedByStep) {
+            if (iterationDataRead >= dataSizeToBeCopiedByStep) {
                 _progressFlow.emit(totalDataRead)
-                currentDataRead = 0
+                iterationDataRead = 0
             }
         }
     }
