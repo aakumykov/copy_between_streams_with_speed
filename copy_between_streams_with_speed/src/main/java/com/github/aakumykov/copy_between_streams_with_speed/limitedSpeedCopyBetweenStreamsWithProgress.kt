@@ -45,28 +45,36 @@ class LimitedStreamCopier: BasicStreamCopier() {
 
         val dataBuffer = ByteArray(operatingPortionSize)
         var totalDataRead: Long = 0
-        var iterationDataRead: Long = 0
+        var thisStepDataRead: Long = 0
 
         while(true) {
             val readBytes = inputStream.read(dataBuffer, 0, operatingPortionSize)
 
+            // Данные закончились.
             if (-1 == readBytes) {
                 break
             }
 
             outputStream.write(dataBuffer, 0, readBytes)
 
+            thisStepDataRead += readBytes
+            totalDataRead += readBytes
+
+            // Размер данных меньше, чем читаемая "порция".
             if (readBytes < operatingPortionSize) {
-                _progressFlow.emit(readBytes.toLong())
+                _progressFlow.emit(totalDataRead)
                 break
             }
 
-            iterationDataRead += readBytes
-            totalDataRead += readBytes
-
-            if (iterationDataRead >= dataSizeToBeCopiedByStep) {
+            if (readBytes < dataSizeToBeCopiedByStep) {
                 _progressFlow.emit(totalDataRead)
-                iterationDataRead = 0
+                break
+            }
+
+            // Пора отправлять сведения о прогрессе.
+            if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
+                _progressFlow.emit(totalDataRead)
+                thisStepDataRead = 0
             }
         }
     }

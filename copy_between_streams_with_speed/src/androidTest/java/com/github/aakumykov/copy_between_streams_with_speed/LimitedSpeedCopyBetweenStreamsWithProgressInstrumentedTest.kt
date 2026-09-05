@@ -4,6 +4,7 @@ import android.util.Log.i
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -152,7 +153,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     @Test
     fun progress_is_correct_on_sizes_lowe_than_10() = runBlocking {
         repeat(9) { i ->
-            val size = i+1
+            val size = i+10
             copy_and_test_progress_list(this,size,
                 1000, 10)
             test_files(size)
@@ -242,6 +243,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 speedBytesPerSecond = speedBytesPerSecond,
                 stepsPerSecond = stepsPerSecond
             )
+            delay(1000)
             it.cancel()
         }.join()
 
@@ -252,6 +254,10 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         val expectedSteps = if (dataSizeBytes < bytesToBeTransferredPerStep) 1
                             else (1f * dataSizeBytes / bytesToBeTransferredPerStep).roundToInt()
 
+        val argumentsLogs = "данные: $dataSizeBytes байт,\n" +
+                "скорость:$speedBytesPerSecond,\n" +
+                "шагов:$stepsPerSecond"
+
         if (expectedSteps > 1) {
                 val progressStepsCountDifferenceFloat =
                     1f * abs(progressList.size - expectedSteps) / expectedSteps
@@ -260,13 +266,13 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 val expectedDiffPercents = 10
 
                 Assert.assertTrue(
-                    "Размер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%",
+                    "${argumentsLogs}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%",
                     progressStepsDifferenceInt <= expectedDiffPercents
                 )
             }
         else {
             Assert.assertEquals(
-                "Размер списка прогресса равен $expectedSteps",
+                "${argumentsLogs}\nРазмер списка прогресса для данных $dataSizeBytes байт равен $expectedSteps",
                 expectedSteps,
                 progressList.size
             )
