@@ -1,10 +1,14 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.util.Log.i
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onEmpty
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -65,7 +69,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 limitedStreamCopier.copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
-                    speedBytesPerSecond = 1000
+                    speedBytesPerSecond = 1000,
                 )
                 it.cancel()
             }
@@ -228,24 +232,43 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         speedBytesPerSecond: Int,
         stepsPerSecond: Int
     ) {
+        val copier = LimitedStreamCopier()
+
         prepareSourceAndTargetFiles(dataSizeBytes)
 
         val progressList = mutableListOf<Long>()
 
-        scope.launch (Dispatchers.IO) {
-            limitedStreamCopier.progressFlow.collect {
-                progressList.add(it)
-            }
-        }.also {
-            limitedStreamCopier.copyFromStreamToStream(
-                inputStream = sourceFileStream,
-                outputStream = targetFileStream,
-                speedBytesPerSecond = speedBytesPerSecond,
-                stepsPerSecond = stepsPerSecond
-            )
-            delay(1000)
-            it.cancel()
-        }.join()
+        var job: Job? = null
+
+        job = scope.launch {
+            copier.progressFlow
+                .onStart {
+                    launch (Dispatchers.IO) {
+                        copier.copyFromStreamToStream(
+                            inputStream = sourceFileStream,
+                            outputStream = targetFileStream,
+                            speedBytesPerSecond = speedBytesPerSecond,
+                            stepsPerSecond = stepsPerSecond,
+                        )
+                    }
+                }
+                .onEmpty {
+                    println("onEmpty")
+                }
+                .onEach {
+                    println("onEach")
+                }
+                .onCompletion {
+                    println("onCompletion")
+                    job?.cancel()
+                    job = null
+                }
+                .collect {
+                    progressList.add(it)
+                }
+        }.apply {
+            join()
+        }
 
         // TODO: Double
 
@@ -266,13 +289,13 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 val expectedDiffPercents = 10
 
                 Assert.assertTrue(
-                    "${argumentsLogs}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%",
+                    "${argumentsLogs}\n${progressList.joinToString(",\n")}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%",
                     progressStepsDifferenceInt <= expectedDiffPercents
                 )
             }
         else {
             Assert.assertEquals(
-                "${argumentsLogs}\nРазмер списка прогресса для данных $dataSizeBytes байт равен $expectedSteps",
+                "${argumentsLogs}\n${progressList.joinToString(",\n")}\nРазмер списка прогресса для данных в $dataSizeBytes байт равен ${progressList.size}",
                 expectedSteps,
                 progressList.size
             )
@@ -303,5 +326,5 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
     }
 
-    private val limitedStreamCopier by lazy { LimitedStreamCopier() }
+    private val limitedStreamCopier: LimitedStreamCopier by lazy { LimitedStreamCopier() }
 }
