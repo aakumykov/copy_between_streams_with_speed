@@ -1,11 +1,8 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -31,7 +28,7 @@ class LimitedStreamCopier: BasicStreamCopier() {
         inputStream: InputStream,
         outputStream: OutputStream,
         speedBytesPerSecond: Int, // TODO: сделать Long
-        stepsPerSecond: Int = 10,
+        stepsPerSecond: Int = 10
     ) {
 
         if (speedBytesPerSecond <= 0)
@@ -51,18 +48,14 @@ class LimitedStreamCopier: BasicStreamCopier() {
         var thisStepDataRead: Long = 0
 
         while(true) {
-            val readBytes = withContext(Dispatchers.IO) {
-                inputStream.read(dataBuffer, 0, operatingPortionSize)
-            }
+            val readBytes = inputStream.read(dataBuffer, 0, operatingPortionSize)
 
             // Данные закончились.
             if (-1 == readBytes) {
                 break
             }
 
-            withContext(Dispatchers.IO) {
-                outputStream.write(dataBuffer, 0, readBytes)
-            }
+            outputStream.write(dataBuffer, 0, readBytes)
 
             thisStepDataRead += readBytes
             totalDataRead += readBytes
