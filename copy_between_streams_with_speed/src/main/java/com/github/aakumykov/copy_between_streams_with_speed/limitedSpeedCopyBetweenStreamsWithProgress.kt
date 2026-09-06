@@ -1,11 +1,8 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.cancel
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream

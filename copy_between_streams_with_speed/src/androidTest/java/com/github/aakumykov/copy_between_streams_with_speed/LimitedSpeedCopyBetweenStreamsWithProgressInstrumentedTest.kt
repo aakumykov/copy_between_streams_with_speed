@@ -4,9 +4,7 @@ import android.util.Log.i
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -234,27 +232,20 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
         val progressList = mutableListOf<Long>()
 
-        var job: Job? = null
-
-        job = scope.launch {
-            launch (Dispatchers.IO) {
-                limitedStreamCopier.progressFlow
-                    .onCompletion {
-                        job?.cancel()
-                    }
-                    .collect {
-                        progressList.add(it)
-                    }
+        scope.launch (Dispatchers.IO) {
+            limitedStreamCopier.progressFlow.collect {
+                progressList.add(it)
             }
+        }.also {
             limitedStreamCopier.copyFromStreamToStream(
                 inputStream = sourceFileStream,
                 outputStream = targetFileStream,
                 speedBytesPerSecond = speedBytesPerSecond,
                 stepsPerSecond = stepsPerSecond
             )
-        }.apply {
-            join()
-        }
+            delay(1000)
+            it.cancel()
+        }.join()
 
         // TODO: Double
 
