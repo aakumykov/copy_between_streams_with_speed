@@ -236,7 +236,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
         var job: Job? = null
 
-        job = scope.launch (Dispatchers.IO) {
+        job = scope.launch {
             launch (Dispatchers.IO) {
                 limitedStreamCopier.progressFlow
                     .onCompletion {

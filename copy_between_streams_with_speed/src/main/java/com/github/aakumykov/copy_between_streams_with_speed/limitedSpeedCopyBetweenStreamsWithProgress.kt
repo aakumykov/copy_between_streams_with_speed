@@ -14,7 +14,7 @@ import kotlin.math.roundToLong
 
 abstract class BasicStreamCopier {
     val progressFlow: SharedFlow<Long> get() = _progressFlow
-    protected val _progressFlow: MutableSharedFlow<Long> = MutableSharedFlow(1)
+    protected val _progressFlow: MutableSharedFlow<Long> = MutableSharedFlow()
 }
 
 class LimitedStreamCopier: BasicStreamCopier() {
@@ -65,18 +65,18 @@ class LimitedStreamCopier: BasicStreamCopier() {
 
             // Размер данных меньше, чем читаемая "порция".
             if (readBytes < operatingPortionSize) {
-                _progressFlow.tryEmit(totalDataRead)
+                _progressFlow.emit(totalDataRead)
                 break
             }
 
             if (readBytes < dataSizeToBeCopiedByStep) {
-                _progressFlow.tryEmit(totalDataRead)
+                _progressFlow.emit(totalDataRead)
                 break
             }
 
             // Пора отправлять сведения о прогрессе.
             if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
-                _progressFlow.tryEmit(totalDataRead)
+                _progressFlow.emit(totalDataRead)
                 thisStepDataRead = 0
             }
         }
