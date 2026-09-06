@@ -1,12 +1,14 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.util.Log.i
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
 import java.io.FileNotFoundException
@@ -47,30 +49,32 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     //
     // Испытание просто копирования
     //
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun file_simply_copied() = runBlocking {
-
         repeat_on_different_sizes { fileSize ->
+            runTest {
+                val fileSize = 10272
+                println("размер файла: $fileSize")
 
-            println("размер файла: $fileSize")
+                prepareSourceAndTargetFiles(fileSize)
 
-            prepareSourceAndTargetFiles(fileSize)
-
-
-            launch (Dispatchers.IO) {
-                limitedStreamCopier.progressFlow.collect {
-                    println(it)
+                val job = launch (Dispatchers.IO) {
+                    limitedStreamCopier.progressFlow.collect {
+                        println(it)
+                    }
                 }
-            }.also {
+                advanceUntilIdle()
+
                 limitedStreamCopier.copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
-                    speedBytesPerSecond = 1000
+                    speedBytesPerSecond = 1_000_000
                 )
-                it.cancel()
-            }
+                job.cancel()
 
-            test_files(fileSize)
+                test_files(fileSize)
+            }
         }
     }
 
@@ -153,10 +157,109 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     @Test
     fun progress_is_correct_on_sizes_lowe_than_10() = runBlocking {
         repeat(9) { i ->
-            val size = i+10
-            copy_and_test_progress_list(this,size,
-                1000, 10)
-            test_files(size)
+            val size = i + 10
+            val speed = 1000
+            val steps = 10
+            prepareSourceAndTargetFiles(size)
+            copy_data(1000, 10) {
+                test_progress_list(
+                    it,
+                    size,
+                    speed,
+                    steps
+                )
+                test_files(size)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun copy_data(
+        speed: Int,
+        steps: Int,
+        onComplete: (progressList:List<Long>) -> Unit
+    ) = runTest {
+
+        val progressList = mutableListOf<Long>()
+
+        val collectingJob = launch {
+            limitedStreamCopier.progressFlow.collect {
+                progressList.add(it)
+            }
+        }
+        advanceUntilIdle()
+
+        limitedStreamCopier.copyFromStreamToStream(
+            inputStream = sourceFileStream,
+            outputStream = targetFileStream,
+            speedBytesPerSecond = speed,
+            stepsPerSecond = steps
+        )
+        collectingJob.cancel()
+
+        onComplete.invoke(progressList)
+    }
+
+
+    private fun test_progress_list(
+        progressList: List<Long>,
+        dataSizeBytes: Int, // TODO: Long
+        speedBytesPerSecond: Int,
+        stepsPerSecond: Int,
+    ) {
+        test_progress_list_size(progressList, dataSizeBytes, speedBytesPerSecond, stepsPerSecond)
+        test_progress_list_is_incremental(progressList)
+    }
+
+    private fun test_progress_list_size(
+        progressList: List<Long>,
+        dataSizeBytes: Int,
+        speedBytesPerSecond: Int,
+        stepsPerSecond: Int
+    ) {
+        val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
+
+        val expectedSteps = if (dataSizeBytes < bytesToBeTransferredPerStep) 1
+        else (1f * dataSizeBytes / bytesToBeTransferredPerStep).roundToInt()
+
+        val argumentsLogs =
+            "данные: $dataSizeBytes байт,\n" +
+                    "скорость:$speedBytesPerSecond,\n" +
+                    "шагов:$stepsPerSecond"
+
+        if (expectedSteps > 1) {
+            val progressStepsCountDifferenceFloat =
+                1f * abs(progressList.size - expectedSteps) / expectedSteps
+            val progressStepsDifferenceInt = (progressStepsCountDifferenceFloat * 100).roundToInt()
+
+            val expectedDiffPercents = 10
+
+            Assert.assertTrue(
+                "${argumentsLogs}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%",
+                progressStepsDifferenceInt <= expectedDiffPercents
+            )
+        }
+        else {
+            Assert.assertEquals(
+                "${argumentsLogs}\nРазмер списка прогресса для данных $dataSizeBytes байт равен $expectedSteps",
+                expectedSteps,
+                progressList.size
+            )
+        }
+    }
+
+
+    private fun test_progress_list_is_incremental(progressList: List<Long>) {
+        // Проверка, что значения увеличиваются.
+        if (progressList.size >= 2) {
+            repeat(progressList.size-1) { i ->
+                val value = progressList[i]
+                val nextValue = progressList[i+1]
+                Assert.assertTrue(
+                    "Каждое предыдущее значение ($value) меньше следующего ($nextValue);\nвесь список:\n${progressList.joinToString(",\n")}",
+                    value < nextValue
+                )
+            }
         }
     }
 
@@ -222,30 +325,31 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     }
 
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun copy_and_test_progress_list(
         scope: CoroutineScope,
         dataSizeBytes: Int,
         speedBytesPerSecond: Int,
         stepsPerSecond: Int
-    ) {
+    ) = runTest {
         prepareSourceAndTargetFiles(dataSizeBytes)
 
         val progressList = mutableListOf<Long>()
 
-        scope.launch (Dispatchers.IO) {
+        val collectingJob = scope.launch (Dispatchers.IO) {
             limitedStreamCopier.progressFlow.collect {
                 progressList.add(it)
             }
-        }.also {
-            limitedStreamCopier.copyFromStreamToStream(
-                inputStream = sourceFileStream,
-                outputStream = targetFileStream,
-                speedBytesPerSecond = speedBytesPerSecond,
-                stepsPerSecond = stepsPerSecond
-            )
-            delay(1000)
-            it.cancel()
-        }.join()
+        }
+        advanceUntilIdle()
+
+        limitedStreamCopier.copyFromStreamToStream(
+            inputStream = sourceFileStream,
+            outputStream = targetFileStream,
+            speedBytesPerSecond = speedBytesPerSecond,
+            stepsPerSecond = stepsPerSecond
+        )
+        collectingJob.cancel()
 
         // TODO: Double
 
@@ -254,7 +358,8 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         val expectedSteps = if (dataSizeBytes < bytesToBeTransferredPerStep) 1
                             else (1f * dataSizeBytes / bytesToBeTransferredPerStep).roundToInt()
 
-        val argumentsLogs = "данные: $dataSizeBytes байт,\n" +
+        val argumentsLogs =
+                "данные: $dataSizeBytes байт,\n" +
                 "скорость:$speedBytesPerSecond,\n" +
                 "шагов:$stepsPerSecond"
 
@@ -278,6 +383,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             )
         }
 
+        // Проверка, что значения увеличиваются.
         if (progressList.size >= 2) {
             repeat(progressList.size-1) { i ->
                 val value = progressList[i]

@@ -60,13 +60,7 @@ class LimitedStreamCopier: BasicStreamCopier() {
             thisStepDataRead += readBytes
             totalDataRead += readBytes
 
-            // Размер данных меньше, чем читаемая "порция".
             if (readBytes < operatingPortionSize) {
-                _progressFlow.emit(totalDataRead)
-                break
-            }
-
-            if (readBytes < dataSizeToBeCopiedByStep) {
                 _progressFlow.emit(totalDataRead)
                 break
             }
