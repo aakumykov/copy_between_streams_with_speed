@@ -247,9 +247,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     @Test
     fun progress_is_correct_on_file_size_greater_than_buffer_size() = runBlocking {
-        repeat(1) { i ->
+        repeat(10) { i ->
             val multiplier = i+2
-            val size = multiplier * DEFAULT_BUFFER_SIZE + random.nextInt(1,10)
+            val size = multiplier * DEFAULT_BUFFER_SIZE + random.nextInt(1,DEFAULT_BUFFER_SIZE)
             val speed = multiplier * 1000
             val steps = 10
             prepareSourceAndTargetFiles(size)
