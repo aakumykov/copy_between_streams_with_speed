@@ -41,7 +41,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 -- первое значение меньше последнего;
                 -- расположены в порядке возрастания.
     4) вариации аргументов:
-        - фиксированный размер, разная скорость, фиксированное число шагов [constant_size_diff_speed_constant_steps];
+        - разная скорость при фиксированном числе шагов [copy_one_size_of_data_with_different_speed_with_constant_stepd];
         - фиксированный размер, фиксированная скорость, разное число шагов [constant_speed_diff_steps];
      */
 
@@ -261,6 +261,31 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
     }
 
+
+    @Test
+    fun copy_one_size_of_data_with_different_speed_with_constant_steps() = runTest {
+        val steps = 10
+
+        for(size in 1..10) {
+            for (speed in 1..10) {
+                prepareSourceAndTargetFiles(size)
+                copy_data(speed, steps) {
+                    test_progress_list(it, size, speed, steps)
+                    test_files(size)
+                }
+            }
+        }
+
+        for(size in 11..100) {
+            for (speed in 10..100) {
+                prepareSourceAndTargetFiles(size)
+                copy_data(speed, steps) {
+                    test_progress_list(it, size, speed, steps)
+                    test_files(size)
+                }
+            }
+        }
+    }
 
     @Test
     fun constant_size_diff_speed_constant_steps() = runTest {
