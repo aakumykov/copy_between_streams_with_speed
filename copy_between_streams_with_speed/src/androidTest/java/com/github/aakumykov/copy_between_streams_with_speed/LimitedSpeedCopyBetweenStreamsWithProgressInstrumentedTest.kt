@@ -42,7 +42,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 -- первое значение меньше последнего;
                 -- расположены в порядке возрастания.
     4) вариации аргументов:
-        - разная скорость при фиксированном числе шагов [test_constant_size_and_steps_with_different_speed];
+        - разная скорость при фиксированном числе шагов [constant_size_and_steps_with_different_speed];
         - фиксированный размер, фиксированная скорость, разное число шагов [];
      */
 
@@ -264,7 +264,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     @Test
-    fun test_constant_size_and_steps_with_different_speed() = runTest {
+    fun constant_size_and_steps_with_different_speed() = runTest {
         test_data_size_units()
         test_data_size_tens()
         test_data_size_hundreds()
@@ -276,8 +276,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun test_data_size_units() {
+        val n = 1
         test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * 1 + random.nextInt(0,num) },
+            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
             speedRange = UNITS_POW..MILLIONS_POW,
             steps = 1,
             comment = "единицы"
@@ -286,8 +287,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun test_data_size_tens() {
+        val n = 10
         test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * 10 + random.nextInt(0,num) },
+            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
             speedRange = TENS_POW..MILLIONS_POW,
             steps = 10,
             comment = "десятки"
@@ -296,8 +298,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun test_data_size_hundreds() {
+        val n = 100
         test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * 100 + random.nextInt(0,num) },
+            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
             speedRange = HUNDREDS_POW..MILLIONS_POW,
             steps = 10,
             comment = "сотни"
@@ -306,8 +309,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun test_data_size_thousands() {
+        val n = 1000
         test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * 1000 + random.nextInt(0,num) },
+            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
             speedRange = THOUSANDS_POW..MILLIONS_POW,
             steps = 10,
             comment = "тысячи"
@@ -316,8 +320,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun test_data_size_tens_thousands() {
+        val n = 10_000
         test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * 10_000 + random.nextInt(0,num) },
+            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
             speedRange = TENS_THOUSANDS_POW..MILLIONS_POW,
             steps = 10,
             comment = "десятки тысяч"
@@ -326,8 +331,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun test_data_size_hundreds_thousands() {
+        val n = 100_000
         test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * 100_000 + random.nextInt(0,num) },
+            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
             speedRange = HUNDREDS_THOUSANDS_POW..MILLIONS_POW,
             steps = 10,
             comment = "сотни тысяч"
@@ -336,8 +342,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun test_data_size_millions() {
+        val n = 1000_000
         test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * 1000_000 + random.nextInt(0,num) },
+            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
             speedRange = MILLIONS_POW..MILLIONS_POW,
             steps = 10,
             comment = "миллионы"
@@ -353,12 +360,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         for(n in 1..9) {
             val size = dataSizeSupplier.invoke(n)
 
-            println("$comment: Размер файла $size байт, шагов $steps")
-
             repeat_on_different_ranges(speedRange) { speed ->
-                println("$comment:  скорость $speed байт/с")
 
                 prepareSourceAndTargetFiles(size)
+
+                println("$comment байт ($size) на скорости $speed байт/с за $steps шагов в секунду.")
 
                 copy_data(speed, steps) {
                     test_progress_list(it, size, speed, steps)
