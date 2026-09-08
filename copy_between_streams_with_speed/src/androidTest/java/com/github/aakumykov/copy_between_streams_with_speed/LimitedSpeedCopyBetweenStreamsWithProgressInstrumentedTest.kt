@@ -12,6 +12,7 @@ import org.junit.Test
 import java.io.FileNotFoundException
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
@@ -20,7 +21,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     План теста:
     1) проверить граничные условия (в данном случае исключения):
         - нулевая скорость [throws_exception_on_zero_speed]
-        - отрицательная  скорость [throws_exception_on_negative_speed]
+        - отрицательная скорость [throws_exception_on_negative_speed]
         - количество шагов в секунду больше скорости в секунду [throws_exception_on_steps_greater_then_speed]
         - оцуцтвует исходный файл [thrown_FNFE_on_no_source_file]
     2) простое копирование файла [file_simply_copied], при котором он:
@@ -41,8 +42,8 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 -- первое значение меньше последнего;
                 -- расположены в порядке возрастания.
     4) вариации аргументов:
-        - разная скорость при фиксированном числе шагов [copy_one_size_of_data_with_different_speed_with_constant_stepd];
-        - фиксированный размер, фиксированная скорость, разное число шагов [constant_speed_diff_steps];
+        - разная скорость при фиксированном числе шагов [test_constant_size_and_steps_with_different_speed];
+        - фиксированный размер, фиксированная скорость, разное число шагов [];
      */
 
 
@@ -52,7 +53,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun file_simply_copied() = runBlocking {
-        repeat_on_different_sizes { fileSize ->
+        repeat_on_different_sizes {
             runTest {
                 val fileSize = 10272
                 println("размер файла: $fileSize")
@@ -264,13 +265,101 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     @Test
     fun test_constant_size_and_steps_with_different_speed() = runTest {
-        val tag = "CS_CS_DS"
-        val steps = 1
-        for(size in 1..100) {
-            println("$tag: Размер файла $size байт, шагов $steps")
-            repeat_on_different_ranges(UNITS, TENS, HUNDREDS, THOUSANDS, TENS_THOUSANDS, HUNDREDS_THOUSANDS, MILLIONS) { speed ->
-                println("$tag:  скорость $speed байс/с")
+        test_data_size_units()
+        test_data_size_tens()
+        test_data_size_hundreds()
+        test_data_size_thousands()
+        test_data_size_tens_thousands()
+        test_data_size_hundreds_thousands()
+        test_data_size_millions()
+    }
+
+
+    private fun test_data_size_units() {
+        test_sizes_with_speed_ranges_and_constant_steps(
+            dataSizeSupplier = { num: Int -> num * 1 + random.nextInt(0,num) },
+            speedRange = UNITS_POW..MILLIONS_POW,
+            steps = 1,
+            comment = "единицы"
+        )
+    }
+
+
+    private fun test_data_size_tens() {
+        test_sizes_with_speed_ranges_and_constant_steps(
+            dataSizeSupplier = { num: Int -> num * 10 + random.nextInt(0,num) },
+            speedRange = TENS_POW..MILLIONS_POW,
+            steps = 10,
+            comment = "десятки"
+        )
+    }
+
+
+    private fun test_data_size_hundreds() {
+        test_sizes_with_speed_ranges_and_constant_steps(
+            dataSizeSupplier = { num: Int -> num * 100 + random.nextInt(0,num) },
+            speedRange = HUNDREDS_POW..MILLIONS_POW,
+            steps = 10,
+            comment = "сотни"
+        )
+    }
+
+
+    private fun test_data_size_thousands() {
+        test_sizes_with_speed_ranges_and_constant_steps(
+            dataSizeSupplier = { num: Int -> num * 1000 + random.nextInt(0,num) },
+            speedRange = THOUSANDS_POW..MILLIONS_POW,
+            steps = 10,
+            comment = "тысячи"
+        )
+    }
+
+
+    private fun test_data_size_tens_thousands() {
+        test_sizes_with_speed_ranges_and_constant_steps(
+            dataSizeSupplier = { num: Int -> num * 10_000 + random.nextInt(0,num) },
+            speedRange = TENS_THOUSANDS_POW..MILLIONS_POW,
+            steps = 10,
+            comment = "десятки тысяч"
+        )
+    }
+
+
+    private fun test_data_size_hundreds_thousands() {
+        test_sizes_with_speed_ranges_and_constant_steps(
+            dataSizeSupplier = { num: Int -> num * 100_000 + random.nextInt(0,num) },
+            speedRange = HUNDREDS_THOUSANDS_POW..MILLIONS_POW,
+            steps = 10,
+            comment = "сотни тысяч"
+        )
+    }
+
+
+    private fun test_data_size_millions() {
+        test_sizes_with_speed_ranges_and_constant_steps(
+            dataSizeSupplier = { num: Int -> num * 1000_000 + random.nextInt(0,num) },
+            speedRange = MILLIONS_POW..MILLIONS_POW,
+            steps = 10,
+            comment = "миллионы"
+        )
+    }
+
+    fun test_sizes_with_speed_ranges_and_constant_steps(
+        dataSizeSupplier: (num: Int) -> Int,
+        speedRange: IntRange,
+        steps: Int,
+        comment: String
+    ) {
+        for(n in 1..9) {
+            val size = dataSizeSupplier.invoke(n)
+
+            println("$comment: Размер файла $size байт, шагов $steps")
+
+            repeat_on_different_ranges(speedRange) { speed ->
+                println("$comment:  скорость $speed байт/с")
+
                 prepareSourceAndTargetFiles(size)
+
                 copy_data(speed, steps) {
                     test_progress_list(it, size, speed, steps)
                     test_files(size)
@@ -279,11 +368,18 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
     }
 
+    private fun randomNumberWithMagnitude(magnitude: Int): Int {
+        val base = 10.0.pow(magnitude).roundToInt()
+        return base + random.nextInt(0, base)
+    }
 
-    private fun repeat_on_different_ranges(vararg sizeRanges: Int, block: (baseSize:Int) -> Unit) {
-        sizeRanges.forEach { range ->
-            val size = range + random.nextInt(0, range)
-            block.invoke(size)
+
+    /**
+     * Для каждого числа из списка генерирует случайное число того же порядка.
+     */
+    private fun repeat_on_different_ranges(sizeRanges: IntRange, block: (baseSize:Int) -> Unit) {
+        sizeRanges.forEach { magnitude ->
+            block.invoke(randomNumberWithMagnitude(magnitude))
         }
     }
 
@@ -321,77 +417,6 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         Assert.assertEquals(sourceFileContents, targetFileContents)
     }
 
-
-    /*@OptIn(ExperimentalCoroutinesApi::class)
-    private suspend fun copy_and_test_progress_list(
-        scope: CoroutineScope,
-        dataSizeBytes: Int,
-        speedBytesPerSecond: Int,
-        stepsPerSecond: Int
-    ) = runTest {
-        prepareSourceAndTargetFiles(dataSizeBytes)
-
-        val progressList = mutableListOf<Long>()
-
-        val collectingJob = scope.launch (Dispatchers.IO) {
-            limitedStreamCopier.progressFlow.collect {
-                progressList.add(it)
-            }
-        }
-        advanceUntilIdle()
-
-        limitedStreamCopier.copyFromStreamToStream(
-            inputStream = sourceFileStream,
-            outputStream = targetFileStream,
-            speedBytesPerSecond = speedBytesPerSecond,
-            stepsPerSecond = stepsPerSecond
-        )
-        collectingJob.cancel()
-
-        // TODO: Double
-
-        val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
-
-        val expectedSteps = if (dataSizeBytes < bytesToBeTransferredPerStep) 1
-                            else (1f * dataSizeBytes / bytesToBeTransferredPerStep).roundToInt()
-
-        val argumentsLogs =
-                "данные: $dataSizeBytes байт,\n" +
-                "скорость:$speedBytesPerSecond,\n" +
-                "шагов:$stepsPerSecond"
-
-        if (expectedSteps > 1) {
-                val progressStepsCountDifferenceFloat =
-                    1f * abs(progressList.size - expectedSteps) / expectedSteps
-                val progressStepsDifferenceInt = (progressStepsCountDifferenceFloat * 100).roundToInt()
-
-                val expectedDiffPercents = 10
-
-                Assert.assertTrue(
-                    "${argumentsLogs}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%",
-                    progressStepsDifferenceInt <= expectedDiffPercents
-                )
-            }
-        else {
-            Assert.assertEquals(
-                "${argumentsLogs}\nРазмер списка прогресса для данных $dataSizeBytes байт равен $expectedSteps",
-                expectedSteps,
-                progressList.size
-            )
-        }
-
-        // Проверка, что значения увеличиваются.
-        if (progressList.size >= 2) {
-            repeat(progressList.size-1) { i ->
-                val value = progressList[i]
-                val nextValue = progressList[i+1]
-                Assert.assertTrue(
-                    "Каждое предыдущее значение ($value) меньше следующего ($nextValue);\nвесь список:\n${progressList.joinToString(",\n")}",
-                    value < nextValue
-                )
-            }
-        }
-    }*/
 
     private suspend fun repeat_on_different_sizes(
         sizesList: List<Int> = listOf(1, 10, 100, 1000, 10_000, 100_000, 1000_000),
@@ -505,12 +530,12 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     private val limitedStreamCopier by lazy { LimitedStreamCopier() }
 
     companion object {
-        const val UNITS = 1
-        const val TENS = 10
-        const val HUNDREDS = 100
-        const val THOUSANDS = 1000
-        const val TENS_THOUSANDS = 10_000
-        const val HUNDREDS_THOUSANDS = 100_000
-        const val MILLIONS = 1000_000
+        private const val UNITS_POW = 0
+        private const val TENS_POW = 1
+        private const val HUNDREDS_POW = 2
+        private const val THOUSANDS_POW = 3
+        private const val TENS_THOUSANDS_POW = 5
+        private const val HUNDREDS_THOUSANDS_POW = 5
+        private const val MILLIONS_POW = 6
     }
 }
