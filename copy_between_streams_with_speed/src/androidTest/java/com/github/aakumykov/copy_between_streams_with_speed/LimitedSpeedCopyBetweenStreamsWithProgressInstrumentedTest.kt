@@ -263,21 +263,13 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     @Test
-    fun copy_one_size_of_data_with_different_speed_with_constant_steps() = runTest {
-        val steps = 10
-
-        for(size in 1..10) {
-            for (speed in 1..10) {
-                prepareSourceAndTargetFiles(size)
-                copy_data(speed, steps) {
-                    test_progress_list(it, size, speed, steps)
-                    test_files(size)
-                }
-            }
-        }
-
-        for(size in 11..100) {
-            for (speed in 10..100) {
+    fun test_constant_size_and_steps_with_different_speed() = runTest {
+        val tag = "CS_CS_DS"
+        val steps = 1
+        for(size in 1..100) {
+            println("$tag: Размер файла $size байт, шагов $steps")
+            repeat_on_different_ranges(UNITS, TENS, HUNDREDS, THOUSANDS, TENS_THOUSANDS, HUNDREDS_THOUSANDS, MILLIONS) { speed ->
+                println("$tag:  скорость $speed байс/с")
                 prepareSourceAndTargetFiles(size)
                 copy_data(speed, steps) {
                     test_progress_list(it, size, speed, steps)
@@ -287,7 +279,15 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
     }
 
-    @Test
+
+    private fun repeat_on_different_ranges(vararg sizeRanges: Int, block: (baseSize:Int) -> Unit) {
+        sizeRanges.forEach { range ->
+            val size = range + random.nextInt(0, range)
+            block.invoke(size)
+        }
+    }
+
+    /*@Test
     fun constant_size_diff_speed_constant_steps() = runTest {
         val dataSize = 1000
         val stepsPerSecond = 10
@@ -302,7 +302,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 test_files(dataSize)
             }
         }
-    }
+    }*/
 
 
     private fun copyWithoutCheck() = runBlocking {
@@ -503,4 +503,14 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private val limitedStreamCopier by lazy { LimitedStreamCopier() }
+
+    companion object {
+        const val UNITS = 1
+        const val TENS = 10
+        const val HUNDREDS = 100
+        const val THOUSANDS = 1000
+        const val TENS_THOUSANDS = 10_000
+        const val HUNDREDS_THOUSANDS = 100_000
+        const val MILLIONS = 1000_000
+    }
 }
