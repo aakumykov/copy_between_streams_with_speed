@@ -42,8 +42,10 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 -- первое значение меньше последнего;
                 -- расположены в порядке возрастания.
     4) вариации аргументов:
-        - разная скорость при фиксированном числе шагов [constant_size_and_steps_with_different_speed];
-        - фиксированный размер, фиксированная скорость, разное число шагов [];
+        - разная скорость при фиксированном числе шагов
+            [constant_size_and_steps_with_different_speed];
+        - фиксированный размер, фиксированная скорость, разное число шагов
+            [constant_size_and_speed_with_different_steps];
      */
 
 
@@ -275,6 +277,27 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     }
 
 
+    @Test
+    fun constant_size_and_speed_with_different_steps() {
+        test_csize_cspeed_with_dsteps_on_data_units()
+    }
+
+    private fun test_csize_cspeed_with_dsteps_on_data_units() {
+        val speed = 1
+        val sizeFrom = 1
+        val sizeTo = 9
+        for(size in 1..9) {
+            repeat_on_different_ranges(speed..sizeTo) { steps ->
+                prepareSourceAndTargetFiles(size)
+                copy_data(speed, steps) {
+                    test_files(size)
+                    test_progress_list(it, size, speed, steps)
+                }
+            }
+        }
+    }
+
+
     private fun test_data_size_units() {
         val n = 1
         test_sizes_with_speed_ranges_and_constant_steps(
@@ -383,8 +406,8 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     /**
      * Для каждого числа из списка генерирует случайное число того же порядка.
      */
-    private fun repeat_on_different_ranges(sizeRanges: IntRange, block: (baseSize:Int) -> Unit) {
-        sizeRanges.forEach { magnitude ->
+    private fun repeat_on_different_ranges(ranges: IntRange, block: (baseSize:Int) -> Unit) {
+        ranges.forEach { magnitude ->
             block.invoke(randomNumberWithMagnitude(magnitude))
         }
     }
