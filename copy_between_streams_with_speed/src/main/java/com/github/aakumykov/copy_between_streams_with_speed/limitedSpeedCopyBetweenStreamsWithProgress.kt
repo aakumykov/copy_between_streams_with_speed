@@ -1,18 +1,11 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
-
-abstract class BasicStreamCopier {
-    val progressFlow: SharedFlow<Long> get() = _progressFlow
-    protected val _progressFlow: MutableSharedFlow<Long> = MutableSharedFlow()
-}
 
 class LimitedStreamCopier: BasicStreamCopier() {
 
@@ -66,14 +59,14 @@ class LimitedStreamCopier: BasicStreamCopier() {
             // Размер данных, которыми оперируют в процессе перекидывания данных.
 
             if (readBytes < operatingPortionSize) {
-                _progressFlow.emit(totalDataRead)
+                publishProgress(totalDataRead)
                 break
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
-                _progressFlow.emit(totalDataRead)
+                publishProgress(totalDataRead)
             }
             else if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
-                _progressFlow.emit(totalDataRead)
+                publishProgress(totalDataRead)
                 thisStepDataRead = 0
             }
         }
