@@ -286,7 +286,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 10,
             stepsRange = 1..10,
             stepsInterval = 1,
-            slightlyBlurStep = false
+            randomizeStep = false
         )
 
         // "десятки байт: 10+..90+"
@@ -295,7 +295,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 100,
             stepsRange = 1..100,
             stepsInterval = 10,
-            slightlyBlurStep = true
+            randomizeStep = true
         )
 
         // "сотни байт: 100+..900+"
@@ -304,7 +304,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 1000,
             stepsRange = 1..100,
             stepsInterval = 10,
-            slightlyBlurStep = true
+            randomizeStep = true
         )
 
         // "тысячи байт: 1000+..9000+"
@@ -313,7 +313,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 10_000,
             stepsRange = 1..100,
             stepsInterval = 10,
-            slightlyBlurStep = true
+            randomizeStep = true
         )
 
         // "десятки тысяч байт: 10_000+..90_000+"
@@ -322,7 +322,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 100_000,
             stepsRange = 1..100,
             stepsInterval = 10,
-            slightlyBlurStep = true
+            randomizeStep = true
         )
 
         // "сотни тысяч байт: 100_000+..900_000+"
@@ -331,7 +331,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 1000_000,
             stepsRange = 1..100,
             stepsInterval = 10,
-            slightlyBlurStep = true
+            randomizeStep = true
         )
 
         // "мильёны байт: 1000_000+..9000_000+"
@@ -340,7 +340,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 10_000_000,
             stepsRange = 1..100,
             stepsInterval = 10,
-            slightlyBlurStep = true
+            randomizeStep = true
         )
 
         qwertry(
@@ -348,7 +348,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speed = 10_000_000,
             stepsRange = 100..1000,
             stepsInterval = 100,
-            slightlyBlurStep = true
+            randomizeStep = true
         )
     }
 
@@ -357,7 +357,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         speed: Int,
         stepsRange: IntRange,
         stepsInterval: Int,
-        slightlyBlurStep: Boolean = false,
+        randomizeStep: Boolean = false,
     ) {
         println("----- Копирование -----")
 
@@ -374,7 +374,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             )
 
             steps += stepsInterval
-            if (slightlyBlurStep) steps += random.nextInt(stepsInterval)
+            if (randomizeStep) steps += random.nextInt(stepsInterval)
         }
     }
 
