@@ -1,6 +1,5 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.Dispatchers
@@ -8,6 +7,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
@@ -334,41 +334,40 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
         // "мильёны байт: 1000_000+..9000_000+"
         qwertry(
-            dataSizeSupplier = { n -> n * 1000_000 + random.nextInt(1000_000) },
-            speedSupplier = { _ -> 10_000_000 },
-            stepsRange = 10..100,
+            dataSizeFromRange = 1000_000..9000_000,
+            speed = 10_000_000,
+            stepsRange = 1..100,
             stepsInterval = 10,
             slightlyBlurStep = true
         )
     }
 
     private fun qwertry(
-        baseNumberRange: IntRange = 1..9,
-        dataSizeSupplier: (n:Int) -> Int,
-        speedSupplier: (n: Int) -> Int,
+        dataSizeFromRange: IntRange,
+        speed: Int,
         stepsRange: IntRange,
         stepsInterval: Int,
         slightlyBlurStep: Boolean = false,
     ) {
-        baseNumberRange.forEach { baseNumber ->
-            println("----- Копирование -----")
+        println("----- Копирование -----")
 
-            val dataSize = dataSizeSupplier.invoke(baseNumber)
-            val speed = speedSupplier.invoke(baseNumber)
+        val dataSize = dataSizeFromRange.random()
 
-            var steps = stepsRange.first
-            while (steps <= stepsRange.last) {
+        var steps = stepsRange.first
+        while (steps <= stepsRange.last) {
 
-                println("Копирование ${dataSize.humanSizeBinary()} байт на скорости ${speed.humanSizeBinary()}/с $steps шагами в секунду.")
-                test_with_params(
-                    dataSizeBytes = dataSize,
-                    speedBytesPerSecond = speed,
-                    stepsPerSecond = steps
-                )
+            test_with_params(
+                dataSizeBytes = dataSize,
+                speedBytesPerSecond = speed,
+                stepsPerSecond = steps,
+                onCopyFinished = { durationMs ->
+                    val duration = 1.toDouble() * durationMs / 1000
+                    println("Скопировано ${dataSize.humanSizeBinary()} байт на скорости ${speed.humanSizeBinary()}/с $steps шагами в секунду за ${duration} с")
+                }
+            )
 
-                steps += stepsInterval
-                if (slightlyBlurStep) steps += random.nextInt(stepsInterval)
-            }
+            steps += stepsInterval
+            if (slightlyBlurStep) steps += random.nextInt(stepsInterval)
         }
     }
 
@@ -553,7 +552,12 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun copy_data(speed: Int, steps: Int, onComplete: (progressList:List<Long>) -> Unit) = runTest {
+    private fun copy_data(
+        speed: Int,
+        steps: Int,
+        onCopyFinished: ((durationMs:Long) -> Unit)? = null,
+        onComplete: (progressList:List<Long>) -> Unit
+    ) = runTest {
 
         val progressList = mutableListOf<Long>()
 
@@ -564,12 +568,15 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
         advanceUntilIdle()
 
+        val startTimeMs = currentTime
         limitedStreamCopier.copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
             speedBytesPerSecond = speed,
             stepsPerSecond = steps
         )
+        onCopyFinished?.invoke(currentTime - startTimeMs)
+
         collectingJob.cancel()
 
         onComplete.invoke(progressList)
@@ -651,9 +658,10 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         dataSizeBytes: Int,
         speedBytesPerSecond: Int,
         stepsPerSecond: Int,
+        onCopyFinished: ((durationMs:Long) -> Unit)? = null
     ) {
         prepareSourceAndTargetFiles(dataSizeBytes)
-        copy_data(speedBytesPerSecond, stepsPerSecond) {
+        copy_data(speedBytesPerSecond, stepsPerSecond, onCopyFinished = onCopyFinished) {
             test_progress_list(it, dataSizeBytes, speedBytesPerSecond, stepsPerSecond)
             test_files(dataSizeBytes)
         }
