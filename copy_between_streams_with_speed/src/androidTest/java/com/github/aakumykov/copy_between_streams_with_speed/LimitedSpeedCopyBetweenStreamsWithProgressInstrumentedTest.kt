@@ -342,6 +342,14 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             stepsInterval = 10,
             slightlyBlurStep = true
         )
+
+        qwertry(
+            dataSizeFromRange = 1000_000..9000_000,
+            speed = 10_000_000,
+            stepsRange = 100..1000,
+            stepsInterval = 100,
+            slightlyBlurStep = true
+        )
     }
 
     private fun qwertry(
