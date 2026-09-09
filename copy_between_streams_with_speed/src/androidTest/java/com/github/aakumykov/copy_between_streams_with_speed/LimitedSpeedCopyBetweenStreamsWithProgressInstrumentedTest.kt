@@ -13,7 +13,6 @@ import org.junit.Test
 import java.io.FileNotFoundException
 import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
@@ -43,10 +42,12 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 -- первое значение меньше последнего;
                 -- расположены в порядке возрастания.
     4) вариации аргументов:
-        - разная скорость при фиксированном числе шагов
+        - разная скорость при фиксированном числе шагов и размере
             [constant_size_and_steps_with_different_speed];
-        - фиксированный размер, фиксированная скорость, разное число шагов
+        - разное число шагов при фиксированных размере и скорости
             [constant_size_and_speed_with_different_steps];
+        - разный размер при фиксированных скорости и числе шагов
+            [constant_steps_and_speed_with_different_size].
      */
 
 
@@ -461,6 +462,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         )
     }
 
+
     private fun do_with_variable_steps(
         dataSizeFromRange: IntRange,
         speed: Int,
@@ -538,139 +540,6 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             if (randomizeSpeed) speed += random.nextInt(speedInterval)
         }
     }
-
-
-    private fun test_data_size_units() {
-        val n = 1
-        test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
-            speedRange = UNITS_POW..MILLIONS_POW,
-            steps = 1,
-            comment = "единицы"
-        )
-    }
-
-
-    private fun test_data_size_tens() {
-        val n = 10
-        test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
-            speedRange = TENS_POW..MILLIONS_POW,
-            steps = 10,
-            comment = "десятки"
-        )
-    }
-
-
-    private fun test_data_size_hundreds() {
-        val n = 100
-        test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
-            speedRange = HUNDREDS_POW..MILLIONS_POW,
-            steps = 10,
-            comment = "сотни"
-        )
-    }
-
-
-    private fun test_data_size_thousands() {
-        val n = 1000
-        test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
-            speedRange = THOUSANDS_POW..MILLIONS_POW,
-            steps = 10,
-            comment = "тысячи"
-        )
-    }
-
-
-    private fun test_data_size_tens_thousands() {
-        val n = 10_000
-        test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
-            speedRange = TENS_THOUSANDS_POW..MILLIONS_POW,
-            steps = 10,
-            comment = "десятки тысяч"
-        )
-    }
-
-
-    private fun test_data_size_hundreds_thousands() {
-        val n = 100_000
-        test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
-            speedRange = HUNDREDS_THOUSANDS_POW..MILLIONS_POW,
-            steps = 10,
-            comment = "сотни тысяч"
-        )
-    }
-
-
-    private fun test_data_size_millions() {
-        val n = 1000_000
-        test_sizes_with_speed_ranges_and_constant_steps(
-            dataSizeSupplier = { num: Int -> num * n + random.nextInt(0,n) },
-            speedRange = MILLIONS_POW..MILLIONS_POW,
-            steps = 10,
-            comment = "миллионы"
-        )
-    }
-
-    fun test_sizes_with_speed_ranges_and_constant_steps(
-        dataSizeSupplier: (num: Int) -> Int,
-        speedRange: IntRange,
-        steps: Int,
-        comment: String
-    ) {
-        for(n in 1..9) {
-            val size = dataSizeSupplier.invoke(n)
-
-            repeat_on_different_ranges(speedRange) { speed ->
-
-                prepareSourceAndTargetFiles(size)
-
-                println("$comment байт ($size) на скорости $speed байт/с за $steps шагов в секунду.")
-
-                copy_data_with_on_complete(speed, steps) {
-                    test_progress_list(it, size, speed, steps)
-                    test_files(size)
-                }
-            }
-        }
-    }
-
-
-    private fun randomNumberWithMagnitude(magnitude: Int): Int {
-        val base = 10.0.pow(magnitude).roundToInt()
-        return base + random.nextInt(0, base)
-    }
-
-
-    /**
-     * Для каждого числа из списка генерирует случайное число того же порядка.
-     */
-    private fun repeat_on_different_ranges(ranges: IntRange, block: (baseSize:Int) -> Unit) {
-        ranges.forEach { magnitude ->
-            block.invoke(randomNumberWithMagnitude(magnitude))
-        }
-    }
-
-    /*@Test
-    fun constant_size_diff_speed_constant_steps() = runTest {
-        val dataSize = 1000
-        val stepsPerSecond = 10
-
-        listOf(stepsPerSecond, 100, 1000, DEFAULT_BUFFER_SIZE, 10_000, 100_000).forEach { base ->
-            val speed = base + if (base > 1) random.nextInt(1, base) else 0
-
-            prepareSourceAndTargetFiles(dataSize)
-
-            copy_data(speed, stepsPerSecond) {
-                test_progress_list(it, dataSize, speed, stepsPerSecond)
-                test_files(dataSize)
-            }
-        }
-    }*/
 
 
     private fun copyWithoutCheck() = runBlocking {
@@ -813,14 +682,4 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private val limitedStreamCopier by lazy { LimitedStreamCopier() }
-
-    companion object {
-        private const val UNITS_POW = 0
-        private const val TENS_POW = 1
-        private const val HUNDREDS_POW = 2
-        private const val THOUSANDS_POW = 3
-        private const val TENS_THOUSANDS_POW = 5
-        private const val HUNDREDS_THOUSANDS_POW = 5
-        private const val MILLIONS_POW = 6
-    }
 }
