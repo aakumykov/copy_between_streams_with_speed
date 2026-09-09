@@ -1,20 +1,28 @@
 package com.github.aakumykov.copy_between_streams_with_counting_demo
 
+import android.R.attr.text
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivityDemoBinding
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.errorMsg
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.errorMsgExtended
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getIntFromPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed
+import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.InputStream
 import kotlin.math.roundToInt
 
@@ -59,15 +67,22 @@ class DemoActivity : AppCompatActivity() {
 
     private var currentInputStream: InputStream? = null
 
-    private fun onStartButtonClicked() {
+    private val limitedStreamCopier by lazy { LimitedStreamCopier() }
 
-        val dataSize = binding.sizeSeekBar.progress
-        val speed = binding.speedSeekBar.progress
+    private val dataSize get() = binding.sizeSeekBar.progress
+    private val speed get() = binding.speedSeekBar.progress
+
+    private fun onStartButtonClicked() {
 
         storeIntInPreferences(KEY_SIZE, dataSize)
         storeIntInPreferences(KEY_SPEED, speed)
 
-        lifecycleScope.launch (Dispatchers.IO) {
+        val eh = CoroutineExceptionHandler { context, throwable ->
+            showError(throwable.errorMsgExtended)
+            Log.e(TAG, throwable.errorMsg, throwable)
+        }
+
+        lifecycleScope.launch (eh + Dispatchers.IO) {
             val sourceFile = File.createTempFile("source","file")
             val targetFile = File.createTempFile("target","file")
 
@@ -76,7 +91,17 @@ class DemoActivity : AppCompatActivity() {
             sourceFile.inputStream().use { inputStream ->
                 this@DemoActivity.currentInputStream = inputStream
                 targetFile.outputStream().use { outputStream ->
-                    copyBetweenStreamsWithSpeed(
+                    doCopy(
+                        scope = this,
+                        inputStream = inputStream,
+                        outputStream = outputStream
+                    )
+                }
+            }
+        }
+    }
+
+    /*copyBetweenStreamsWithSpeed(
                         inputStream = inputStream,
                         outputStream = outputStream,
                         speedBytesPerSec = speed,
@@ -89,10 +114,27 @@ class DemoActivity : AppCompatActivity() {
                                     "за ${(timeElapsedMs.toFloat()/1000)} с,\n" +
                                     "скорость: ${humanReadableByteCount(speedBytesPerSec)}/с")
                         }
-                    )
-                }
+                    )*/
+
+    private suspend fun doCopy(
+        scope: CoroutineScope,
+        inputStream: FileInputStream,
+        outputStream: FileOutputStream
+    ) {
+        scope.launch {
+            limitedStreamCopier.progressFlow.collect { transferred ->
+                val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
+                showProgress(percent)
             }
+        }.invokeOnCompletion {
+            println()
         }
+
+        limitedStreamCopier.copyFromStreamToStream(
+            inputStream,
+            outputStream,
+            speed
+        )
     }
 
     private val probeClass by lazy {
@@ -113,9 +155,21 @@ class DemoActivity : AppCompatActivity() {
         }
     }
 
-    private fun showInfo(text: String) {
+    private fun showInfo(message: String) {
         lifecycleScope.launch {
-            binding.infoView.text = text
+            binding.infoView.apply {
+                text = message
+                setTextColor(getColor(R.color.black_white_day_night))
+            }
+        }
+    }
+
+    private fun showError(message: String) {
+        lifecycleScope.launch {
+            binding.infoView.apply {
+                text = message
+                setTextColor(getColor(R.color.error))
+            }
         }
     }
 
@@ -125,6 +179,7 @@ class DemoActivity : AppCompatActivity() {
     }
 
     companion object {
+        val TAG: String = DemoActivity::class.java.simpleName
         const val KEY_SIZE = "SIZE"
         const val KEY_SPEED = "SPEED"
         const val MAX_SIZE = 12_000_000
