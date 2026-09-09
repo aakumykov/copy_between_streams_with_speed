@@ -7,7 +7,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
@@ -281,56 +280,59 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     @Test
     fun constant_size_and_speed_with_different_steps() {
-        /*// "единицы байт: 1..9"
+        // "единицы байт: 1..9"
         qwertry(
-            dataSizeSupplier = { n -> n * 1 },
-            speedSupplier = { _ -> 10 },
+            dataSizeFromRange = 1..9,
+            speed = 10,
             stepsRange = 1..10,
-            stepsInterval = 1
+            stepsInterval = 1,
+            slightlyBlurStep = false
         )
 
         // "десятки байт: 10+..90+"
         qwertry(
-            dataSizeSupplier = { n -> n * 10 + random.nextInt(10) },
-            speedSupplier = { _ -> 10 },
-            stepsRange = 1..10,
-            stepsInterval = 1
+            dataSizeFromRange = 10..90,
+            speed = 100,
+            stepsRange = 1..100,
+            stepsInterval = 10,
+            slightlyBlurStep = true
         )
 
         // "сотни байт: 100+..900+"
         qwertry(
-            dataSizeSupplier = { n -> n * 100 + random.nextInt(100) },
-            speedSupplier = { _ -> 1000 },
-            stepsRange = 10..100,
+            dataSizeFromRange = 100..900,
+            speed = 1000,
+            stepsRange = 1..100,
             stepsInterval = 10,
+            slightlyBlurStep = true
         )
 
         // "тысячи байт: 1000+..9000+"
         qwertry(
-            dataSizeSupplier = { n -> n * 1000 + random.nextInt(1000) },
-            speedSupplier = { _ -> 10_000 },
-            stepsRange = 10..100,
+            dataSizeFromRange = 1000..9000,
+            speed = 10_000,
+            stepsRange = 1..100,
             stepsInterval = 10,
             slightlyBlurStep = true
         )
 
         // "десятки тысяч байт: 10_000+..90_000+"
         qwertry(
-            dataSizeSupplier = { n -> n * 10_000 + random.nextInt(10_000) },
-            speedSupplier = { _ -> 100_000 },
-            stepsRange = 10..100,
+            dataSizeFromRange = 10_000..90_000,
+            speed = 100_000,
+            stepsRange = 1..100,
             stepsInterval = 10,
             slightlyBlurStep = true
         )
 
         // "сотни тысяч байт: 100_000+..900_000+"
         qwertry(
-            dataSizeSupplier = { n -> n * 100_000 + random.nextInt(100_000) },
-            speedSupplier = { _ -> 1000_000 },
-            stepsRange = 10..100,
+            dataSizeFromRange = 100_000..900_000,
+            speed = 1000_000,
+            stepsRange = 1..100,
             stepsInterval = 10,
             slightlyBlurStep = true
-        )*/
+        )
 
         // "мильёны байт: 1000_000+..9000_000+"
         qwertry(
@@ -356,14 +358,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         var steps = stepsRange.first
         while (steps <= stepsRange.last) {
 
+            println("Копирование ${dataSize.humanSizeBinary()} на скорости ${speed.humanSizeBinary()}/с с $steps шагами в секунду.")
             test_with_params(
                 dataSizeBytes = dataSize,
                 speedBytesPerSecond = speed,
-                stepsPerSecond = steps,
-                onCopyFinished = { durationMs ->
-                    val duration = 1.toDouble() * durationMs / 1000
-                    println("Скопировано ${dataSize.humanSizeBinary()} байт на скорости ${speed.humanSizeBinary()}/с $steps шагами в секунду за ${duration} с")
-                }
+                stepsPerSecond = steps
             )
 
             steps += stepsInterval
@@ -552,12 +551,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun copy_data(
-        speed: Int,
-        steps: Int,
-        onCopyFinished: ((durationMs:Long) -> Unit)? = null,
-        onComplete: (progressList:List<Long>) -> Unit
-    ) = runTest {
+    private fun copy_data(speed: Int, steps: Int, onComplete: (progressList:List<Long>) -> Unit) = runTest {
 
         val progressList = mutableListOf<Long>()
 
@@ -568,15 +562,12 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
         advanceUntilIdle()
 
-        val startTimeMs = currentTime
         limitedStreamCopier.copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
             speedBytesPerSecond = speed,
             stepsPerSecond = steps
         )
-        onCopyFinished?.invoke(currentTime - startTimeMs)
-
         collectingJob.cancel()
 
         onComplete.invoke(progressList)
@@ -658,10 +649,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         dataSizeBytes: Int,
         speedBytesPerSecond: Int,
         stepsPerSecond: Int,
-        onCopyFinished: ((durationMs:Long) -> Unit)? = null
     ) {
         prepareSourceAndTargetFiles(dataSizeBytes)
-        copy_data(speedBytesPerSecond, stepsPerSecond, onCopyFinished = onCopyFinished) {
+        copy_data(speedBytesPerSecond, stepsPerSecond) {
             test_progress_list(it, dataSizeBytes, speedBytesPerSecond, stepsPerSecond)
             test_files(dataSizeBytes)
         }
