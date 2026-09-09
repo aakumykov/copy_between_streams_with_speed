@@ -1,5 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -279,7 +281,95 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     @Test
     fun constant_size_and_speed_with_different_steps() {
-        test_csize_cspeed_with_dsteps_on_data_units()
+        /*// "единицы байт: 1..9"
+        qwertry(
+            dataSizeSupplier = { n -> n * 1 },
+            speedSupplier = { _ -> 10 },
+            stepsRange = 1..10,
+            stepsInterval = 1
+        )
+
+        // "десятки байт: 10+..90+"
+        qwertry(
+            dataSizeSupplier = { n -> n * 10 + random.nextInt(10) },
+            speedSupplier = { _ -> 10 },
+            stepsRange = 1..10,
+            stepsInterval = 1
+        )
+
+        // "сотни байт: 100+..900+"
+        qwertry(
+            dataSizeSupplier = { n -> n * 100 + random.nextInt(100) },
+            speedSupplier = { _ -> 1000 },
+            stepsRange = 10..100,
+            stepsInterval = 10,
+        )
+
+        // "тысячи байт: 1000+..9000+"
+        qwertry(
+            dataSizeSupplier = { n -> n * 1000 + random.nextInt(1000) },
+            speedSupplier = { _ -> 10_000 },
+            stepsRange = 10..100,
+            stepsInterval = 10,
+            slightlyBlurStep = true
+        )
+
+        // "десятки тысяч байт: 10_000+..90_000+"
+        qwertry(
+            dataSizeSupplier = { n -> n * 10_000 + random.nextInt(10_000) },
+            speedSupplier = { _ -> 100_000 },
+            stepsRange = 10..100,
+            stepsInterval = 10,
+            slightlyBlurStep = true
+        )
+
+        // "сотни тысяч байт: 100_000+..900_000+"
+        qwertry(
+            dataSizeSupplier = { n -> n * 100_000 + random.nextInt(100_000) },
+            speedSupplier = { _ -> 1000_000 },
+            stepsRange = 10..100,
+            stepsInterval = 10,
+            slightlyBlurStep = true
+        )*/
+
+        // "мильёны байт: 1000_000+..9000_000+"
+        qwertry(
+            dataSizeSupplier = { n -> n * 1000_000 + random.nextInt(1000_000) },
+            speedSupplier = { _ -> 10_000_000 },
+            stepsRange = 10..100,
+            stepsInterval = 10,
+            slightlyBlurStep = true
+        )
+    }
+
+    private fun qwertry(
+        baseNumberRange: IntRange = 1..9,
+        dataSizeSupplier: (n:Int) -> Int,
+        speedSupplier: (n: Int) -> Int,
+        stepsRange: IntRange,
+        stepsInterval: Int,
+        slightlyBlurStep: Boolean = false,
+    ) {
+        baseNumberRange.forEach { baseNumber ->
+            println("----- Копирование -----")
+
+            val dataSize = dataSizeSupplier.invoke(baseNumber)
+            val speed = speedSupplier.invoke(baseNumber)
+
+            var steps = stepsRange.first
+            while (steps <= stepsRange.last) {
+
+                println("Копирование ${dataSize.humanSizeBinary()} байт на скорости ${speed.humanSizeBinary()}/с $steps шагами в секунду.")
+                test_with_params(
+                    dataSizeBytes = dataSize,
+                    speedBytesPerSecond = speed,
+                    stepsPerSecond = steps
+                )
+
+                steps += stepsInterval
+                if (slightlyBlurStep) steps += random.nextInt(stepsInterval)
+            }
+        }
     }
 
     private fun test_csize_cspeed_with_dsteps_on_data_units() {
@@ -396,6 +486,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             }
         }
     }
+
 
     private fun randomNumberWithMagnitude(magnitude: Int): Int {
         val base = 10.0.pow(magnitude).roundToInt()
@@ -552,6 +643,19 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                     value < nextValue
                 )
             }
+        }
+    }
+
+
+    private fun test_with_params(
+        dataSizeBytes: Int,
+        speedBytesPerSecond: Int,
+        stepsPerSecond: Int,
+    ) {
+        prepareSourceAndTargetFiles(dataSizeBytes)
+        copy_data(speedBytesPerSecond, stepsPerSecond) {
+            test_progress_list(it, dataSizeBytes, speedBytesPerSecond, stepsPerSecond)
+            test_files(dataSizeBytes)
         }
     }
 
