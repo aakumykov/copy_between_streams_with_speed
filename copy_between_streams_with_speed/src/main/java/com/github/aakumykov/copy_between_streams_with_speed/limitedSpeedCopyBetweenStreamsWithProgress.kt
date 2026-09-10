@@ -60,7 +60,6 @@ class LimitedStreamCopier: BasicStreamCopier() {
 
             if (readBytes < operatingPortionSize) {
                 publishProgress(totalDataRead)
-                break
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
                 publishProgress(totalDataRead)
