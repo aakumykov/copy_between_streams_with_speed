@@ -13,4 +13,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Начать копирование" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"/>
 </LinearLayout>
