@@ -20,11 +20,13 @@ import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableB
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import kotlin.math.roundToInt
 
 class DemoActivity : AppCompatActivity() {
@@ -62,6 +64,7 @@ class DemoActivity : AppCompatActivity() {
             }
         }
         binding.startButton.setOnClickListener { onStartButtonClicked() }
+        binding.startButton2.setOnClickListener { startCopyingFile2() }
         binding.stopButton.setOnClickListener { onStopButtonClicked() }
         binding.probeButton.setOnClickListener { onProbeButtonClicked() }
     }
@@ -72,6 +75,58 @@ class DemoActivity : AppCompatActivity() {
 
     private val dataSize get() = binding.sizeSeekBar.progress
     private val speed get() = binding.speedSeekBar.progress
+
+    private val sourceFile: File by lazy { File.createTempFile("source", "file") }
+    private val targetFile: File by lazy { File.createTempFile("target", "file") }
+
+    private val sourceFileStream: InputStream get() = sourceFile.inputStream()
+    private val targetFileStream: OutputStream get() = targetFile.outputStream()
+
+
+    private var fileCopyingJob2: Job? = null
+    private var progressCollectingJob2: Job? = null
+
+    fun startCopyingFile2() {
+
+
+
+        val sourceStream = sourceFileStream
+        val targetStream = targetFileStream
+
+        sourceStream.use { inputStream ->
+            targetStream.use { outputStream ->
+
+                lifecycleScope.launch (Dispatchers.IO) {
+
+                    sourceFile.writeBytes(random.nextBytes(dataSize))
+
+                    launch (Dispatchers.Main) {
+                        showInfo("Копирование-2 начато")
+                    }
+
+                    limitedStreamCopier.copyFromStreamToStream(
+                        inputStream,
+                        outputStream,
+                        1000_1000,
+                    )
+
+                    launch (Dispatchers.Main) {
+                        showInfo("Копирование-2 завершено")
+                    }
+
+                }
+            }
+        }
+    }
+
+    fun stopCopyingFile2() {
+        fileCopyingJob2?.cancel()
+        fileCopyingJob2 = null
+    }
+
+    fun closeStream2() {
+        sourceFileStream.close()
+    }
 
     private fun onStartButtonClicked() {
 
@@ -84,8 +139,7 @@ class DemoActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch (eh + Dispatchers.IO) {
-            val sourceFile = File.createTempFile("source","file")
-            val targetFile = File.createTempFile("target","file")
+
 
             sourceFile.writeBytes(random.nextBytes(dataSize))
 

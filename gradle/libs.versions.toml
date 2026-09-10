@@ -16,6 +16,8 @@ storage_access_helper = "3.0.0-alpha"
 material = "1.14.0"
 kotlin = "2.3.0"
 junitKtx = "1.3.0"
+activityKtx = "1.13.0"
+constraintlayout = "2.2.2"
 
 
 [libraries]
@@ -35,6 +37,8 @@ seek_bar_with_text_input = { module = "com.github.aakumykov:seek_bar_with_text_i
 storage_access_helper = { module = "com.github.aakumykov:storage_access_helper", version.ref = "storage_access_helper" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-junit-ktx = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "junitKtx" }
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
