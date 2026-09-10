@@ -43,11 +43,20 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 -- расположены в порядке возрастания.
     4) вариации аргументов:
         - разная скорость при фиксированном числе шагов и размере
-            [constant_size_and_steps_with_different_speed];
+            [diff_speed_with_constant_size_and_steps__units_to_thousands];
+            [diff_speed_with_constant_size_and_steps__tens_thousands];
+            [diff_speed_with_constant_size_and_steps__hundreds_thousands];
+            [diff_speed_with_constant_size_and_steps__millions];
         - разное число шагов при фиксированных размере и скорости
-            [constant_size_and_speed_with_different_steps];
+            [diff_steps_with_constant_size_and_speed__units_to_thousands];
+            [diff_steps_with_constant_size_and_speed__tens_thousands];
+            [diff_steps_with_constant_size_and_speed__hundreds_thousands];
+            [diff_steps_with_constant_size_and_speed__millions];
         - разный размер при фиксированных скорости и числе шагов
-            [constant_steps_and_speed_with_different_size].
+            [diff_size_with_constant_steps_and_speed__units_to_thousands].
+            [diff_size_with_constant_steps_and_speed__tens_thousands].
+            [diff_size_with_constant_steps_and_speed__hundreds_thousands].
+            [diff_size_with_constant_steps_and_speed__millions].
      */
 
 
@@ -267,8 +276,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     }
 
 
+    //
+    // разный размер при фиксированных скорости и числе шагов
+    //
     @Test
-    fun constant_steps_and_speed_with_different_size() = runTest {
+    fun diff_size_with_constant_steps_and_speed__units_to_thousands() = runTest {
         // единицы байт: 1..9
         do_with_variable_data_size(
             speed =  1,
@@ -301,7 +313,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             dataSizeRange = 1000..9000,
             dataSizeInterval = 1000
         )
+    }
 
+
+    @Test
+    fun diff_size_with_constant_steps_and_speed__tens_thousands() = runTest {
         // десятки тысяч байт: 10_000..90_000
         do_with_variable_data_size(
             speed =  100_000,
@@ -309,7 +325,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             dataSizeRange = 10_000..90_000,
             dataSizeInterval = 10_000
         )
+    }
 
+
+    @Test
+    fun diff_size_with_constant_steps_and_speed__hundreds_thousands() = runTest {
         // сотни тысяч байт: 100_000..900_000
         do_with_variable_data_size(
             speed =  1000_000,
@@ -317,7 +337,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             dataSizeRange = 100_000..900_000,
             dataSizeInterval = 100_000
         )
+    }
 
+
+    @Test
+    fun diff_size_with_constant_steps_and_speed__millions() = runTest {
         // мильёны байт: 1000_000..9000_000
         do_with_variable_data_size(
             speed =  10_000_000,
@@ -328,8 +352,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     }
 
 
+    //
+    // разная скорость при фиксированном числе шагов и размере
+    //
     @Test
-    fun constant_size_and_steps_with_different_speed() = runTest {
+    fun diff_speed_with_constant_size_and_steps__units_to_thousands() = runTest {
         // единицы байт: 1..9
         do_with_variable_speed(
             dataSizeFromRange = 1..9,
@@ -361,7 +388,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speedRange = 100..1000,
             speedInterval = 10,
         )
+    }
 
+
+    @Test
+    fun diff_speed_with_constant_size_and_steps__tens_thousands() = runTest {
         // десятки тысяч байт: 10_000..90_000
         do_with_variable_speed(
             dataSizeFromRange = 10_000..90_000,
@@ -369,18 +400,14 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             speedRange = 100_000..1000_000,
             speedInterval = 1000,
         )
+    }
 
+
+    @Test
+    fun diff_speed_with_constant_size_and_steps__hundreds_thousands() = runTest {
         // сотни тысяч байт: 100_000..900_000
         do_with_variable_speed(
             dataSizeFromRange = 100_000..900_000,
-            steps = 10,
-            speedRange = 1000_000..9000_000,
-            speedInterval = 100_000,
-        )
-
-        // мильёны байт: 100_000..900_000
-        do_with_variable_speed(
-            dataSizeFromRange = 1000_000..9000_000,
             steps = 10,
             speedRange = 1000_000..9000_000,
             speedInterval = 100_000,
@@ -389,7 +416,22 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     @Test
-    fun constant_size_and_speed_with_different_steps() {
+    fun diff_speed_with_constant_size_and_steps__millions() = runTest {
+        // мильёны байт: 100_000..900_000
+        do_with_variable_speed(
+            dataSizeFromRange = 1000_000..9000_000,
+            steps = 10,
+            speedRange = 1000_000..9000_000,
+            speedInterval = 1000_000,
+        )
+    }
+
+
+    //
+    // разное число шагов при фиксированных размере и скорости
+    //
+    @Test
+    fun diff_steps_with_constant_size_and_speed__units_to_thousands() {
         // "единицы байт: 1..9"
         do_with_variable_steps(
             dataSizeFromRange = 1..9,
@@ -425,7 +467,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             stepsInterval = 10,
             randomizeStep = true
         )
+    }
 
+
+    @Test
+    fun diff_steps_with_constant_size_and_speed__tens_thousands() {
         // "десятки тысяч байт: 10_000+..90_000+"
         do_with_variable_steps(
             dataSizeFromRange = 10_000..90_000,
@@ -434,7 +480,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             stepsInterval = 10,
             randomizeStep = true
         )
+    }
 
+
+    @Test
+    fun diff_steps_with_constant_size_and_speed__hundreds_thousands() {
         // "сотни тысяч байт: 100_000+..900_000+"
         do_with_variable_steps(
             dataSizeFromRange = 100_000..900_000,
@@ -443,7 +493,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             stepsInterval = 10,
             randomizeStep = true
         )
+    }
 
+
+    @Test
+    fun diff_steps_with_constant_size_and_speed__millions() {
         // "мильёны байт: 1000_000+..9000_000+"
         do_with_variable_steps(
             dataSizeFromRange = 1000_000..9000_000,
@@ -452,14 +506,102 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             stepsInterval = 10,
             randomizeStep = true
         )
+    }
 
-        do_with_variable_steps(
-            dataSizeFromRange = 1000_000..9000_000,
-            speed = 10_000_000,
-            stepsRange = 100..1000,
-            stepsInterval = 100,
-            randomizeStep = true
+
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun copy_data_with_on_complete(speed: Int, steps: Int, onComplete: (progressList:List<Long>) -> Unit) = runTest {
+
+        val progressList = mutableListOf<Long>()
+
+        val collectingJob = launch {
+            limitedStreamCopier.progressFlow.collect {
+                progressList.add(it)
+            }
+        }
+        advanceUntilIdle()
+
+        limitedStreamCopier.copyFromStreamToStream(
+            inputStream = sourceFileStream,
+            outputStream = targetFileStream,
+            speedBytesPerSecond = speed,
+            stepsPerSecond = steps
         )
+        collectingJob.cancel()
+
+        onComplete.invoke(progressList)
+    }
+
+
+    private fun test_progress_list(
+        progressList: List<Long>,
+        dataSizeBytes: Int, // TODO: Long
+        speedBytesPerSecond: Int,
+        stepsPerSecond: Int,
+    ) {
+        test_progress_list_size(progressList, dataSizeBytes, speedBytesPerSecond, stepsPerSecond)
+        test_progress_list_incrementality(progressList)
+    }
+
+
+    private fun test_progress_list_size(
+        progressList: List<Long>,
+        dataSizeBytes: Int,
+        speedBytesPerSecond: Int,
+        stepsPerSecond: Int
+    ) {
+        val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
+        val operatingPortionSize = if (bytesToBeTransferredPerStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else bytesToBeTransferredPerStep
+
+        val expectedSteps = when {
+            (0 == dataSizeBytes) -> {
+                0
+            }
+            (dataSizeBytes <= operatingPortionSize) -> {
+                1
+            }
+            else -> {
+                ceil(1f * dataSizeBytes / operatingPortionSize).roundToInt()
+            }
+        }
+
+        val argumentsLog =
+            "\nданные: $dataSizeBytes байт," +
+            "\nскорость:$speedBytesPerSecond," +
+            "\nшагов:$stepsPerSecond"
+
+        if (expectedSteps > 1) {
+            val progressStepsCountDifferenceFloat = 1f * abs(progressList.size - expectedSteps) / expectedSteps
+            val progressStepsDifferenceInt = (progressStepsCountDifferenceFloat * 100).roundToInt()
+            val expectedDiffPercents = 10
+
+            val message = "${argumentsLog}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%."
+
+            Assert.assertTrue(message, progressStepsDifferenceInt <= expectedDiffPercents)
+        }
+        else {
+            Assert.assertEquals(
+                "${argumentsLog}\nРазмер списка прогресса для данных в $dataSizeBytes байт должен быть равен $expectedSteps байт.",
+                expectedSteps,
+                progressList.size
+            )
+        }
+    }
+
+
+    private fun test_progress_list_incrementality(progressList: List<Long>) {
+        // Проверка, что значения увеличиваются.
+        if (progressList.size >= 2) {
+            repeat(progressList.size-1) { i ->
+                val value = progressList[i]
+                val nextValue = progressList[i+1]
+                Assert.assertTrue(
+                    "Каждое предыдущее значение ($value) меньше следующего ($nextValue);\nвесь список:\n${progressList.joinToString(",\n")}",
+                    value < nextValue
+                )
+            }
+        }
     }
 
 
@@ -571,102 +713,6 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
             }
         }
     }
-
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun copy_data_with_on_complete(speed: Int, steps: Int, onComplete: (progressList:List<Long>) -> Unit) = runTest {
-
-        val progressList = mutableListOf<Long>()
-
-        val collectingJob = launch {
-            limitedStreamCopier.progressFlow.collect {
-                progressList.add(it)
-            }
-        }
-        advanceUntilIdle()
-
-        limitedStreamCopier.copyFromStreamToStream(
-            inputStream = sourceFileStream,
-            outputStream = targetFileStream,
-            speedBytesPerSecond = speed,
-            stepsPerSecond = steps
-        )
-        collectingJob.cancel()
-
-        onComplete.invoke(progressList)
-    }
-
-
-    private fun test_progress_list(
-        progressList: List<Long>,
-        dataSizeBytes: Int, // TODO: Long
-        speedBytesPerSecond: Int,
-        stepsPerSecond: Int,
-    ) {
-        test_progress_list_size(progressList, dataSizeBytes, speedBytesPerSecond, stepsPerSecond)
-        test_progress_list_incrementality(progressList)
-    }
-
-
-    private fun test_progress_list_size(
-        progressList: List<Long>,
-        dataSizeBytes: Int,
-        speedBytesPerSecond: Int,
-        stepsPerSecond: Int
-    ) {
-        val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
-        val operatingPortionSize = if (bytesToBeTransferredPerStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else bytesToBeTransferredPerStep
-
-        val expectedSteps = when {
-            (0 == dataSizeBytes) -> {
-                0
-            }
-            (dataSizeBytes <= operatingPortionSize) -> {
-                1
-            }
-            else -> {
-                ceil(1f * dataSizeBytes / operatingPortionSize).roundToInt()
-            }
-        }
-
-        val argumentsLog =
-            "\nданные: $dataSizeBytes байт," +
-            "\nскорость:$speedBytesPerSecond," +
-            "\nшагов:$stepsPerSecond"
-
-        if (expectedSteps > 1) {
-            val progressStepsCountDifferenceFloat = 1f * abs(progressList.size - expectedSteps) / expectedSteps
-            val progressStepsDifferenceInt = (progressStepsCountDifferenceFloat * 100).roundToInt()
-            val expectedDiffPercents = 10
-
-            val message = "${argumentsLog}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%."
-
-            Assert.assertTrue(message, progressStepsDifferenceInt <= expectedDiffPercents)
-        }
-        else {
-            Assert.assertEquals(
-                "${argumentsLog}\nРазмер списка прогресса для данных в $dataSizeBytes байт должен быть равен $expectedSteps байт.",
-                expectedSteps,
-                progressList.size
-            )
-        }
-    }
-
-
-    private fun test_progress_list_incrementality(progressList: List<Long>) {
-        // Проверка, что значения увеличиваются.
-        if (progressList.size >= 2) {
-            repeat(progressList.size-1) { i ->
-                val value = progressList[i]
-                val nextValue = progressList[i+1]
-                Assert.assertTrue(
-                    "Каждое предыдущее значение ($value) меньше следующего ($nextValue);\nвесь список:\n${progressList.joinToString(",\n")}",
-                    value < nextValue
-                )
-            }
-        }
-    }
-
 
     private fun copy_and_test_with_params(
         dataSizeBytes: Int,
