@@ -15,6 +15,7 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.g
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.ScopedLimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -116,13 +117,20 @@ class DemoActivity : AppCompatActivity() {
                         }
                     )*/
 
+    private val scopedLimitedStreamCopier: ScopedLimitedStreamCopier by lazy {
+        ScopedLimitedStreamCopier(
+            scope = lifecycleScope,
+            streamCopier = limitedStreamCopier
+        )
+    }
+
     private suspend fun doCopy(
         scope: CoroutineScope,
         inputStream: FileInputStream,
         outputStream: FileOutputStream
     ) {
         scope.launch {
-            limitedStreamCopier.progressFlow.collect { transferred ->
+            scopedLimitedStreamCopier.progressFlow.collect { transferred ->
                 val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
                 showProgress(percent)
             }
@@ -130,7 +138,7 @@ class DemoActivity : AppCompatActivity() {
             println()
         }
 
-        limitedStreamCopier.copyFromStreamToStream(
+        scopedLimitedStreamCopier.copyFromStreamToStream(
             inputStream,
             outputStream,
             speed
