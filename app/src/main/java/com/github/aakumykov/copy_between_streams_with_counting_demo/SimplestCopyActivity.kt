@@ -40,23 +40,26 @@ class SimplestCopyActivity : AppCompatActivity() {
         if (!targetFile.exists()) throw FileNotFoundException("target file does not exists")
 
         val data = random.nextBytes(100)
-        sourceFile.writeBytes(data)
-        sourceFile.inputStream().use { inputStream ->
-            targetFile.outputStream().use { outputStream ->
 
-                lifecycleScope.launch (Dispatchers.IO) {
+        lifecycleScope.launch (Dispatchers.IO) {
+
+            sourceFile.writeBytes(data)
+
+            sourceFile.inputStream().use { inputStream ->
+                targetFile.outputStream().use { outputStream ->
+
                     streamCopier.copyFromStreamToStream(
                         inputStream,
                         outputStream,
                         1000
                     )
+                }.also {
+                    println("outputStream...")
+                }.also {
+                    println("inputStream ...")
                 }
 
-            }.also {
-                println("outputStream...")
             }
-        }.also {
-            println("inputStream ...")
         }
     }
 }
