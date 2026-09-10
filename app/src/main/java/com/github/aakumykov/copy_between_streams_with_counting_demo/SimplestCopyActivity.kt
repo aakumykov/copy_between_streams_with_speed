@@ -52,7 +52,11 @@ class SimplestCopyActivity : AppCompatActivity() {
                     )
                 }
 
+            }.also {
+                println("outputStream...")
             }
+        }.also {
+            println("inputStream ...")
         }
     }
 }
