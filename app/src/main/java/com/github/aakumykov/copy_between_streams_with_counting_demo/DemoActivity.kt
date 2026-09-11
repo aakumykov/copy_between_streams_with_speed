@@ -71,7 +71,7 @@ class DemoActivity : AppCompatActivity() {
 
     private var currentInputStream: InputStream? = null
 
-    private val limitedStreamCopier by lazy { LimitedStreamCopier() }
+    private val limitedStreamCopier by lazy { LimitedStreamCopier(lifecycleScope) }
 
     private val dataSize get() = binding.sizeSeekBar.progress
     private val speed get() = binding.speedSeekBar.progress

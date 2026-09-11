@@ -36,13 +36,14 @@ class SimplestCopyActivity : AppCompatActivity() {
         binding.startButton.setOnClickListener { startCopy() }
     }
 
-    private val streamCopier by lazy { LimitedStreamCopier() }
+    private val streamCopier by lazy { LimitedStreamCopier(lifecycleScope) }
 
     private val dataSize = 1000
 
-    private var dataCopyingJob: Job? = null
-
     fun startCopy() {
+
+        hideInfo()
+
         val sourceFile = File(cacheDir, "source_file.bin").apply { createNewFile() }
         val targetFile = File(cacheDir, "target_file.bin").apply { createNewFile() }
         if (!sourceFile.exists()) throw FileNotFoundException("source file does not exists")
@@ -50,40 +51,50 @@ class SimplestCopyActivity : AppCompatActivity() {
 
         val data = random.nextBytes(dataSize)
 
-        dataCopyingJob = lifecycleScope.launch (Dispatchers.IO) {
+        lifecycleScope.launch {
 
-            sourceFile.writeBytes(data)
+            launch (Dispatchers.IO) {
+                sourceFile.writeBytes(data)
+            }.join()
+
+            launch {
+                streamCopier
+                    .progressFlow
+                    .onCompletion {
+                        showInfo("Скопировано")
+                    }
+                    .collect {
+                        showProgress(it)
+                    }
+            }
 
             sourceFile.inputStream().use { inputStream ->
                 targetFile.outputStream().use { outputStream ->
-
-                    launch (Dispatchers.Main) {
-                        streamCopier
-                            .progressFlow
-                            .onCompletion {
-                                showToast("Скопировано")
-                            }
-                            .collect {
-                                showProgress(it)
-                            }
-                    }
-
                     streamCopier.copyFromStreamToStream(
                         inputStream,
                         outputStream,
-                        10
+                        speedBytesPerSecond = 1,
+                        stepsPerSecond = 1
                     )
-
-                    dataCopyingJob?.cancel()
-                    dataCopyingJob = null
                 }
             }
-
         }
     }
 
     fun showProgress(value: Long) {
         val progress = ((1f * value / dataSize) * 100).roundToInt()
         binding.progressBar.progress = progress
+    }
+
+    fun showInfo(message: String) {
+        binding.infoView.apply {
+            text = message
+        }
+    }
+
+    fun hideInfo() {
+        binding.infoView.apply {
+            text = ""
+        }
     }
 }

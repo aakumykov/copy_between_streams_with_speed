@@ -19,4 +19,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"/>
+
+    <TextView
+        android:id="@+id/infoView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+
+    <Button
+        android:id="@+id/dummyButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Кнопка для нажимания" />
+
 </LinearLayout>
