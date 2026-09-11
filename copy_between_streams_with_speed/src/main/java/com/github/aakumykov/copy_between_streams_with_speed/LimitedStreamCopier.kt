@@ -58,7 +58,7 @@ class LimitedStreamCopier(
         // с закрытием потока до завершения копирования, но переменная currentJob получает значение
         // тоже после фактического завершения работы "корутиной". В итоге после завершения работы,
         // когда currentJob должна стать null, она наоборот становится не-null.
-        currentJob = coroutineScope.launch (coroutineDispatcher) {
+        coroutineScope.launch (coroutineDispatcher) {
 
             while(true) {
                 val readBytes = inputStream.read(dataBuffer, 0, operatingPortionSize)
@@ -93,6 +93,7 @@ class LimitedStreamCopier(
             }
 
         }.apply {
+            currentJob = this
             join()
         }
     }
