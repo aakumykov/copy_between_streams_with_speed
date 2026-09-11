@@ -7,7 +7,7 @@ abstract class BasicStreamCopier: StreamCopier {
 
     override val progressFlow: SharedFlow<Long> get() = _progressFlow
 
-    private val _progressFlow: MutableSharedFlow<Long> = MutableSharedFlow()
+    protected val _progressFlow: MutableSharedFlow<Long> = MutableSharedFlow()
 
     protected suspend fun publishProgress(value: Long) {
         _progressFlow.emit(value)

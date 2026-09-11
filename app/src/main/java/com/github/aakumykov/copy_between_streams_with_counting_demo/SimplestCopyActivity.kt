@@ -51,13 +51,15 @@ class SimplestCopyActivity : AppCompatActivity() {
 
         val data = random.nextBytes(dataSize)
 
+        var progressCollectingJob: Job? = null
+
         lifecycleScope.launch {
 
             launch (Dispatchers.IO) {
                 sourceFile.writeBytes(data)
             }.join()
 
-            launch {
+            progressCollectingJob = launch {
                 streamCopier
                     .progressFlow
                     .onCompletion {
@@ -73,11 +75,14 @@ class SimplestCopyActivity : AppCompatActivity() {
                     streamCopier.copyFromStreamToStream(
                         inputStream,
                         outputStream,
-                        speedBytesPerSecond = 1,
+                        speedBytesPerSecond = 500,
                         stepsPerSecond = 1
                     )
                 }
             }
+
+            progressCollectingJob?.cancel()
+            progressCollectingJob = null
         }
     }
 
