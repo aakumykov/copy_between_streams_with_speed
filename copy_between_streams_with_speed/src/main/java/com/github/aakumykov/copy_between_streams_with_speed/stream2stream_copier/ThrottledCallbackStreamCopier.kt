@@ -1,21 +1,21 @@
-package com.github.aakumykov.copy_between_streams_with_speed
+package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.math.roundToLong
 
-class ThrottledCallbackUnlimitedStreamCopier (
-    private val unlimitedStreamCopier: UnlimitedStreamCopier
-): Stream2StreamCopier by unlimitedStreamCopier {
+class ThrottledCallbackStreamCopier (
+    private val progressCallbackRate: Int = 10,
+    private val streamCopier: Stream2StreamCopier
+): Stream2StreamCopier by streamCopier {
 
     private val currentTimeMs: Long get() = System.currentTimeMillis()
 
-    fun copyFromStreamToStreamWithCallbackRate(
+    override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes:Long) -> Unit)? = null,
-        progressCallbackRate: Int = 10,
-        finishCallback: ((transferredBytes:Long) -> Unit)? = null,
+        progressCallback: ((transferredBytes:Long) -> Unit)?,
+        finishCallback: ((transferredBytes:Long) -> Unit)?,
     ) {
         val minimumCallbackPeriodMs = (1000f / progressCallbackRate).roundToLong()
 
@@ -40,7 +40,7 @@ class ThrottledCallbackUnlimitedStreamCopier (
             finishCallback.invoke(transferredBytes)
         } else null
 
-        copyFromStreamToStream(
+        streamCopier.copyFromStreamToStream(
             inputStream = inputStream,
             outputStream = outputStream,
             progressCallback = progressCallbackWrapper,

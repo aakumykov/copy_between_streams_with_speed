@@ -1,6 +1,5 @@
 package com.github.aakumykov.copy_between_streams_with_counting_demo
 
-import android.R.attr.text
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
@@ -14,7 +13,7 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.e
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getIntFromPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierOld
 import com.github.aakumykov.copy_between_streams_with_speed.ScopedLimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -71,7 +70,7 @@ class DemoActivity : AppCompatActivity() {
 
     private var currentInputStream: InputStream? = null
 
-    private val limitedStreamCopier by lazy { LimitedStreamCopier(lifecycleScope) }
+    private val limitedStreamCopier by lazy { LimitedStreamCopierOld(lifecycleScope) }
 
     private val dataSize get() = binding.sizeSeekBar.progress
     private val speed get() = binding.speedSeekBar.progress

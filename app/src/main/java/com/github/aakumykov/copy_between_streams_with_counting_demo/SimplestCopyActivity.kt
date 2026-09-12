@@ -1,21 +1,19 @@
 package com.github.aakumykov.copy_between_streams_with_counting_demo
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
-import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopier
-import com.github.aakumykov.copy_between_streams_with_speed.ThrottledCallbackUnlimitedStreamCopier
-import com.github.aakumykov.copy_between_streams_with_speed.UnlimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.ThrottledCallbackStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
@@ -38,15 +36,26 @@ class SimplestCopyActivity : AppCompatActivity() {
         binding.startButton.setOnClickListener { startCopy() }
     }
 
-    private val unlimitedStreamCopier: UnlimitedStreamCopier by lazy {
+    private val unlimitedStreamCopier: Stream2StreamCopier by lazy {
         UnlimitedStreamCopier()
     }
 
-    private val throttledCallbackUnlimitedStreamCopier by lazy {
-        ThrottledCallbackUnlimitedStreamCopier(unlimitedStreamCopier)
+    private val limitedStreamCopier: Stream2StreamCopier by lazy {
+        LimitedStreamCopier(
+            speedBytesPerSecond = 3000,
+            stepsPerSecond = 100
+        )
     }
 
-    private val dataSize = 1000
+    private val throttledCallbackUnlimitedStreamCopier by lazy {
+        ThrottledCallbackStreamCopier(
+            progressCallbackRate = 1,
+//            unlimitedStreamCopier
+            limitedStreamCopier
+        )
+    }
+
+    private val dataSize = 10_000
 
     fun startCopy() {
 
@@ -67,16 +76,16 @@ class SimplestCopyActivity : AppCompatActivity() {
                 targetFile.outputStream().use { outputStream ->
 
                     throttledCallbackUnlimitedStreamCopier
-                        .copyFromStreamToStreamWithCallbackRate(
+                        .copyFromStreamToStream(
                             inputStream,
                             outputStream,
                             progressCallback = { transferredBytes ->
+                                Log.d(TAG, "transferredBytes: $transferredBytes")
                                 val progress = (100f * transferredBytes / dataSize).roundToInt()
                                 launch (Dispatchers.Main) {
                                     showProgress(progress)
                                 }
                             },
-                            progressCallbackRate = 5,
                             finishCallback = { transferredBytes ->
                                 showInfo("Готово")
                             }
@@ -101,5 +110,9 @@ class SimplestCopyActivity : AppCompatActivity() {
         binding.infoView.apply {
             text = ""
         }
+    }
+
+    companion object {
+        val TAG: String = SimplestCopyActivity::class.java.simpleName
     }
 }

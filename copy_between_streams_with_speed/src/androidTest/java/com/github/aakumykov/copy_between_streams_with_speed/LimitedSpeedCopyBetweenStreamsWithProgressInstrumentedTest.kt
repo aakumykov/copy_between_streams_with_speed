@@ -727,5 +727,5 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     }
 
 
-    private val limitedStreamCopier by lazy { LimitedStreamCopier() }
+    private val limitedStreamCopier by lazy { LimitedStreamCopierOld() }
 }
