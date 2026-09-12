@@ -55,25 +55,17 @@ class SimplestCopyActivity : AppCompatActivity() {
         binding.startButton.setOnClickListener { startCopy() }
         binding.cancelButton.setOnClickListener { cancelCopy() }
 
-        binding.speedSeekBar.apply {
-            setChangeListener(object: SeekBarWithTextInput.ChangeListener {
-                override fun onSeekBarWithTextInputProgressChanged(progress: Int, fromUser: Boolean) {
-                    if (fromUser) {
-                        stream2streamCopier.setSpeedBytesPerSec(progress)
-                    }
-                }
-            })
-            setProgressLabelProvider { progress ->
-                "Скорость $progress"
-            }
+        binding.speedSeekBar.setProgressLabelProvider { progress ->
+                "Скорость $progress байт/с"
         }
+
 
         binding.dataSizeSeekBar.setProgressLabelProvider {
             "Размер $it байт"
         }
 
         binding.stepsSeekBar.setProgressLabelProvider {
-            "$it шагов в секунду"
+            "$it шагов/секунду"
         }
 
         binding.progressRateSeekBar.setProgressLabelProvider {
@@ -86,8 +78,8 @@ class SimplestCopyActivity : AppCompatActivity() {
         UnlimitedStreamCopier()
     }
 
-    private val limitedStreamCopier: Stream2StreamCopier by lazy {
-        LimitedStreamCopier(
+    private val limitedStreamCopier: Stream2StreamCopier get() {
+        return LimitedStreamCopier(
             initialSpeedBytesPerSecond = speedBytesPerSec,
             stepsPerSecond = stepsPerSecond
         )

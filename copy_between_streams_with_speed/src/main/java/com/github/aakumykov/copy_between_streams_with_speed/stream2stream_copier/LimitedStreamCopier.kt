@@ -13,7 +13,7 @@ import kotlin.math.roundToLong
  */
 class LimitedStreamCopier(
     private val initialSpeedBytesPerSecond: Int, // TODO: сделать Long
-    private val stepsPerSecond: Int = 10
+    private val stepsPerSecond: Int
 ): Stream2StreamCopier {
 
     private var speedBytesPerSecond: Int = initialSpeedBytesPerSecond
@@ -28,7 +28,7 @@ class LimitedStreamCopier(
         if (dataSizeToBeCopiedByStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE
         else dataSizeToBeCopiedByStep
 
-    private val timeForStepMs: Long = (1000F / stepsPerSecond).roundToLong()
+    private val timeForStepMs: Long = (1000f / stepsPerSecond).roundToLong()
 
     private val dataBuffer = ByteArray(operatingPortionSize)
 
@@ -43,12 +43,16 @@ class LimitedStreamCopier(
     ) {
         val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRatePerSecond).roundToLong()
         var lastProgressPublishTimeMs: Long = 0
+        var lastProgressWasSent = false
 
         fun publishProgressIfItsTime(totalDataRead: Long, force: Boolean = false) {
-            val interval = System.currentTimeMillis() - lastProgressPublishTimeMs
-            if (interval >= minimumProgressCallbackPeriodMs || force) {
+            val progressSendingInterval: Long = System.currentTimeMillis() - lastProgressPublishTimeMs
+            if (progressSendingInterval >= minimumProgressCallbackPeriodMs || force) {
                 progressCallback?.invoke(totalDataRead)
                 lastProgressPublishTimeMs = System.currentTimeMillis()
+                lastProgressWasSent = true
+            } else {
+                lastProgressWasSent = false
             }
         }
 
@@ -70,7 +74,7 @@ class LimitedStreamCopier(
             }
         }
 
-        if (initialSpeedBytesPerSecond <= 0)
+        if (speedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
         if (stepsPerSecond > speedBytesPerSecond)
@@ -88,6 +92,9 @@ class LimitedStreamCopier(
 
             // Данные закончились.
             if (-1 == readBytes) {
+                if (!lastProgressWasSent) {
+                    progressCallback?.invoke(totalDataRead)
+                }
                 finishCallback?.invoke(totalDataRead)
                 break
             }

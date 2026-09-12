@@ -45,12 +45,6 @@
         android:layout_height="wrap_content"
         />
 
-    <Button
-        android:id="@+id/dummyButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Кнопка для нажимания" />
-
     <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
         android:id="@+id/dataSizeSeekBar"
         android:layout_width="match_parent"
@@ -64,7 +58,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:progress="10"
-        app:max="1000"
+        app:max="100"
         />
 
     <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
