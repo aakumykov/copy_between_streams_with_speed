@@ -19,11 +19,12 @@ class LimitedStreamCopier(
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes:Long) -> Unit)?,
+        bufferSize: Int,
+        progressCallback: ((stepPortionOfData: Long, transferredBytes:Long) -> Unit)?,
         finishCallback: ((transferredBytes:Long) -> Unit)?,
     ) {
-        fun publishProgress(totalDataRead: Long) {
-            progressCallback?.invoke(totalDataRead)
+        fun publishProgress(stepPortionOfData: Long, totalDataRead: Long) {
+            progressCallback?.invoke(stepPortionOfData,totalDataRead)
         }
 
         fun sleepIfNeeded(
@@ -87,13 +88,13 @@ class LimitedStreamCopier(
             // Размер данных, которыми оперируют в процессе перекидывания данных.
 
             if (readBytes < operatingPortionSize) {
-                publishProgress(totalDataRead)
+                publishProgress(thisStepDataRead, totalDataRead)
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
-                publishProgress(totalDataRead)
+                publishProgress(thisStepDataRead, totalDataRead)
             }
             else if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
-                publishProgress(totalDataRead)
+                publishProgress(thisStepDataRead, totalDataRead)
                 sleepIfNeeded(
                     System.currentTimeMillis() - startTime,
                     timeForStepMs,

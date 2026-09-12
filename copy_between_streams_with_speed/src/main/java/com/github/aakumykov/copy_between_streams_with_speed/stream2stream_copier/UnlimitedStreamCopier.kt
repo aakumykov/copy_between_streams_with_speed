@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copie
 
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.Buffer
 
 
 class UnlimitedStreamCopier: Stream2StreamCopier {
@@ -9,7 +10,8 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes:Long, isLastPieceOfData: Boolean) -> Unit)?,
+        bufferSize: Int,
+        progressCallback: ((stepPortionOfData: Long, transferredBytes:Long) -> Unit)?,
         finishCallback: ((transferredBytes:Long) -> Unit)?,
     ) {
         val bufferSize = DEFAULT_BUFFER_SIZE
@@ -19,16 +21,13 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
 
         while (true) {
             val readBytes = inputStream.read(dataBuffer, 0, bufferSize)
-
             if (-1 == readBytes) {
                 finishCallback?.invoke(totalReadBytes)
                 break
             }
-
             totalReadBytes += readBytes
             outputStream.write(dataBuffer, 0, readBytes)
-
-            progressCallback?.invoke(totalReadBytes, readBytes < bufferSize)
+            progressCallback?.invoke(readBytes.toLong(),totalReadBytes)
         }
     }
 }

@@ -77,9 +77,9 @@ class SimplestCopyActivity : AppCompatActivity() {
 
                     throttledCallbackUnlimitedStreamCopier
                         .copyFromStreamToStream(
-                            inputStream,
-                            outputStream,
-                            progressCallback = { transferredBytes ->
+                            inputStream = inputStream,
+                            outputStream = outputStream,
+                            progressCallback = { step, transferredBytes ->
                                 Log.d(TAG, "transferredBytes: $transferredBytes")
                                 val progress = (100f * transferredBytes / dataSize).roundToInt()
                                 launch (Dispatchers.Main) {
