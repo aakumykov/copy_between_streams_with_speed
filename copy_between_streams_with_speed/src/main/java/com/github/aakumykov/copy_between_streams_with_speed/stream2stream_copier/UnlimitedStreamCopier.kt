@@ -5,16 +5,17 @@ import java.io.OutputStream
 import kotlin.math.roundToLong
 
 
-class UnlimitedStreamCopier: Stream2StreamCopier {
+class UnlimitedStreamCopier(
+    private val progressRatePerSecond: Int,
+): Stream2StreamCopier {
 
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
         progressCallback: ((transferredBytes: Long) -> Unit)?,
-        progressCallbackRatePerSecond: Int,
         finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
-        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRatePerSecond).roundToLong()
+        val minimumProgressCallbackPeriodMs = (1000f / progressRatePerSecond).roundToLong()
         var lastProgressPublishTimeMs: Long = 0
 
         fun publishProgressIfItsTime(totalDataRead: Long) {

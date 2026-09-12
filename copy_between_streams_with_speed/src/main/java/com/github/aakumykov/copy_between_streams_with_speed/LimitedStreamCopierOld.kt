@@ -24,28 +24,28 @@ class LimitedStreamCopierOld(
     /**
      * @param inputStream
      * @param outputStream
-     * @param speedBytesPerSecond
-     * @param stepsPerSecond Не может быть больше, чем [speedBytesPerSecond].
+     * @param speed
+     * @param stepsPerSecond Не может быть больше, чем [speed].
      */
     @OptIn(FlowPreview::class)
     @Throws(IllegalStateException::class, IllegalArgumentException::class, IOException::class)
     override suspend fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        speedBytesPerSecond: Int, // TODO: сделать Long
+        speed: Int,
         stepsPerSecond: Int
     ) {
         if (null != currentJob) // TODO: тестировать
             throw IllegalStateException("Current job field is not null, seems job is running...")
 
-        if (speedBytesPerSecond <= 0)
+        if (speed <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
-        if (stepsPerSecond > speedBytesPerSecond)
+        if (stepsPerSecond > speed)
             throw IllegalArgumentException("StepsPerSecond cannot be greater than speedBytesPerSecond.")
 
         val timeForStepMs = (1000F / stepsPerSecond).roundToLong()
-        val dataSizeToBeCopiedByStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
+        val dataSizeToBeCopiedByStep = (1f * speed / stepsPerSecond).roundToInt()
         // Если размер данных, который нужно скопировать за один шаг, больше размера буфера,
         // черпаю данные меньшим объёмом.
         val operatingPortionSize = if (dataSizeToBeCopiedByStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else dataSizeToBeCopiedByStep

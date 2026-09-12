@@ -83,7 +83,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 limitedStreamCopier.copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
-                    speedBytesPerSecond = 1_000_000
+                    speed = 1_000_000
                 )
                 job.cancel()
 
@@ -120,7 +120,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 limitedStreamCopier.copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
-                    speedBytesPerSecond = 0
+                    speed = 0
                 )
             }
         }
@@ -134,7 +134,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 limitedStreamCopier.copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
-                    speedBytesPerSecond = -1
+                    speed = -1
                 )
             }
         }
@@ -149,7 +149,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 limitedStreamCopier.copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
-                    speedBytesPerSecond = 10,
+                    speed = 10,
                     stepsPerSecond = 20
                 )
             }
@@ -525,7 +525,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         limitedStreamCopier.copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
-            speedBytesPerSecond = speed,
+            speed = speed,
             stepsPerSecond = steps
         )
         collectingJob.cancel()
@@ -688,7 +688,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         limitedStreamCopier.copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
-            speedBytesPerSecond = 1000
+            speed = 1000
         )
     }
 

@@ -8,14 +8,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
-import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
-import com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,13 +73,14 @@ class SimplestCopyActivity : AppCompatActivity() {
     }
 
     private val unlimitedStreamCopier: Stream2StreamCopier by lazy {
-        UnlimitedStreamCopier()
+        UnlimitedStreamCopier(progressRate)
     }
 
     private val limitedStreamCopier: Stream2StreamCopier get() {
         return LimitedStreamCopier(
-            initialSpeedBytesPerSecond = speedBytesPerSec,
-            stepsPerSecond = stepsPerSecond
+            speedBytesPerSecond = speedBytesPerSec,
+            progressRatePerSecond = progressRate,
+            dataCopyStepsPerSecond = stepsPerSecond
         )
     }
 
@@ -127,7 +126,6 @@ class SimplestCopyActivity : AppCompatActivity() {
                                     showProgress(progress)
                                 }
                             },
-                            progressCallbackRatePerSecond = progressRate,
                             finishCallback = {
                                 showInfo("Готово (${it.humanSizeBinary()})")
                                 currentInputStream = null

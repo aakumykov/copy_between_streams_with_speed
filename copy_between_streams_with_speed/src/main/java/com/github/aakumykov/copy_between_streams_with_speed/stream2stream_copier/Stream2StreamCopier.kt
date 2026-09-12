@@ -9,7 +9,6 @@ interface Stream2StreamCopier {
         inputStream: InputStream,
         outputStream: OutputStream,
         progressCallback: ((transferredBytes: Long) -> Unit)? = null,
-        progressCallbackRatePerSecond: Int,
         finishCallback: ((transferredBytes: Long) -> Unit)? = null,
     )
 

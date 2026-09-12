@@ -8,19 +8,20 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
- * @param initialSpeedBytesPerSecond
- * @param stepsPerSecond Не может быть больше, чем [initialSpeedBytesPerSecond].
+ * @param dataCopyStepsPerSecond Не может быть больше [speedBytesPerSecond].
+ * @param progressRatePerSecond Частота срабатывания коллбека прогресса.
  */
 class LimitedStreamCopier(
-    private val initialSpeedBytesPerSecond: Int, // TODO: сделать Long
-    private val stepsPerSecond: Int
+    private val speedBytesPerSecond: Int,
+    private val progressRatePerSecond: Int,
+    private val dataCopyStepsPerSecond: Int,
 ): Stream2StreamCopier {
 
-    private var speedBytesPerSecond: Int = initialSpeedBytesPerSecond
+    private var speed: Int = speedBytesPerSecond
 
-    // get() для динамического изменения скорости (получится ли?)
+    // get() - для динамического изменения скорости
     private val dataSizeToBeCopiedByStep: Int
-        get() = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
+        get() = (1f * speed / dataCopyStepsPerSecond).roundToInt()
 
     // Если размер данных, который нужно скопировать за один шаг, больше размера буфера,
     // черпаю данные меньшим объёмом.
@@ -28,7 +29,7 @@ class LimitedStreamCopier(
         if (dataSizeToBeCopiedByStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE
         else dataSizeToBeCopiedByStep
 
-    private val timeForStepMs: Long = (1000f / stepsPerSecond).roundToLong()
+    private val timeForStepMs: Long = (1000f / dataCopyStepsPerSecond).roundToLong()
 
     private val dataBuffer = ByteArray(operatingPortionSize)
 
@@ -38,10 +39,9 @@ class LimitedStreamCopier(
         inputStream: InputStream,
         outputStream: OutputStream,
         progressCallback: ((transferredBytes: Long) -> Unit)?,
-        progressCallbackRatePerSecond: Int,
         finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
-        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRatePerSecond).roundToLong()
+        val minimumProgressCallbackPeriodMs = (1000f / progressRatePerSecond).roundToLong()
         var lastProgressPublishTimeMs: Long = 0
         var lastProgressWasSent = false
 
@@ -74,10 +74,10 @@ class LimitedStreamCopier(
             }
         }
 
-        if (speedBytesPerSecond <= 0)
+        if (speed <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
-        if (stepsPerSecond > speedBytesPerSecond)
+        if (dataCopyStepsPerSecond > speed)
             throw IllegalArgumentException("StepsPerSecond cannot be greater than speedBytesPerSecond.")
 
         var totalDataRead: Long = 0
@@ -129,10 +129,10 @@ class LimitedStreamCopier(
     }
 
     override fun setSpeedBytesPerSec(value: Int) {
-        if (value >= stepsPerSecond) {
-            speedBytesPerSecond = value
+        if (value >= dataCopyStepsPerSecond) {
+            speed = value
         } else {
-            Log.w(TAG, "Speed bytes per second ($value) cannot be greater than steps per second ($stepsPerSecond) value.")
+            Log.w(TAG, "Speed bytes per second ($value) cannot be greater than steps per second ($dataCopyStepsPerSecond) value.")
         }
     }
 
