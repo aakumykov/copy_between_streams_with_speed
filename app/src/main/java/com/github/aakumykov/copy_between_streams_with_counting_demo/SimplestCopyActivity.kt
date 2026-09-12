@@ -79,6 +79,7 @@ class SimplestCopyActivity : AppCompatActivity() {
                         .copyFromStreamToStream(
                             inputStream = inputStream,
                             outputStream = outputStream,
+                            bufferSize = DEFAULT_BUFFER_SIZE,
                             progressCallback = { step, transferredBytes ->
                                 Log.d(TAG, "transferredBytes: $transferredBytes")
                                 val progress = (100f * transferredBytes / dataSize).roundToInt()
