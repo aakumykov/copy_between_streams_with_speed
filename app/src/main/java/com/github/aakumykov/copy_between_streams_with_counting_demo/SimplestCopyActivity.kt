@@ -8,11 +8,14 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
+import com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -29,8 +32,15 @@ class SimplestCopyActivity : AppCompatActivity() {
     val sourceFile by lazy { File(cacheDir, "source_file.bin").apply { createNewFile() } }
     val targetFile by lazy { File(cacheDir, "target_file.bin").apply { createNewFile() } }
 
-    private val sourceFileStream: InputStream by lazy { sourceFile.inputStream() }
-    private val targetFileStream: OutputStream by lazy { targetFile.outputStream() }
+    var currentInputStream: InputStream? = null
+
+    private val sourceFileStream: InputStream get() = sourceFile.inputStream()
+    private val targetFileStream: OutputStream get() = targetFile.outputStream()
+
+    private val speedBytesPerSec: Int get() = binding.speedSeekBar.progress
+    private val stepsPerSecond: Int get() = binding.stepsSeekBar.progress
+    private val dataSize: Int get() = binding.dataSizeSeekBar.progress
+    private val progressRate: Int get() = binding.progressRateSeekBar.progress
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +54,32 @@ class SimplestCopyActivity : AppCompatActivity() {
         }
         binding.startButton.setOnClickListener { startCopy() }
         binding.cancelButton.setOnClickListener { cancelCopy() }
+
+        binding.speedSeekBar.apply {
+            setChangeListener(object: SeekBarWithTextInput.ChangeListener {
+                override fun onSeekBarWithTextInputProgressChanged(progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        stream2streamCopier.setSpeedBytesPerSec(progress)
+                    }
+                }
+            })
+            setProgressLabelProvider { progress ->
+                "Скорость $progress"
+            }
+        }
+
+        binding.dataSizeSeekBar.setProgressLabelProvider {
+            "Размер $it байт"
+        }
+
+        binding.stepsSeekBar.setProgressLabelProvider {
+            "$it шагов в секунду"
+        }
+
+        binding.progressRateSeekBar.setProgressLabelProvider {
+            "Прогресс $it раз в секунду"
+        }
+
     }
 
     private val unlimitedStreamCopier: Stream2StreamCopier by lazy {
@@ -52,16 +88,14 @@ class SimplestCopyActivity : AppCompatActivity() {
 
     private val limitedStreamCopier: Stream2StreamCopier by lazy {
         LimitedStreamCopier(
-            speedBytesPerSecond = 3000,
-            stepsPerSecond = 100
+            initialSpeedBytesPerSecond = speedBytesPerSec,
+            stepsPerSecond = stepsPerSecond
         )
     }
 
     private val stream2streamCopier: Stream2StreamCopier by lazy {
         limitedStreamCopier
     }
-
-    private val dataSize = 100_000
 
     fun startCopy() {
 
@@ -82,8 +116,13 @@ class SimplestCopyActivity : AppCompatActivity() {
 
             sourceFile.writeBytes(data)
 
-            sourceFileStream.use { inputStream ->
-                targetFileStream.use { outputStream ->
+            val sourceStream = sourceFileStream
+            val targetStream =  targetFileStream
+
+            currentInputStream = sourceStream
+
+            sourceStream.use { inputStream ->
+                targetStream.use { outputStream ->
 
                     stream2streamCopier
                         .copyFromStreamToStream(
@@ -96,9 +135,10 @@ class SimplestCopyActivity : AppCompatActivity() {
                                     showProgress(progress)
                                 }
                             },
-                            progressCallbackRate = 1,
+                            progressCallbackRatePerSecond = progressRate,
                             finishCallback = {
-                                showInfo("Готово")
+                                showInfo("Готово (${it.humanSizeBinary()})")
+                                currentInputStream = null
                             }
                         )
 
@@ -108,14 +148,12 @@ class SimplestCopyActivity : AppCompatActivity() {
     }
 
     fun cancelCopy() {
-        when(random.nextBoolean()) {
-            true -> sourceFileStream.close()
-            false -> targetFileStream.close()
-        }
+        currentInputStream?.close()
     }
 
 
     fun showProgress(progress: Int) {
+        Log.d(TAG, "прогресс: $progress")
         binding.progressBar.progress = progress
     }
 

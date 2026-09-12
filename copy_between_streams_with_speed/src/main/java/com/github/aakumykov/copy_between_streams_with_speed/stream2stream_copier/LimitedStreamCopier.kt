@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 
+import android.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -7,23 +8,40 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
- * @param speedBytesPerSecond
- * @param stepsPerSecond Не может быть больше, чем [speedBytesPerSecond].
+ * @param initialSpeedBytesPerSecond
+ * @param stepsPerSecond Не может быть больше, чем [initialSpeedBytesPerSecond].
  */
 class LimitedStreamCopier(
-    private val speedBytesPerSecond: Int, // TODO: сделать Long
+    private val initialSpeedBytesPerSecond: Int, // TODO: сделать Long
     private val stepsPerSecond: Int = 10
 ): Stream2StreamCopier {
+
+    private var speedBytesPerSecond: Int = initialSpeedBytesPerSecond
+
+    // get() для динамического изменения скорости (получится ли?)
+    private val dataSizeToBeCopiedByStep: Int
+        get() = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
+
+    // Если размер данных, который нужно скопировать за один шаг, больше размера буфера,
+    // черпаю данные меньшим объёмом.
+    private val operatingPortionSize =
+        if (dataSizeToBeCopiedByStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE
+        else dataSizeToBeCopiedByStep
+
+    private val timeForStepMs: Long = (1000F / stepsPerSecond).roundToLong()
+
+    private val dataBuffer = ByteArray(operatingPortionSize)
+
 
     @Throws(IllegalStateException::class, IllegalArgumentException::class, IOException::class)
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
         progressCallback: ((transferredBytes: Long) -> Unit)?,
-        progressCallbackRate: Int,
+        progressCallbackRatePerSecond: Int,
         finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
-        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRate).roundToLong()
+        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRatePerSecond).roundToLong()
         var lastProgressPublishTimeMs: Long = 0
 
         fun publishProgressIfItsTime(totalDataRead: Long, force: Boolean = false) {
@@ -52,26 +70,16 @@ class LimitedStreamCopier(
             }
         }
 
-        if (speedBytesPerSecond <= 0)
+        if (initialSpeedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
         if (stepsPerSecond > speedBytesPerSecond)
             throw IllegalArgumentException("StepsPerSecond cannot be greater than speedBytesPerSecond.")
 
-        val timeForStepMs = (1000F / stepsPerSecond).roundToLong()
-
-        val dataSizeToBeCopiedByStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
-
-        // Если размер данных, который нужно скопировать за один шаг, больше размера буфера,
-        // черпаю данные меньшим объёмом.
-        val operatingPortionSize =
-            if (dataSizeToBeCopiedByStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE
-            else dataSizeToBeCopiedByStep
-
-        val dataBuffer = ByteArray(operatingPortionSize)
-
         var totalDataRead: Long = 0
         var thisStepDataRead: Long = 0
+
+        publishProgressIfItsTime(0, true)
 
         while(true) {
             val startTime = System.currentTimeMillis()
@@ -111,5 +119,17 @@ class LimitedStreamCopier(
                 thisStepDataRead = 0
             }
         }
+    }
+
+    override fun setSpeedBytesPerSec(value: Int) {
+        if (value >= stepsPerSecond) {
+            speedBytesPerSecond = value
+        } else {
+            Log.w(TAG, "Speed bytes per second ($value) cannot be greater than steps per second ($stepsPerSecond) value.")
+        }
+    }
+
+    companion object {
+        val TAG: String = LimitedStreamCopier::class.java.simpleName
     }
 }

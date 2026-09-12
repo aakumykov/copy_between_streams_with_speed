@@ -11,10 +11,10 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
         inputStream: InputStream,
         outputStream: OutputStream,
         progressCallback: ((transferredBytes: Long) -> Unit)?,
-        progressCallbackRate: Int,
+        progressCallbackRatePerSecond: Int,
         finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
-        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRate).roundToLong()
+        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRatePerSecond).roundToLong()
         var lastProgressPublishTimeMs: Long = 0
 
         fun publishProgressIfItsTime(totalDataRead: Long) {
@@ -41,6 +41,10 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
 
             publishProgressIfItsTime(totalReadBytes)
         }
+    }
+
+    override fun setSpeedBytesPerSec(value: Int) {
+
     }
 }
 
