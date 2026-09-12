@@ -11,17 +11,26 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
-import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.ThrottledCallbackStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
+import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.InputStream
+import java.io.OutputStream
 import kotlin.math.roundToInt
 
 class SimplestCopyActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySimplestCopyBinding
+
+    val sourceFile by lazy { File(cacheDir, "source_file.bin").apply { createNewFile() } }
+    val targetFile by lazy { File(cacheDir, "target_file.bin").apply { createNewFile() } }
+
+    private val sourceFileStream: InputStream by lazy { sourceFile.inputStream() }
+    private val targetFileStream: OutputStream by lazy { targetFile.outputStream() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +43,7 @@ class SimplestCopyActivity : AppCompatActivity() {
             insets
         }
         binding.startButton.setOnClickListener { startCopy() }
+        binding.cancelButton.setOnClickListener { cancelCopy() }
     }
 
     private val unlimitedStreamCopier: Stream2StreamCopier by lazy {
@@ -47,47 +57,47 @@ class SimplestCopyActivity : AppCompatActivity() {
         )
     }
 
-    private val throttledCallbackUnlimitedStreamCopier by lazy {
-        ThrottledCallbackStreamCopier(
-            progressCallbackRate = 1,
-//            unlimitedStreamCopier
-            limitedStreamCopier
-        )
+    private val stream2streamCopier: Stream2StreamCopier by lazy {
+        limitedStreamCopier
     }
 
-    private val dataSize = 10_000
+    private val dataSize = 100_000
 
     fun startCopy() {
 
         hideInfo()
 
-        val sourceFile = File(cacheDir, "source_file.bin").apply { createNewFile() }
-        val targetFile = File(cacheDir, "target_file.bin").apply { createNewFile() }
         if (!sourceFile.exists()) throw FileNotFoundException("source file does not exists")
         if (!targetFile.exists()) throw FileNotFoundException("target file does not exists")
 
         val data = random.nextBytes(dataSize)
 
-        lifecycleScope.launch (Dispatchers.IO) {
+        val eh = CoroutineExceptionHandler { _, throwable ->
+            lifecycleScope.launch (Dispatchers.Main) {
+                showError(throwable)
+            }
+        }
+
+        lifecycleScope.launch (eh + Dispatchers.IO) {
 
             sourceFile.writeBytes(data)
 
-            sourceFile.inputStream().use { inputStream ->
-                targetFile.outputStream().use { outputStream ->
+            sourceFileStream.use { inputStream ->
+                targetFileStream.use { outputStream ->
 
-                    throttledCallbackUnlimitedStreamCopier
+                    stream2streamCopier
                         .copyFromStreamToStream(
                             inputStream = inputStream,
                             outputStream = outputStream,
-                            bufferSize = DEFAULT_BUFFER_SIZE,
-                            progressCallback = { step, transferredBytes ->
+                            progressCallback = { transferredBytes ->
                                 Log.d(TAG, "transferredBytes: $transferredBytes")
                                 val progress = (100f * transferredBytes / dataSize).roundToInt()
                                 launch (Dispatchers.Main) {
                                     showProgress(progress)
                                 }
                             },
-                            finishCallback = { transferredBytes ->
+                            progressCallbackRate = 1,
+                            finishCallback = {
                                 showInfo("Готово")
                             }
                         )
@@ -97,6 +107,14 @@ class SimplestCopyActivity : AppCompatActivity() {
         }
     }
 
+    fun cancelCopy() {
+        when(random.nextBoolean()) {
+            true -> sourceFileStream.close()
+            false -> targetFileStream.close()
+        }
+    }
+
+
     fun showProgress(progress: Int) {
         binding.progressBar.progress = progress
     }
@@ -104,6 +122,17 @@ class SimplestCopyActivity : AppCompatActivity() {
     fun showInfo(message: String) {
         binding.infoView.apply {
             text = message
+            setTextColor(getColor(R.color.black_white_day_night))
+        }
+    }
+
+    fun showError(throwable: Throwable) {
+        throwable.errorMsg.also {
+            binding.infoView.apply {
+                text = it
+                setTextColor(getColor(R.color.error))
+            }
+            Log.e(TAG, it, throwable)
         }
     }
 

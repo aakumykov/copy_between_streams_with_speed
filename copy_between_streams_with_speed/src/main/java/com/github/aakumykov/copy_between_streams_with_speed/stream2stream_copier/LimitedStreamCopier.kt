@@ -19,12 +19,19 @@ class LimitedStreamCopier(
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        bufferSize: Int,
-        progressCallback: ((stepPortionOfData: Long, transferredBytes:Long) -> Unit)?,
-        finishCallback: ((transferredBytes:Long) -> Unit)?,
+        progressCallback: ((transferredBytes: Long) -> Unit)?,
+        progressCallbackRate: Int,
+        finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
-        fun publishProgress(stepPortionOfData: Long, totalDataRead: Long) {
-            progressCallback?.invoke(stepPortionOfData,totalDataRead)
+        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRate).roundToLong()
+        var lastProgressPublishTimeMs: Long = 0
+
+        fun publishProgressIfItsTime(totalDataRead: Long, force: Boolean = false) {
+            val interval = System.currentTimeMillis() - lastProgressPublishTimeMs
+            if (interval >= minimumProgressCallbackPeriodMs || force) {
+                progressCallback?.invoke(totalDataRead)
+                lastProgressPublishTimeMs = System.currentTimeMillis()
+            }
         }
 
         fun sleepIfNeeded(
@@ -88,13 +95,13 @@ class LimitedStreamCopier(
             // Размер данных, которыми оперируют в процессе перекидывания данных.
 
             if (readBytes < operatingPortionSize) {
-                publishProgress(thisStepDataRead, totalDataRead)
+                publishProgressIfItsTime(totalDataRead, true)
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
-                publishProgress(thisStepDataRead, totalDataRead)
+                publishProgressIfItsTime(totalDataRead, true)
             }
             else if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
-                publishProgress(thisStepDataRead, totalDataRead)
+                publishProgressIfItsTime(totalDataRead)
                 sleepIfNeeded(
                     System.currentTimeMillis() - startTime,
                     timeForStepMs,

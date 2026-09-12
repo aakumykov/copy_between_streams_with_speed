@@ -2,7 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copie
 
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.Buffer
+import kotlin.math.roundToLong
 
 
 class UnlimitedStreamCopier: Stream2StreamCopier {
@@ -10,10 +10,21 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        bufferSize: Int,
-        progressCallback: ((stepPortionOfData: Long, transferredBytes:Long) -> Unit)?,
-        finishCallback: ((transferredBytes:Long) -> Unit)?,
+        progressCallback: ((transferredBytes: Long) -> Unit)?,
+        progressCallbackRate: Int,
+        finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
+        val minimumProgressCallbackPeriodMs = (1000f / progressCallbackRate).roundToLong()
+        var lastProgressPublishTimeMs: Long = 0
+
+        fun publishProgressIfItsTime(totalDataRead: Long) {
+            val interval = System.currentTimeMillis() - lastProgressPublishTimeMs
+            if (interval >= minimumProgressCallbackPeriodMs) {
+                progressCallback?.invoke(totalDataRead)
+                lastProgressPublishTimeMs = System.currentTimeMillis()
+            }
+        }
+
         val bufferSize = DEFAULT_BUFFER_SIZE
         val dataBuffer = ByteArray(bufferSize)
 
@@ -27,7 +38,8 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
             }
             totalReadBytes += readBytes
             outputStream.write(dataBuffer, 0, readBytes)
-            progressCallback?.invoke(readBytes.toLong(),totalReadBytes)
+
+            publishProgressIfItsTime(totalReadBytes)
         }
     }
 }
