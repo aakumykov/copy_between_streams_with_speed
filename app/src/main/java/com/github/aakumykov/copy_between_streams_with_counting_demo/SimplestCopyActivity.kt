@@ -10,6 +10,8 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.ThrottledCallbackUnlimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.UnlimitedStreamCopier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flowOn
@@ -36,7 +38,13 @@ class SimplestCopyActivity : AppCompatActivity() {
         binding.startButton.setOnClickListener { startCopy() }
     }
 
-    private val streamCopier by lazy { LimitedStreamCopier(lifecycleScope) }
+    private val unlimitedStreamCopier: UnlimitedStreamCopier by lazy {
+        UnlimitedStreamCopier()
+    }
+
+    private val throttledCallbackUnlimitedStreamCopier by lazy {
+        ThrottledCallbackUnlimitedStreamCopier(unlimitedStreamCopier)
+    }
 
     private val dataSize = 1000
 
@@ -51,43 +59,35 @@ class SimplestCopyActivity : AppCompatActivity() {
 
         val data = random.nextBytes(dataSize)
 
-        var progressCollectingJob: Job? = null
+        lifecycleScope.launch (Dispatchers.IO) {
 
-        lifecycleScope.launch {
-
-            launch (Dispatchers.IO) {
-                sourceFile.writeBytes(data)
-            }.join()
-
-            progressCollectingJob = launch {
-                streamCopier
-                    .progressFlow
-                    .onCompletion {
-                        showInfo("Скопировано")
-                    }
-                    .collect {
-                        showProgress(it)
-                    }
-            }
+            sourceFile.writeBytes(data)
 
             sourceFile.inputStream().use { inputStream ->
                 targetFile.outputStream().use { outputStream ->
-                    streamCopier.copyFromStreamToStream(
-                        inputStream,
-                        outputStream,
-                        speedBytesPerSecond = 500,
-                        stepsPerSecond = 1
-                    )
+
+                    throttledCallbackUnlimitedStreamCopier
+                        .copyFromStreamToStreamWithCallbackRate(
+                            inputStream,
+                            outputStream,
+                            progressCallback = { transferredBytes ->
+                                val progress = (100f * transferredBytes / dataSize).roundToInt()
+                                launch (Dispatchers.Main) {
+                                    showProgress(progress)
+                                }
+                            },
+                            progressCallbackRate = 5,
+                            finishCallback = { transferredBytes ->
+                                showInfo("Готово")
+                            }
+                        )
+
                 }
             }
-
-            progressCollectingJob?.cancel()
-            progressCollectingJob = null
         }
     }
 
-    fun showProgress(value: Long) {
-        val progress = ((1f * value / dataSize) * 100).roundToInt()
+    fun showProgress(progress: Int) {
         binding.progressBar.progress = progress
     }
 

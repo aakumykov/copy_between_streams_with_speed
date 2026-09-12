@@ -11,7 +11,7 @@ class UnlimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() 
     fun file_copied() = runBlocking {
         val fileSize = 10
         prepareSourceAndTargetFiles(fileSize)
-        unlimitedSpeedCopyBetweenStreamsWithProgress(
+        unlimitedSpeedCopyBetweenStreams(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
         ).collect {  }
@@ -68,7 +68,7 @@ class UnlimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() 
 
         val progressList = mutableListOf<Long>()
 
-        unlimitedSpeedCopyBetweenStreamsWithProgress(
+        unlimitedSpeedCopyBetweenStreams(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
         ).collect { progressList.add(it) }
