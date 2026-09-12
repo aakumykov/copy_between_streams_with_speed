@@ -14,7 +14,7 @@ class ThrottledCallbackStreamCopier (
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes:Long) -> Unit)?,
+        progressCallback: ((transferredBytes:Long, isLastPieceOfData: Boolean) -> Unit)?,
         finishCallback: ((transferredBytes:Long) -> Unit)?,
     ) {
         val minimumCallbackPeriodMs = (1000f / progressCallbackRate).roundToLong()
@@ -22,7 +22,7 @@ class ThrottledCallbackStreamCopier (
         var startTimeMs = currentTimeMs
         var progressCallbackTriggeredAtLeastOnce = false
 
-        val progressCallbackWrapper: ((transferredBytes:Long) -> Unit) = { transferredBytes ->
+        val progressCallbackWrapper: ((transferredBytes:Long, isLastPieceOfData: Boolean) -> Unit) = { transferredBytes ->
             if (null != progressCallback) {
                 val durationMs = currentTimeMs - startTimeMs
                 if (durationMs >= minimumCallbackPeriodMs) {
@@ -30,15 +30,15 @@ class ThrottledCallbackStreamCopier (
                     progressCallbackTriggeredAtLeastOnce = true
                     startTimeMs = currentTimeMs
                 }
-                if (!progressCallbackTriggeredAtLeastOnce) {
-                    progressCallback.invoke(transferredBytes)
-                }
             }
         }
 
-        val finishCallbackWrapper: ((transferredBytes:Long) -> Unit)? = if (null != finishCallback) { transferredBytes ->
-            finishCallback.invoke(transferredBytes)
-        } else null
+        val finishCallbackWrapper: ((transferredBytes:Long) -> Unit) = { transferredBytes ->
+            if (null != progressCallback && !progressCallbackTriggeredAtLeastOnce) {
+                progressCallback.invoke(transferredBytes)
+            }
+            finishCallback?.invoke(transferredBytes)
+        }
 
         streamCopier.copyFromStreamToStream(
             inputStream = inputStream,

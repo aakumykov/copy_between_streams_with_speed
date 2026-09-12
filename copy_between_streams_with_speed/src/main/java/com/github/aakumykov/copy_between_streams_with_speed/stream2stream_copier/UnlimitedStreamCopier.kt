@@ -9,7 +9,7 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes:Long) -> Unit)?,
+        progressCallback: ((transferredBytes:Long, isLastPieceOfData: Boolean) -> Unit)?,
         finishCallback: ((transferredBytes:Long) -> Unit)?,
     ) {
         val bufferSize = DEFAULT_BUFFER_SIZE
@@ -19,13 +19,16 @@ class UnlimitedStreamCopier: Stream2StreamCopier {
 
         while (true) {
             val readBytes = inputStream.read(dataBuffer, 0, bufferSize)
+
             if (-1 == readBytes) {
                 finishCallback?.invoke(totalReadBytes)
                 break
             }
+
             totalReadBytes += readBytes
             outputStream.write(dataBuffer, 0, readBytes)
-            progressCallback?.invoke(totalReadBytes)
+
+            progressCallback?.invoke(totalReadBytes, readBytes < bufferSize)
         }
     }
 }

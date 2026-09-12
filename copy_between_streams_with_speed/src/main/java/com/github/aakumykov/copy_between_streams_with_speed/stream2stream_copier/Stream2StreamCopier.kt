@@ -7,7 +7,7 @@ interface Stream2StreamCopier {
     fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes:Long) -> Unit)? = null,
+        progressCallback: ((transferredBytes:Long, isLastPieceOfData: Boolean) -> Unit)? = null,
         finishCallback: ((transferredBytes:Long) -> Unit)? = null,
     )
 }
