@@ -3,6 +3,8 @@ package com.github.aakumykov.copy_between_streams_with_speed
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Assert
 import org.junit.runner.RunWith
@@ -57,6 +59,7 @@ abstract class TestBase {
     }
 
     protected fun prepareSourceFile(dataSizeBytes: Int) {
+        println("prepareSourceFile(${dataSizeBytes})")
         clearSourceFile()
 
         sourceFile.createNewFile()
@@ -68,6 +71,7 @@ abstract class TestBase {
     }
 
     protected fun prepareTargetFile() {
+        println("prepareTargetFile()")
         // Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
         // поэтому производится здесь.
         clearTargetFile()
@@ -78,14 +82,30 @@ abstract class TestBase {
 
 
     protected fun writeTestDataToFile(file: File, dataSizeBytes: Int) {
+        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) СТАРТ")
+
         val pieceSize = DEFAULT_BUFFER_SIZE
         val mainSteps = dataSizeBytes / pieceSize
-        val additionalBytesCount = dataSizeBytes - (mainSteps * pieceSize)
+
+        var alreadyWritten = 0
+
         file.outputStream().use { outputStream ->
-            repeat(mainSteps) {
-                outputStream.write(random.nextBytes(pieceSize))
+
+            fun writeAndDisplay(data: ByteArray) {
+                outputStream.write(data)
+                val count = data.size
+                alreadyWritten += count
+                println("записано ${count}, всего ${alreadyWritten.humanDecimalPlaces}")
             }
-            outputStream.write(random.nextBytes(additionalBytesCount))
+
+            repeat(mainSteps) {
+                writeAndDisplay(random.nextBytes(pieceSize))
+            }
+
+            val additionalBytesCount = dataSizeBytes - alreadyWritten
+            writeAndDisplay(random.nextBytes(additionalBytesCount))
         }
+
+        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) ФИНИШ")
     }
 }
