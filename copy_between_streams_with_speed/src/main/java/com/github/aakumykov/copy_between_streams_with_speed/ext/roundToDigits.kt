@@ -10,10 +10,10 @@ internal fun Float.roundToFloatingDigits(n: Int): Float {
     ).toFloat()
 }
 
-internal fun Double.roundToFloatingDigits(n: Int): String {
+internal fun Double.roundToFloatingDigits(n: Int): Double {
     return String.format(
         Locale.getDefault(),
         "%.${n}f",
         this
-    )
+    ).toDouble()
 }

@@ -11,39 +11,70 @@ import kotlin.math.roundToLong
 class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
+    fun simple_test() = runTest {
+        test_with_params(
+            1000,
+            100,
+            1,
+            1,
+            10.0
+        )
+    }
+
+    @Test
     fun `продолжительность_копирования_плюс_минус_20_от_расчётной`() = runTest {
         for (dataSize in 1..100) {
-            prepareSourceAndTargetFiles(dataSize)
-
-            val speed = 200
-            val rate = 1
-            val steps = 10
-
-            val estimatedDuration
-                    = ((1f * dataSize / speed)*1_000_000)
-                .roundToLong()
-
-            val lsc = LimitedStreamCopier(
-                speedBytesPerSecond = speed,
-                progressRatePerSecond = rate,
-                dataCopyStepsPerSecond = steps
+            test_with_params(
+                dataSize = dataSize,
+                speed = 200,
+                steps = 10,
+                rate = 1,
+                10.0
             )
-
-            val startTime = currentTime
-            lsc.copyFromStreamToStream(
-                sourceFileStream,
-                targetFileStream
-            )
-            val duration = currentTime - startTime
-
-            println("sz: $dataSize, " +
-                    "sp: $speed, " +
-                    "st: $steps " +
-                    "-> " +
-                    "es:${estimatedDuration.humanDecimalPlaces}, " +
-                    "dr:${duration.humanDecimalPlaces}")
-//            Assert.assertTrue("$duration in 4800..5200 при размере данных $dataSize", duration in 4800..5200)
         }
+    }
+
+    private fun test_with_params(dataSize: Int, speed: Int,
+                                 steps: Int, rate: Int,
+                                 targetCopyingTimeDeviationPercents: Double) {
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        val estimatedDuration
+                = ((1f * dataSize / speed)*1_000_000_000)
+            .roundToLong()
+
+        val lsc = LimitedStreamCopier(
+            speedBytesPerSecond = speed,
+            progressRatePerSecond = rate,
+            dataCopyStepsPerSecond = steps
+        )
+
+        val startTime = currentTime
+        lsc.copyFromStreamToStream(
+            sourceFileStream,
+            targetFileStream
+        )
+        val duration = currentTime - startTime
+
+        val deviationPercent
+            = (duration.toDouble() / estimatedDuration)
+            .roundToFloatingDigits(3)
+
+        val logString = "sz: $dataSize, " +
+                "sp: $speed, " +
+                "st: $steps " +
+                "-> " +
+                "es:${estimatedDuration.humanDecimalPlaces}, " +
+                "dr:${duration.humanDecimalPlaces} " +
+                "(${deviationPercent}%)"
+
+        println(logString)
+
+        Assert.assertTrue(
+            "отклонение времени копирования не более ${targetCopyingTimeDeviationPercents}%",
+            deviationPercent <= targetCopyingTimeDeviationPercents
+        )
     }
 
     private val currentTime: Long

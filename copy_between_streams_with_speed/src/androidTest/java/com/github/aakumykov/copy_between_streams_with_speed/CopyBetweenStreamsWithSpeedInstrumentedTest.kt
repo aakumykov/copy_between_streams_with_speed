@@ -1,20 +1,13 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.percent
-import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.utils.repeatFromTo
 import org.junit.Assert
 import org.junit.Test
-import org.junit.runner.RunWith
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
