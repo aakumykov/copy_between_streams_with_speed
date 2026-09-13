@@ -106,7 +106,10 @@ abstract class TestBase {
             writeAndDisplay(random.nextBytes(additionalBytesCount))
         }
 
-        Assert.assertEquals(dataSizeBytes, file.length())
+        Assert.assertEquals(
+            dataSizeBytes.toLong(),
+            file.length()
+        )
 
         println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) ФИНИШ")
     }

@@ -41,11 +41,14 @@ class LimitedStreamCopier(
         progressCallback: ((transferredBytes: Long) -> Unit)?,
         finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
+//        Log.d(TAG, "copyFromStreamToStream() called with: inputStream = $inputStream, outputStream = $outputStream, progressCallback = $progressCallback, finishCallback = $finishCallback")
+
         val minimumProgressCallbackPeriodMs = (1000f / progressRatePerSecond).roundToLong()
         var lastProgressPublishTimeMs: Long = 0
         var lastProgressWasSent = false
 
         fun publishProgressIfItsTime(totalDataRead: Long, force: Boolean = false) {
+//            Log.d(TAG, "publishProgressIfItsTime() called with: totalDataRead = $totalDataRead, force = $force")
             val progressSendingInterval: Long = System.currentTimeMillis() - lastProgressPublishTimeMs
             if (progressSendingInterval >= minimumProgressCallbackPeriodMs || force) {
                 progressCallback?.invoke(totalDataRead)
@@ -62,6 +65,7 @@ class LimitedStreamCopier(
             bytesRealCopiedInStep: Long,
             bytesNeedToBeCopiedInStep: Long
         ) {
+//            Log.d(TAG, "sleepIfNeeded() called with: stepDurationMs = $stepDurationMs, timeAllocatedForStep = $timeAllocatedForStep, bytesRealCopiedInStep = $bytesRealCopiedInStep, bytesNeedToBeCopiedInStep = $bytesNeedToBeCopiedInStep")
             if (bytesRealCopiedInStep >= bytesNeedToBeCopiedInStep) {
 
                 val bytesOverrunPercentage: Float = (bytesRealCopiedInStep.toFloat() / bytesNeedToBeCopiedInStep)
@@ -92,6 +96,7 @@ class LimitedStreamCopier(
 
             // Данные закончились.
             if (-1 == readBytes) {
+//                Log.d(TAG, "данные закончились")
                 if (!lastProgressWasSent) {
                     progressCallback?.invoke(totalDataRead)
                 }
@@ -110,12 +115,27 @@ class LimitedStreamCopier(
             // Размер данных, которыми оперируют в процессе перекидывания данных.
 
             if (readBytes < operatingPortionSize) {
+//                Log.d(TAG, "readBytes < operatingPortionSize")
                 publishProgressIfItsTime(totalDataRead, true)
+                sleepIfNeeded(
+                    System.currentTimeMillis() - startTime,
+                    timeForStepMs,
+                    thisStepDataRead,
+                    dataSizeToBeCopiedByStep.toLong()
+                )
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
+//                Log.d(TAG, "readBytes < dataSizeToBeCopiedByStep")
                 publishProgressIfItsTime(totalDataRead, true)
+                sleepIfNeeded(
+                    System.currentTimeMillis() - startTime,
+                    timeForStepMs,
+                    thisStepDataRead,
+                    dataSizeToBeCopiedByStep.toLong()
+                )
             }
             else if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
+//                Log.d(TAG, "thisStepDataRead >= dataSizeToBeCopiedByStep")
                 publishProgressIfItsTime(totalDataRead)
                 sleepIfNeeded(
                     System.currentTimeMillis() - startTime,
