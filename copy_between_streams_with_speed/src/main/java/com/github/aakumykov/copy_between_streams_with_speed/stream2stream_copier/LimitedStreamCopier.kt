@@ -75,6 +75,8 @@ class LimitedStreamCopier(
                 if (sleepingLackTimeMs > 0) {
                     Thread.sleep(sleepingLackTimeMs)
                 }
+            } else {
+                println("спать не нужно")
             }
         }
 

@@ -1,11 +1,12 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.R.attr.duration
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
+import com.github.aakumykov.copy_between_streams_with_speed.ext.toHMS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert
 import org.junit.Test
 import kotlin.math.roundToLong
 
@@ -13,13 +14,15 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun simple_test() = runBlocking {
-        test_with_params(
-            1000_000,
-            100_000,
-            10,
-            10,
-            10.0
-        )
+        for (multiplier in 81..82) {
+            test_with_params(
+                1000 * multiplier,
+                1000 * multiplier,
+                10,
+                10,
+                10.0
+            )
+        }
     }
 
     @Test
@@ -51,24 +54,33 @@ class LimitedStreamCopierTest2 : TestBase() {
             dataCopyStepsPerSecond = steps
         )
 
-        val startTime = currentTime
+        val startTimeNs = currentTimeNanos
+        val startTimeMs = currentTimeMs
+
         lsc.copyFromStreamToStream(
             sourceFileStream,
-            targetFileStream
+            targetFileStream,
+            progressCallback = {
+                println("скопировано: $it")
+            }
         )
-        val duration = currentTime - startTime
+        val durationNs = currentTimeNanos - startTimeNs
+        val durationMs = currentTimeMs - startTimeMs
+
+        println("скопировано за время: ${durationMs.toHMS()}")
 
         val deviationPercent
-            = (100 * estimatedDuration / duration.toDouble())
+            = (100 * estimatedDuration / durationNs.toDouble())
             .roundToFloatingDigits(0)
 
-        val logString = "sz: $dataSize, " +
-                "sp: $speed, " +
-                "st: $steps " +
-                "-> " +
-                "edr:${estimatedDuration.humanDecimalPlaces}, " +
-                "rdr:${duration.humanDecimalPlaces} " +
-                "(${deviationPercent}%)"
+        val logString =
+//            "sz: $dataSize, " +
+//            "sp: $speed, " +
+//            "st: $steps " +
+//            "-> " +
+            "edr:${estimatedDuration.humanDecimalPlaces}, " +
+            "rdr:${duration.humanDecimalPlaces} " +
+            "(${deviationPercent}%)"
 
         println(logString)
 
@@ -80,6 +92,9 @@ class LimitedStreamCopierTest2 : TestBase() {
 //        )
     }
 
-    private val currentTime: Long
+    private val currentTimeMs: Long
+        get() = System.currentTimeMillis()
+
+    private val currentTimeNanos: Long
         get() = System.currentTimeMillis() + System.nanoTime()
 }
