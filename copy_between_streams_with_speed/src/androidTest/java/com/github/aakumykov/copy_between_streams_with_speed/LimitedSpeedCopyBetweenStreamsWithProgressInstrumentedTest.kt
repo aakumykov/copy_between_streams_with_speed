@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -74,13 +75,13 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 prepareSourceAndTargetFiles(fileSize)
 
                 val job = launch (Dispatchers.IO) {
-                    limitedStreamCopier.progressFlow.collect {
+                    limitedStreamCopier(this).progressFlow.collect {
                         println(it)
                     }
                 }
                 advanceUntilIdle()
 
-                limitedStreamCopier.copyFromStreamToStream(
+                limitedStreamCopier(this).copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
                     speed = 1_000_000
@@ -117,7 +118,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
             prepareSourceAndTargetFiles()
             runBlocking {
-                limitedStreamCopier.copyFromStreamToStream(
+                limitedStreamCopier(this).copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
                     speed = 0
@@ -131,7 +132,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     fun throws_exception_on_negative_speed() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
             runBlocking {
-                limitedStreamCopier.copyFromStreamToStream(
+                limitedStreamCopier(this).copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
                     speed = -1
@@ -146,7 +147,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
             prepareSourceAndTargetFiles(10)
             runBlocking {
-                limitedStreamCopier.copyFromStreamToStream(
+                limitedStreamCopier(this).copyFromStreamToStream(
                     inputStream = sourceFileStream,
                     outputStream = targetFileStream,
                     speed = 10,
@@ -516,13 +517,13 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         val progressList = mutableListOf<Long>()
 
         val collectingJob = launch {
-            limitedStreamCopier.progressFlow.collect {
+            limitedStreamCopier(this).progressFlow.collect {
                 progressList.add(it)
             }
         }
         advanceUntilIdle()
 
-        limitedStreamCopier.copyFromStreamToStream(
+        limitedStreamCopier(this).copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
             speed = speed,
@@ -685,7 +686,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     private fun copyWithoutCheck() = runBlocking {
-        limitedStreamCopier.copyFromStreamToStream(
+        limitedStreamCopier(this).copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
             speed = 1000
@@ -726,6 +727,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         }
     }
 
-
-    private val limitedStreamCopier by lazy { LimitedStreamCopierOld() }
+    private fun limitedStreamCopier(scope: CoroutineScope): LimitedStreamCopierOld {
+        return LimitedStreamCopierOld(scope)
+    }
 }

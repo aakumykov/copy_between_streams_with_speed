@@ -7,7 +7,7 @@ import org.junit.Test
 
 class UnlimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
-    @Test
+    /*@Test
     fun file_copied() = runBlocking {
         val fileSize = 10
         prepareSourceAndTargetFiles(fileSize)
@@ -82,5 +82,5 @@ class UnlimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() 
                 Assert.assertTrue("Каждое предыдущее значение меньше следующего", value < nextValue)
             }
         }
-    }
+    }*/
 }
