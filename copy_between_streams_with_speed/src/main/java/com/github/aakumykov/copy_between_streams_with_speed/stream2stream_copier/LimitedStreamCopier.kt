@@ -115,7 +115,7 @@ class LimitedStreamCopier(
                 logD( "-1 == readBytes")
                 // Для случая, когда данные закончились ровно на границе [dataSizeToBeCopiedByStep].
                 // В этом случае
-//                if (!lastProgressWasSent) { progressCallback?.invoke(totalDataRead) }
+                if (!lastProgressWasSent) { progressCallback?.invoke(totalDataRead) }
                 finishCallback?.invoke(totalDataRead)
                 break
             }
