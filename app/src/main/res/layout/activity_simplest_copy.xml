@@ -65,7 +65,7 @@
         android:id="@+id/stepsSeekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:progress="10"
+        app:progress="1"
         app:max="10"
         />
 
