@@ -55,7 +55,12 @@ class LimitedStreamCopier(
         val minimumProgressCallbackPeriodMs = (1000f / progressRatePerSecond).roundToLong()
         var lastProgressPublishTimeMs: Long = 0
         var lastProgressWasSent = false
+        var lastProgressValue: Long = 0
 
+        fun publishProgressIfNeeded(value: Long, force: Boolean = false) {
+            val progressDiff = value - lastProgressValue
+            lastProgressValue = value
+        }
 
         fun publishProgressIfItsTime(totalDataRead: Long, force: Boolean = false) {
             val progressSendingInterval: Long = System.currentTimeMillis() - lastProgressPublishTimeMs
