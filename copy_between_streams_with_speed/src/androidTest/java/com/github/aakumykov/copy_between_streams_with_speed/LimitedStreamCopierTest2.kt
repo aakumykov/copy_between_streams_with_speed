@@ -49,9 +49,9 @@ class LimitedStreamCopierTest2 : TestBase() {
             .roundToLong()
 
         val lsc = LimitedStreamCopier(
-            speedBytesPerSecond = speed,
-            progressRatePerSecond = rate,
-            dataCopyStepsPerSecond = steps
+            initialSpeedBytesPerSecond = speed,
+            initialProgressRatePerSecond = rate,
+            initialDataCopyStepsPerSecond = steps
         )
 
         val startTimeNs = currentTimeNanos

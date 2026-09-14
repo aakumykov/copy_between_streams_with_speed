@@ -2,6 +2,8 @@ package com.github.aakumykov.copy_between_streams_with_counting_demo
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.ProgressBar
+import android.widget.SeekBar
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -14,6 +16,7 @@ import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
+import com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,23 +56,54 @@ class SimplestCopyActivity : AppCompatActivity() {
         binding.startButton.setOnClickListener { startCopy() }
         binding.cancelButton.setOnClickListener { cancelCopy() }
 
-        binding.speedSeekBar.setProgressLabelProvider { progress ->
+
+        binding.dataSizeSeekBar.apply {
+            setProgressLabelProvider {
+                "Размер $it байт"
+            }
+        }
+
+        binding.speedSeekBar.apply {
+            setProgressLabelProvider { progress ->
                 "Скорость $progress байт/с"
+            }
+            /*setChangeListener(object: SeekBarWithTextInput.ChangeListener{
+                override fun onSeekBarWithTextInputProgressChanged(
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
+                    limitedStreamCopier.setSpeedBytesPerSec(progress)
+                }
+            })*/
         }
 
-
-        binding.dataSizeSeekBar.setProgressLabelProvider {
-            "Размер $it байт"
+        binding.stepsSeekBar.apply {
+            setProgressLabelProvider {
+                "$it шагов/секунду"
+            }
+            /*setChangeListener(object: SeekBarWithTextInput.ChangeListener{
+                override fun onSeekBarWithTextInputProgressChanged(
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
+                    limitedStreamCopier.setStepsPerSec(progress)
+                }
+            })*/
         }
 
-        binding.stepsSeekBar.setProgressLabelProvider {
-            "$it шагов/секунду"
+        binding.progressRateSeekBar.apply {
+            setProgressLabelProvider {
+                "Прогресс $it раз в секунду"
+            }
+            /*setChangeListener(object: SeekBarWithTextInput.ChangeListener{
+                override fun onSeekBarWithTextInputProgressChanged(
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
+                    limitedStreamCopier.setProgressRate(progress)
+                }
+            })*/
         }
-
-        binding.progressRateSeekBar.setProgressLabelProvider {
-            "Прогресс $it раз в секунду"
-        }
-
     }
 
     private val unlimitedStreamCopier: Stream2StreamCopier by lazy {
@@ -82,10 +116,6 @@ class SimplestCopyActivity : AppCompatActivity() {
             progressRatePerSecond = progressRate,
             dataCopyStepsPerSecond = stepsPerSecond
         )
-    }
-
-    private val stream2streamCopier: Stream2StreamCopier by lazy {
-        limitedStreamCopier
     }
 
     fun startCopy() {
@@ -115,7 +145,7 @@ class SimplestCopyActivity : AppCompatActivity() {
             sourceStream.use { inputStream ->
                 targetStream.use { outputStream ->
 
-                    stream2streamCopier
+                    limitedStreamCopier
                         .copyFromStreamToStream(
                             inputStream = inputStream,
                             outputStream = outputStream,

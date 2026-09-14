@@ -43,9 +43,5 @@ class UnlimitedStreamCopier(
             publishProgressIfItsTime(totalReadBytes)
         }
     }
-
-    override fun setSpeedBytesPerSec(value: Int) {
-
-    }
 }
 
