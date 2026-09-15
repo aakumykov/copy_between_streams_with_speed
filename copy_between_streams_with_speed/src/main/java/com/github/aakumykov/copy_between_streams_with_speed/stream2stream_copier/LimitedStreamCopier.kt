@@ -17,6 +17,14 @@ class LimitedStreamCopier(
     private val progressRatePerSecond: Int, // TODO: перенести в функцию?
 ): Stream2StreamCopier {
 
+    init {
+        if (speedBytesPerSecond <= 0)
+            throw IllegalArgumentException("Speed must be greater than zero.")
+
+        if (0 <= progressRatePerSecond)
+            throw IllegalArgumentException("progressRatePerSecond cannot be zero")
+    }
+
     //
     // Скорость может быть задана огромная, параметр "количество данных, которые должны быть
     // переданы за шаг [steps]", потенциально (но не всегда!) самый большой.
@@ -76,10 +84,6 @@ class LimitedStreamCopier(
                 logD("спать не нужно")
             }
         }
-
-
-        if (speedBytesPerSecond <= 0)
-            throw IllegalArgumentException("Speed must be greater than zero.")
 
         var totalDataRead: Long = 0
         var thisStepDataRead: Long = 0

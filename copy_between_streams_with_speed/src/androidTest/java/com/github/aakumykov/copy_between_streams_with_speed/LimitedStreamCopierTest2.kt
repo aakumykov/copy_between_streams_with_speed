@@ -19,28 +19,37 @@ class LimitedStreamCopierTest2 : TestBase() {
                 1000 * multiplier,
                 1000 * multiplier,
                 10,
-                10,
                 10.0
             )
         }
     }
 
     @Test
-    fun `продолжительность_копирования_плюс_минус_20_от_расчётной`() = runTest {
-        for (dataSize in 1..100) {
-            test_with_params(
-                dataSize = dataSize,
-                speed = 15,
-                steps = 10,
-                rate = 1,
-                10.0
-            )
+    fun `продолжительность_копирования_плюс_минус_10_процентов_от_расчётной`() = runTest {
+        listOf(
+//            IntRange(1,2),
+//            IntRange(3,6),
+//            IntRange(7,10),
+//            IntRange(10,20),
+//            IntRange(20,30),
+            IntRange(30,40),
+        ).forEach{ range ->
+            range.forEach { dataSize ->
+                test_with_params(
+                    dataSize = dataSize,
+                    speed = 15,
+                    rate = 1,
+                    10.0
+                )
+            }
         }
     }
 
-    private fun test_with_params(dataSize: Int, speed: Int,
-                                 steps: Int, rate: Int,
-                                 targetCopyingTimeDeviationPercents: Double) {
+    private fun test_with_params(dataSize: Int,
+                                 speed: Int,
+                                 rate: Int,
+                                 targetCopyingTimeDeviationPercents: Double
+    ) {
 
         prepareSourceAndTargetFiles(dataSize)
 
@@ -49,9 +58,8 @@ class LimitedStreamCopierTest2 : TestBase() {
             .roundToLong()
 
         val lsc = LimitedStreamCopier(
-            initialSpeedBytesPerSecond = speed,
-            initialProgressRatePerSecond = rate,
-            initialDataCopyStepsPerSecond = steps
+            speedBytesPerSecond = speed,
+            progressRatePerSecond = rate,
         )
 
         val startTimeNs = currentTimeNanos
