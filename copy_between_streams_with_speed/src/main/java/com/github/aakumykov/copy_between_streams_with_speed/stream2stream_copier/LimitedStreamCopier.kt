@@ -23,6 +23,9 @@ class LimitedStreamCopier(
 
         if (progressRatePerSecond <= 0)
             throw IllegalArgumentException("progressRatePerSecond cannot be zero")
+
+        if (progressRatePerSecond > speedBytesPerSecond)
+            throw IllegalArgumentException("progress rate cannot be greater than speed")
     }
 
     //
