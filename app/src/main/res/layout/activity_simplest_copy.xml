@@ -49,15 +49,15 @@
         android:id="@+id/dataSizeSeekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:progress="100"
-        app:max="1000"
+        app:progress="8192"
+        app:max="100000"
         />
 
     <com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
         android:id="@+id/speedSeekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:progress="1000"
+        app:progress="4096"
         app:max="10000"
         />
 

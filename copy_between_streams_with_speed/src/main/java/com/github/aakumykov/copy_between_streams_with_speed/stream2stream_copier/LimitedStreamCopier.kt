@@ -17,10 +17,6 @@ class LimitedStreamCopier(
     private val progressRatePerSecond: Int, // TODO: перенести в функцию?
 ): Stream2StreamCopier {
 
-//    private var speed: Int = initialSpeedBytesPerSecond
-//    private var steps: Int = initialDataCopyStepsPerSecond
-//    private var progressRate: Int = initialProgressRatePerSecond
-
     //
     // Скорость может быть задана огромная, параметр "количество данных, которые должны быть
     // переданы за шаг [steps]", потенциально (но не всегда!) самый большой.
@@ -59,6 +55,7 @@ class LimitedStreamCopier(
 
         fun sleepIfNeeded(stepDurationMs: Long, timeAllocatedForStep: Long,
                           bytesRealCopiedInStep: Long, bytesNeedToBeCopiedInStep: Long) {
+
             logD( "sleepIfNeeded(): " +
                     "stepDurationMs = $stepDurationMs, " +
                     "timeAllocatedForStep = $timeAllocatedForStep, " +
@@ -80,25 +77,25 @@ class LimitedStreamCopier(
             }
         }
 
-        publishProgress(0)
 
         if (speedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
-//        if (dataCopyStepsPerSecond > speedBytesPerSecond)
-//            throw IllegalArgumentException("Steps per second cannot be greater than speed bytes per second.")
-
         var totalDataRead: Long = 0
         var thisStepDataRead: Long = 0
 
-
-        // Для начала отсчёта периода срабатывания коллбека прогресса
-//        publishProgressIfItsTime(0, true)
-
-
         logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
+
+        // Публикую начальный (нулевой) прогресс.
+        publishProgress(0)
+
+        var lastPieceOfDataSize = 0
+
+        fun dataEndsWithSmallAppendix(): Boolean = operatingPortionSize != lastPieceOfDataSize
+
         while(true) {
+
             val startTime = System.currentTimeMillis()
 
             val readBytes = inputStream.read(dataBuffer, 0, operatingPortionSize)
@@ -106,9 +103,8 @@ class LimitedStreamCopier(
             // Данные закончились.
             if (-1 == readBytes) {
                 logD( "-1 == readBytes")
-                // Для случая, когда данные закончились ровно на границе [dataSizeToBeCopiedByStep].
-                // В этом случае
-                publishProgress(totalDataRead)
+                if (dataEndsWithSmallAppendix())
+                    publishProgress(totalDataRead)
                 finishCallback?.invoke(totalDataRead)
                 break
             }
@@ -117,6 +113,7 @@ class LimitedStreamCopier(
 
             thisStepDataRead += readBytes
             totalDataRead += readBytes
+            lastPieceOfDataSize = readBytes
 
             // Объёмы данных в порядке уменьшения:
             // Полный размер данных.
@@ -169,6 +166,7 @@ class LimitedStreamCopier(
         Log.d(TAG, "[$uniqueId] $text")
     }
 
+    // Чтобы logcat не скрывал повторяющиеся записи.
     private val uniqueId: String get() = UUID.randomUUID().toString().split("-").first()
 
     companion object {
