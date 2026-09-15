@@ -105,6 +105,7 @@ class SimplestCopyActivity : AppCompatActivity() {
     fun startCopy() {
 
         hideInfo()
+        binding.progressBar.progress = 0
 
         if (!sourceFile.exists()) throw FileNotFoundException("source file does not exists")
         if (!targetFile.exists()) throw FileNotFoundException("target file does not exists")

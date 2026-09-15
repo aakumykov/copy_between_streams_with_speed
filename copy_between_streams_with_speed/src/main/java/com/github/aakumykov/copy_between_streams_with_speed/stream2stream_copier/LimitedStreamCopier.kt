@@ -91,9 +91,6 @@ class LimitedStreamCopier(
         logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
 
-        // Публикую начальный (нулевой) прогресс.
-        publishProgress(0)
-
         var lastPieceOfDataSize = 0
 
         fun dataEndsWithSmallAppendix(): Boolean = operatingPortionSize != lastPieceOfDataSize
