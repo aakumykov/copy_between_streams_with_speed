@@ -10,10 +10,13 @@ import org.junit.Assert
 import org.junit.Test
 import java.io.FileNotFoundException
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
+
+    companion object {
+        const val DEFAULT_PROGRESS_LIST_SIZE_DIFF_PERCENTS = 10
+    }
 
     /**
     План теста:
@@ -527,8 +530,15 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         dataSizeBytes: Int, // TODO: Long
         speedBytesPerSecond: Int,
         progressRate: Int,
+        expectedProgressListDiffPercents: Int = DEFAULT_PROGRESS_LIST_SIZE_DIFF_PERCENTS
     ) {
-        test_progress_list_size(progressList, dataSizeBytes, speedBytesPerSecond, progressRate)
+        test_progress_list_size(
+            progressList,
+            dataSizeBytes,
+            speedBytesPerSecond,
+            progressRate,
+            expectedProgressListDiffPercents
+        )
         test_progress_list_incrementality(progressList)
     }
 
@@ -537,41 +547,33 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         progressList: List<Long>,
         dataSizeBytes: Int,
         speedBytesPerSecond: Int,
-        stepsPerSecond: Int
+        progressRate: Int,
+        expectedProgressListDiffPercents: Int
     ) {
-        val bytesToBeTransferredPerStep = (1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
-        val operatingPortionSize = if (bytesToBeTransferredPerStep > DEFAULT_BUFFER_SIZE) DEFAULT_BUFFER_SIZE else bytesToBeTransferredPerStep
-
-        val expectedSteps = when {
-            (0 == dataSizeBytes) -> {
-                0
-            }
-            (dataSizeBytes <= operatingPortionSize) -> {
-                1
-            }
-            else -> {
-                ceil(1f * dataSizeBytes / operatingPortionSize).roundToInt()
-            }
-        }
+        val expectedCopyingTime = 1f * dataSizeBytes / speedBytesPerSecond
+        val expectedProgressShots = (expectedCopyingTime * progressRate).roundToInt()
 
         val argumentsLog =
             "\nданные: $dataSizeBytes байт," +
             "\nскорость:$speedBytesPerSecond," +
-            "\nшагов:$stepsPerSecond"
+            "\nшагов:$progressRate"
 
-        if (expectedSteps > 1) {
-            val progressStepsCountDifferenceFloat = 1f * abs(progressList.size - expectedSteps) / expectedSteps
-            val progressStepsDifferenceInt = (progressStepsCountDifferenceFloat * 100).roundToInt()
-            val expectedDiffPercents = 10
+        if (expectedProgressShots > 1) {
+            val progressStepsDifferenceFloat = 1f * abs(progressList.size - expectedProgressShots) / expectedProgressShots
+            val progressStepsDifferenceInt = (progressStepsDifferenceFloat * 100).roundToInt()
 
-            val message = "${argumentsLog}\nРазмер списка прогресса (${progressList.size}) отличается от ожидаемого (${expectedSteps}) более, чем на ${expectedDiffPercents}%: на ${progressStepsDifferenceInt}%."
+            val message = "${argumentsLog}\n" +
+                    "Размер списка прогресса (${progressList.size}) " +
+                    "отличается от ожидаемого (${expectedProgressShots}) " +
+                    "более, чем на ${expectedProgressListDiffPercents}%: " +
+                    "на ${progressStepsDifferenceInt}%."
 
-            Assert.assertTrue(message, progressStepsDifferenceInt <= expectedDiffPercents)
+            Assert.assertTrue(message, progressStepsDifferenceInt <= expectedProgressListDiffPercents)
         }
         else {
             Assert.assertEquals(
-                "${argumentsLog}\nРазмер списка прогресса для данных в $dataSizeBytes байт должен быть равен $expectedSteps байт.",
-                expectedSteps,
+                "${argumentsLog}\nРазмер списка прогресса для данных в $dataSizeBytes байт должен быть равен $expectedProgressShots байт.",
+                expectedProgressShots,
                 progressList.size
             )
         }
