@@ -167,7 +167,7 @@ class LimitedStreamCopier(
 
 
     private fun logD(text: String) {
-        Log.d(TAG, "[$uniqueId] $text")
+//        Log.d(TAG, "[$uniqueId] $text")
     }
 
     // Чтобы logcat не скрывал повторяющиеся записи.
