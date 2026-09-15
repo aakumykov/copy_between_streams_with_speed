@@ -10,12 +10,10 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
- * @param dataCopyStepsPerSecond Не может быть больше [speedBytesPerSecond].
  * @param progressRatePerSecond Частота срабатывания коллбека прогресса.
  */
 class LimitedStreamCopier(
     private val speedBytesPerSecond: Int,
-    private val dataCopyStepsPerSecond: Int,
     private val progressRatePerSecond: Int, // TODO: перенести в функцию?
 ): Stream2StreamCopier {
 
@@ -30,7 +28,7 @@ class LimitedStreamCopier(
     // get() - для динамического изменения скорости
     //
     private val dataSizeToBeCopiedByStep: Int
-        get() = (1f * speedBytesPerSecond / dataCopyStepsPerSecond).roundToInt()
+        get() = (1f * speedBytesPerSecond / progressRatePerSecond).roundToInt()
 
     //
     // Оперирую данными (черпаю данные) в размере, равном размеру данных "на шаг", или
@@ -40,7 +38,7 @@ class LimitedStreamCopier(
     //
     private val operatingPortionSize = min(dataSizeToBeCopiedByStep, DEFAULT_BUFFER_SIZE)
 
-    private val timeForStepMs: Long = (1000f / dataCopyStepsPerSecond).roundToLong()
+    private val timeForStepMs: Long = (1000f / progressRatePerSecond).roundToLong()
 
     private val dataBuffer = ByteArray(operatingPortionSize)
 
@@ -54,28 +52,19 @@ class LimitedStreamCopier(
     ) {
 //        logD( "copyFromStreamToStream() called with: inputStream = $inputStream, outputStream = $outputStream, progressCallback = $progressCallback, finishCallback = $finishCallback")
 
-        val minimumProgressCallbackPeriodMs = (1000f / progressRatePerSecond).roundToLong()
-        var lastProgressPublishTimeMs: Long = 0
-        var lastProgressWasSent = false
-
-
-        fun publishProgressIfItsTime(totalDataRead: Long, force: Boolean = false) {
-            val progressSendingInterval: Long = System.currentTimeMillis() - lastProgressPublishTimeMs
-
-            if (((minimumProgressCallbackPeriodMs - progressSendingInterval) < 2) || force) {
-                logD( "publishProgressIfItsTime() called with: totalDataRead = $totalDataRead, force = $force")
-                progressCallback?.invoke(totalDataRead)
-                lastProgressPublishTimeMs = System.currentTimeMillis()
-                lastProgressWasSent = true
-            } else {
-                logD( "publishProgressIfItsTime() не время отправлять прогресс ($progressSendingInterval < $minimumProgressCallbackPeriodMs)")
-                lastProgressWasSent = false
-            }
+        fun publishProgress(totalDataRead: Long) {
+            logD("publishProgress(), totalDataRead: $totalDataRead")
+            progressCallback?.invoke(totalDataRead)
         }
 
         fun sleepIfNeeded(stepDurationMs: Long, timeAllocatedForStep: Long,
                           bytesRealCopiedInStep: Long, bytesNeedToBeCopiedInStep: Long) {
-//            logD( "sleepIfNeeded() called with: stepDurationMs = $stepDurationMs, timeAllocatedForStep = $timeAllocatedForStep, bytesRealCopiedInStep = $bytesRealCopiedInStep, bytesNeedToBeCopiedInStep = $bytesNeedToBeCopiedInStep")
+            logD( "sleepIfNeeded(): " +
+                    "stepDurationMs = $stepDurationMs, " +
+                    "timeAllocatedForStep = $timeAllocatedForStep, " +
+                    "bytesRealCopiedInStep = $bytesRealCopiedInStep, " +
+                    "bytesNeedToBeCopiedInStep = $bytesNeedToBeCopiedInStep," +
+                    "total")
 
             if (bytesRealCopiedInStep >= bytesNeedToBeCopiedInStep) {
 
@@ -87,16 +76,17 @@ class LimitedStreamCopier(
                     Thread.sleep(sleepingLackTimeMs)
                 }
             } else {
-                println("спать не нужно")
+                logD("спать не нужно")
             }
         }
 
+        publishProgress(0)
 
         if (speedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
-        if (dataCopyStepsPerSecond > speedBytesPerSecond)
-            throw IllegalArgumentException("Steps per second cannot be greater than speed bytes per second.")
+//        if (dataCopyStepsPerSecond > speedBytesPerSecond)
+//            throw IllegalArgumentException("Steps per second cannot be greater than speed bytes per second.")
 
         var totalDataRead: Long = 0
         var thisStepDataRead: Long = 0
@@ -106,7 +96,7 @@ class LimitedStreamCopier(
 //        publishProgressIfItsTime(0, true)
 
 
-        logD( "speed: $speedBytesPerSecond, steps: $dataCopyStepsPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
+        logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
         while(true) {
             val startTime = System.currentTimeMillis()
@@ -118,9 +108,7 @@ class LimitedStreamCopier(
                 logD( "-1 == readBytes")
                 // Для случая, когда данные закончились ровно на границе [dataSizeToBeCopiedByStep].
                 // В этом случае
-                if (!lastProgressWasSent) {
-                    publishProgressIfItsTime(totalDataRead, true)
-                }
+                publishProgress(totalDataRead)
                 finishCallback?.invoke(totalDataRead)
                 break
             }
@@ -145,7 +133,7 @@ class LimitedStreamCopier(
                     dataSizeToBeCopiedByStep.toLong()
                 )
 
-                publishProgressIfItsTime(totalDataRead)
+                publishProgress(totalDataRead)
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
                 logD( "readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
@@ -157,7 +145,7 @@ class LimitedStreamCopier(
                     dataSizeToBeCopiedByStep.toLong()
                 )
 
-                publishProgressIfItsTime(totalDataRead)
+                publishProgress(totalDataRead)
             }
             else if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
                 logD( "thisStepDataRead ($thisStepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
@@ -169,7 +157,7 @@ class LimitedStreamCopier(
                     dataSizeToBeCopiedByStep.toLong()
                 )
 
-                publishProgressIfItsTime(totalDataRead)
+                publishProgress(totalDataRead)
 
                 thisStepDataRead = 0
             }

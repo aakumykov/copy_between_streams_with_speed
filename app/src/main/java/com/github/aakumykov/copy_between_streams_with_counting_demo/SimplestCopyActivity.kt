@@ -39,7 +39,6 @@ class SimplestCopyActivity : AppCompatActivity() {
     private val targetFileStream: OutputStream get() = targetFile.outputStream()
 
     private val speedBytesPerSec: Int get() = binding.speedSeekBar.progress
-    private val stepsPerSecond: Int get() = binding.stepsSeekBar.progress
     private val dataSize: Int get() = binding.dataSizeSeekBar.progress
     private val progressRate: Int get() = binding.progressRateSeekBar.progress
 
@@ -77,20 +76,6 @@ class SimplestCopyActivity : AppCompatActivity() {
             })*/
         }
 
-        binding.stepsSeekBar.apply {
-            setProgressLabelProvider {
-                "$it шагов/секунду"
-            }
-            /*setChangeListener(object: SeekBarWithTextInput.ChangeListener{
-                override fun onSeekBarWithTextInputProgressChanged(
-                    progress: Int,
-                    fromUser: Boolean
-                ) {
-                    limitedStreamCopier.setStepsPerSec(progress)
-                }
-            })*/
-        }
-
         binding.progressRateSeekBar.apply {
             setProgressLabelProvider {
                 "Прогресс $it раз в секунду"
@@ -114,7 +99,6 @@ class SimplestCopyActivity : AppCompatActivity() {
         return LimitedStreamCopier(
             speedBytesPerSecond = speedBytesPerSec,
             progressRatePerSecond = progressRate,
-            dataCopyStepsPerSecond = stepsPerSecond
         )
     }
 
