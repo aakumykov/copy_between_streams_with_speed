@@ -34,11 +34,12 @@ class LimitedStreamCopierTest2 : TestBase() {
 //            IntRange(20,30),
             IntRange(30,40),
         ).forEach{ range ->
+            val speedMultiplier = 10
             range.forEach { dataSize ->
                 test_with_params(
                     dataSize = dataSize,
-                    speed = 15,
-                    rate = 1,
+                    speed = dataSize * speedMultiplier,
+                    rate = 10,
                     10.0
                 )
             }

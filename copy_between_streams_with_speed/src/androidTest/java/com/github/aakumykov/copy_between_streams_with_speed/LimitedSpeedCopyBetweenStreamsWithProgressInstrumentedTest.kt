@@ -168,11 +168,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     fun progress_is_correct_on_sizes_lowe_than_10() = runBlocking {
         repeat(9) { i ->
             val size = i + 10
-            val speed = 1000
-            val steps = 10
+            val speed = size * 10
+            val rate = 10
             prepareSourceAndTargetFiles(size)
-            copy_data_with_on_complete {
-                test_progress_list(it, size, speed, steps)
+            copy_data_with_on_complete(speed,rate) {
+                test_progress_list(it, size, speed, rate)
                 test_files(size)
             }
         }
@@ -502,13 +502,20 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun copy_data_with_on_complete(onComplete: (progressList:List<Long>) -> Unit) = runTest {
+    private fun copy_data_with_on_complete(
+        speed: Int = 10,
+        rate: Int = 10,
+        onComplete: (progressList:List<Long>) -> Unit
+    ) = runTest {
 
         val progressList = mutableListOf<Long>()
 
-        limitedStreamCopier(10,10).copyFromStreamToStream(
+        limitedStreamCopier(speed,rate).copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
+            progressCallback = { transferredBytes ->
+                progressList.add(transferredBytes)
+            }
         )
 
         onComplete.invoke(progressList)
@@ -519,9 +526,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         progressList: List<Long>,
         dataSizeBytes: Int, // TODO: Long
         speedBytesPerSecond: Int,
-        stepsPerSecond: Int,
+        progressRate: Int,
     ) {
-        test_progress_list_size(progressList, dataSizeBytes, speedBytesPerSecond, stepsPerSecond)
+        test_progress_list_size(progressList, dataSizeBytes, speedBytesPerSecond, progressRate)
         test_progress_list_incrementality(progressList)
     }
 
