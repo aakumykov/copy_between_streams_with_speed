@@ -102,7 +102,7 @@ class LimitedStreamCopier(
 
             // Данные закончились.
             if (-1 == readBytes) {
-                logD( "-1 == readBytes")
+                logD( "прочитано, -1 == readBytes")
                 if (dataEndsWithSmallAppendix())
                     publishProgress(totalDataRead)
                 finishCallback?.invoke(totalDataRead)
@@ -121,7 +121,7 @@ class LimitedStreamCopier(
             // Размер данных, которыми оперируют в процессе перекидывания данных.
 
             if (readBytes < operatingPortionSize) {
-                logD( "readBytes ($readBytes) < operatingPortionSize ($operatingPortionSize)")
+                logD( "прочитано, readBytes ($readBytes) < operatingPortionSize ($operatingPortionSize)")
 
                 sleepIfNeeded(
                     System.currentTimeMillis() - startTime,
@@ -133,7 +133,7 @@ class LimitedStreamCopier(
                 publishProgress(totalDataRead)
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
-                logD( "readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
+                logD( "прочитано, readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
 
                 sleepIfNeeded(
                     System.currentTimeMillis() - startTime,
@@ -145,7 +145,7 @@ class LimitedStreamCopier(
                 publishProgress(totalDataRead)
             }
             else if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
-                logD( "thisStepDataRead ($thisStepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
+                logD( "прочитано, thisStepDataRead ($thisStepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
 
                 sleepIfNeeded(
                     System.currentTimeMillis() - startTime,
