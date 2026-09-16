@@ -14,10 +14,20 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun simple_test() = runBlocking {
-        for (multiplier in 81..82) {
+        test_with_params(
+            57,
+            13,
+            1,
+            10.0
+        )
+    }
+
+    @Test
+    fun repeated_simple_test() = runBlocking {
+        for (multiplier in 1..10) {
             test_with_params(
-                1000 * multiplier,
-                1000 * multiplier,
+                100 * multiplier,
+                30 * multiplier,
                 10,
                 10.0
             )
@@ -76,7 +86,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         val durationNs = currentTimeNanos - startTimeNs
         val durationMs = currentTimeMs - startTimeMs
 
-        println("скопировано за время: ${durationMs.toHMS()}")
+        println("${dataSize.humanDecimalPlaces} со скоростью ${speed.humanDecimalPlaces} скопировано за время: ${durationMs.toHMS()}")
 
         val deviationPercent
             = (100 * estimatedDuration / durationNs.toDouble())

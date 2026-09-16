@@ -1,7 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import com.github.aakumykov.copy_between_streams_with_speed.LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest.Companion.DEFAULT_PROGRESS_LIST_SIZE_DIFF_PERCENTS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -657,12 +657,12 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         dataSizeInterval: Int,
         randomizeDataSize: Boolean = true,
     ) {
-        println("----- Копирование с вариацией размера данных -----")
+        println("DEBUG_PROGRESS, ----- Копирование с вариацией размера данных -----")
 
         var dataSize = dataSizeRange.first
         while (dataSize <= dataSizeRange.last) {
 
-            println("Копирование ${dataSize.humanSizeBinary()} на скорости ${speed.humanSizeBinary()}/с с $progressRate шагами в секунду.")
+            println("DEBUG_PROGRESS, Копирование ${dataSize.humanDecimalPlaces} на скорости ${speed.humanDecimalPlaces}/с с $progressRate шагами в секунду.")
             copy_and_test_with_params(
                 dataSizeBytes = dataSize,
                 speed = speed,

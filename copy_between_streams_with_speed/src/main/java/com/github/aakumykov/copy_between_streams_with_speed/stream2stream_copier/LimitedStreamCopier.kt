@@ -60,7 +60,7 @@ class LimitedStreamCopier(
 //        logD( "copyFromStreamToStream() called with: inputStream = $inputStream, outputStream = $outputStream, progressCallback = $progressCallback, finishCallback = $finishCallback")
 
         fun publishProgress(totalDataRead: Long) {
-            logD("publishProgress(), totalDataRead: $totalDataRead")
+            logDEBUG("publishProgress(), totalDataRead: $totalDataRead", tag="DEBUG_PROGRESS")
             progressCallback?.invoke(totalDataRead)
         }
 
@@ -177,6 +177,10 @@ class LimitedStreamCopier(
 
     private fun logD(text: String) {
 //        Log.d(TAG, "[$uniqueId] $text")
+    }
+
+    private fun logDEBUG(text: String, tag: String = TAG) {
+//        Log.i(tag, "[$uniqueId] $text")
     }
 
     // Чтобы logcat не скрывал повторяющиеся записи.
