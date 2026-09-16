@@ -101,8 +101,10 @@ class LimitedStreamCopier(
          * и последний кусочек прочитанных данных меньше этой порции.
          */
         fun dataEndsWithSmallAppendix(): Boolean {
-            return dataSizeToBeCopiedByStep > 1 &&
-                    operatingPortionSize != lastPieceOfDataSize
+            val stepGreaterThanOne = dataSizeToBeCopiedByStep > 1
+            val lastPieceIsSmaller = operatingPortionSize != lastPieceOfDataSize
+            val result = stepGreaterThanOne && lastPieceIsSmaller
+            return result
         }
 
         while(true) {
@@ -114,8 +116,8 @@ class LimitedStreamCopier(
             // Данные закончились.
             if (-1 == readBytes) {
                 logD( "прочитано, -1 == readBytes")
-                if (dataEndsWithSmallAppendix())
-                    publishProgress(totalDataRead)
+//                if (dataEndsWithSmallAppendix())
+//                    publishProgress(totalDataRead)
                 finishCallback?.invoke(totalDataRead)
                 break
             }
