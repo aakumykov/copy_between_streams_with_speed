@@ -1,32 +1,52 @@
 package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 
-import android.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
+typealias ProgressCallback = ((transferredBytes: Long) -> Unit)
+typealias FinishCallback = ((transferredBytes: Long) -> Unit)
+
 /**
+ * ПотокоНЕБЕЗОПАСЕН.
+ *
  * @param progressRatePerSecond Частота срабатывания коллбека прогресса.
  */
 class LimitedStreamCopier(
     private val speedBytesPerSecond: Int,
-    private val progressRatePerSecond: Int, // TODO: перенести в функцию?
+    private val progressRatePerSecond: Int,
+    dataCopyingStepsPerSecond: Int = 1000,
 ): Stream2StreamCopier {
+
+    val stepsPerSecond = min(speedBytesPerSecond, dataCopyingStepsPerSecond)
 
     init {
         if (speedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
-        if (progressRatePerSecond <= 0)
-            throw IllegalArgumentException("progressRatePerSecond cannot be zero")
+        if (dataCopyingStepsPerSecond <= 0)
+            throw IllegalArgumentException("dataCopyingStepsPerSecond cannot be zero")
 
-        if (progressRatePerSecond > speedBytesPerSecond)
-            throw IllegalArgumentException("progress rate cannot be greater than speed")
+//        if (dataCopyingStepsPerSecond > speedBytesPerSecond)
+//            throw IllegalArgumentException("data copying steps per second cannot be greater than speed")
     }
+
+    private var progressCallback: ProgressCallback? = null
+    private var finishCallback: FinishCallback? = null
+
+    private var workIsRunning: Boolean = false
+    private var callbackThread: Thread? = null
+
+    var totalDataRead: Long = 0
+    var stepDataRead: Long = 0
 
     //
     // Скорость может быть задана огромная, параметр "количество данных, которые должны быть
@@ -35,7 +55,7 @@ class LimitedStreamCopier(
     // get() - для динамического изменения скорости
     //
     private val dataSizeToBeCopiedByStep: Int
-        get() = (1f * speedBytesPerSecond / progressRatePerSecond).roundToInt()
+        get() = ceil(1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
 
     //
     // Оперирую данными (черпаю данные) в размере, равном размеру данных "на шаг", или
@@ -45,66 +65,31 @@ class LimitedStreamCopier(
     //
     private val operatingPortionSize = min(dataSizeToBeCopiedByStep, DEFAULT_BUFFER_SIZE)
 
-    private val timeForStepMs: Long = (1000f / progressRatePerSecond).roundToLong()
+    private val dataCopyingIntervalMs: Long = floor(1000f / stepsPerSecond).roundToLong()
+    private val progressCallbackIntervalMs: Long = floor(1000f / progressRatePerSecond).roundToLong()
 
     private val dataBuffer = ByteArray(operatingPortionSize)
-
 
     @Throws(IllegalStateException::class, IllegalArgumentException::class, IOException::class)
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes: Long) -> Unit)?,
-        finishCallback: ((transferredBytes: Long) -> Unit)?,
+        progressCallback: ProgressCallback?,
+        finishCallback: FinishCallback?,
     ) {
-//        logD( "copyFromStreamToStream() called with: inputStream = $inputStream, outputStream = $outputStream, progressCallback = $progressCallback, finishCallback = $finishCallback")
-
-        fun publishProgress(totalDataRead: Long) {
-            logDEBUG("publishProgress(), totalDataRead: $totalDataRead", tag="DEBUG_PROGRESS")
-            progressCallback?.invoke(totalDataRead)
-        }
-
-        fun sleepIfNeeded(stepDurationMs: Long, timeAllocatedForStep: Long,
-                          bytesRealCopiedInStep: Long, bytesNeedToBeCopiedInStep: Long) {
-
-            logD( "sleepIfNeeded(): " +
-                    "stepDurationMs = $stepDurationMs, " +
-                    "timeAllocatedForStep = $timeAllocatedForStep, " +
-                    "bytesRealCopiedInStep = $bytesRealCopiedInStep, " +
-                    "bytesNeedToBeCopiedInStep = $bytesNeedToBeCopiedInStep," +
-                    "total")
-
-            if (bytesRealCopiedInStep >= bytesNeedToBeCopiedInStep) {
-
-                val bytesOverrunPercentage: Float = (bytesRealCopiedInStep.toFloat() / bytesNeedToBeCopiedInStep)
-
-                val sleepingLackTimeMs = (bytesOverrunPercentage * timeAllocatedForStep - stepDurationMs).roundToLong()
-
-                if (sleepingLackTimeMs > 0) {
-                    Thread.sleep(sleepingLackTimeMs)
-                }
-            } else {
-                logD("спать не нужно")
-            }
-        }
-
-        var totalDataRead: Long = 0
-        var thisStepDataRead: Long = 0
-
         logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
+        this.progressCallback = progressCallback
+        this.finishCallback = finishCallback
+        this.workIsRunning = true
 
-        var lastPieceOfDataSize = 0
-
-        /**
-         * Данные копируются порциями, большими единице,
-         * и последний кусочек прочитанных данных меньше этой порции.
-         */
-        fun dataEndsWithSmallAppendix(): Boolean {
-            val stepGreaterThanOne = dataSizeToBeCopiedByStep > 1
-            val lastPieceIsSmaller = operatingPortionSize != lastPieceOfDataSize
-            val result = stepGreaterThanOne && lastPieceIsSmaller
-            return result
+        callbackThread = thread {
+            while(workIsRunning) {
+                progressCallback?.invoke(totalDataRead)
+                TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
+            }
+            println("Завершение вспомогательного потока")
+            callbackThread?.join(10)
         }
 
         while(true) {
@@ -116,17 +101,15 @@ class LimitedStreamCopier(
             // Данные закончились.
             if (-1 == readBytes) {
                 logD( "прочитано, -1 == readBytes")
-//                if (dataEndsWithSmallAppendix())
-//                    publishProgress(totalDataRead)
+                workIsRunning = true
                 finishCallback?.invoke(totalDataRead)
                 break
             }
 
             outputStream.write(dataBuffer, 0, readBytes)
 
-            thisStepDataRead += readBytes
+            stepDataRead += readBytes
             totalDataRead += readBytes
-            lastPieceOfDataSize = readBytes
 
             // Объёмы данных в порядке уменьшения:
             // Полный размер данных.
@@ -135,43 +118,33 @@ class LimitedStreamCopier(
 
             if (readBytes < operatingPortionSize) {
                 logD( "прочитано, readBytes ($readBytes) < operatingPortionSize ($operatingPortionSize)")
-
-                sleepIfNeeded(
-                    System.currentTimeMillis() - startTime,
-                    timeForStepMs,
-                    thisStepDataRead,
-                    dataSizeToBeCopiedByStep.toLong()
-                )
-
-                publishProgress(totalDataRead)
+                sleepIfNeeded(startTime)
             }
             else if (readBytes < dataSizeToBeCopiedByStep) {
                 logD( "прочитано, readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
-
-                sleepIfNeeded(
-                    System.currentTimeMillis() - startTime,
-                    timeForStepMs,
-                    thisStepDataRead,
-                    dataSizeToBeCopiedByStep.toLong()
-                )
-
-                publishProgress(totalDataRead)
+                sleepIfNeeded(startTime)
             }
-            else if (thisStepDataRead >= dataSizeToBeCopiedByStep) {
-                logD( "прочитано, thisStepDataRead ($thisStepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
-
-                sleepIfNeeded(
-                    System.currentTimeMillis() - startTime,
-                    timeForStepMs,
-                    thisStepDataRead,
-                    dataSizeToBeCopiedByStep.toLong()
-                )
-
-                publishProgress(totalDataRead)
-
-                thisStepDataRead = 0
+            else if (stepDataRead >= dataSizeToBeCopiedByStep) {
+                logD( "прочитано, thisStepDataRead ($stepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
+                sleepIfNeeded(startTime)
+                stepDataRead = 0
             }
         }
+    }
+
+    private fun sleepIfNeeded(startTime: Long) {
+        if (stepDataRead >= dataSizeToBeCopiedByStep) {
+            sleepingLackTimeMs(System.currentTimeMillis() - startTime).also {
+                if (it > 0) Thread.sleep(it)
+            }
+        } else {
+            logD("спать не нужно")
+        }
+    }
+
+    private fun sleepingLackTimeMs(stepDurationMs: Long): Long {
+        val bytesOverrunPercentage: Float = (stepDataRead.toFloat() / dataSizeToBeCopiedByStep)
+        return (bytesOverrunPercentage * dataCopyingIntervalMs - stepDurationMs).roundToLong()
     }
 
 

@@ -13,6 +13,22 @@ import kotlin.math.roundToLong
 class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
+    fun c1() {
+        val dataSize = 100
+        prepareSourceAndTargetFiles(dataSize)
+        LimitedStreamCopier(
+            speedBytesPerSecond = 30,
+            progressRatePerSecond = 1,
+        ).copyFromStreamToStream(
+            sourceFileStream,
+            targetFileStream,
+            progressCallback = {
+                println("прогресс: $it")
+            }
+        )
+    }
+
+    @Test
     fun simple_test() = runBlocking {
         test_with_params(
             57,
