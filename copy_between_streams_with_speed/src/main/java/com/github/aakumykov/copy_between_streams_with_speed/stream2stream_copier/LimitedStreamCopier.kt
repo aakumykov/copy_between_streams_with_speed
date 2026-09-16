@@ -96,7 +96,14 @@ class LimitedStreamCopier(
 
         var lastPieceOfDataSize = 0
 
-        fun dataEndsWithSmallAppendix(): Boolean = operatingPortionSize != lastPieceOfDataSize
+        /**
+         * Данные копируются порциями, большими единице,
+         * и последний кусочек прочитанных данных меньше этой порции.
+         */
+        fun dataEndsWithSmallAppendix(): Boolean {
+            return dataSizeToBeCopiedByStep > 1 &&
+                    operatingPortionSize != lastPieceOfDataSize
+        }
 
         while(true) {
 

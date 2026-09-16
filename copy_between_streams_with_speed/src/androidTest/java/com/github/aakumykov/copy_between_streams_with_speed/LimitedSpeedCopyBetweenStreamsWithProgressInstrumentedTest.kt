@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import com.github.aakumykov.copy_between_streams_with_speed.LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest.Companion.DEFAULT_PROGRESS_LIST_SIZE_DIFF_PERCENTS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -10,6 +11,7 @@ import org.junit.Assert
 import org.junit.Test
 import java.io.FileNotFoundException
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
@@ -288,47 +290,49 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     // разный размер при фиксированных скорости и числе шагов
     //
     @Test
-    fun diff_size_with_constant_rate_and_speed__units_to_thousands() = runTest {
+    fun diff_size_with_constant_rate_and_speed__1_9() = runTest {
         // единицы байт: 1..9
-        /*do_with_variable_data_size(
-            speed =  1,
+        do_with_variable_data_size(
+            speed = 1,
             progressRate = 1,
             dataSizeRange = 1..9,
             dataSizeInterval = 1,
             randomizeDataSize = false
-        )*/
+        )
+    }
 
+    @Test
+    fun diff_size_with_constant_rate_and_speed__10_90() = runTest {
         // десятки байт: 10..90
         do_with_variable_data_size(
-            speed =  100,
-            progressRate = 10,
-            dataSizeRange = 22..22,
-            dataSizeInterval = 10
-        )
-
-        // десятки байт: 10..90
-        /*do_with_variable_data_size(
-            speed =  100,
+            speed = 100,
             progressRate = 10,
             dataSizeRange = 10..90,
             dataSizeInterval = 10
-        )*/
+        )
 
+    }
+
+    @Test
+    fun diff_size_with_constant_rate_and_speed__100_900() = runTest {
         // сотни байт: 100..900
-        /*do_with_variable_data_size(
-            speed =  1000,
+        do_with_variable_data_size(
+            speed = 1000,
             progressRate = 10,
             dataSizeRange = 100..900,
             dataSizeInterval = 100
-        )*/
+        )
+    }
 
+    @Test
+    fun diff_size_with_constant_rate_and_speed__1000_9000() = runTest {
         // тысячи байт: 1000..9000
-        /*do_with_variable_data_size(
+        do_with_variable_data_size(
             speed =  10_000,
             progressRate = 10,
             dataSizeRange = 1000..9000,
             dataSizeInterval = 1000
-        )*/
+        )
     }
 
 
@@ -573,7 +577,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         expectedProgressListDiffPercents: Int
     ) {
         val expectedCopyingTime = 1f * dataSizeBytes / speedBytesPerSecond
-        val expectedProgressShots = (expectedCopyingTime * progressRate).roundToInt()
+        val expectedProgressShots = ceil(expectedCopyingTime * progressRate).roundToInt()
 
         val argumentsLog =
             "\nданные: $dataSizeBytes байт," +
