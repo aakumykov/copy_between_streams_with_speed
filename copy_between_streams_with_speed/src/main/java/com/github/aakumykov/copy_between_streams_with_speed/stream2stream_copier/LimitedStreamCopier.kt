@@ -1,10 +1,12 @@
 package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 
+import android.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -42,8 +44,7 @@ class LimitedStreamCopier(
     private var progressCallback: ProgressCallback? = null
     private var finishCallback: FinishCallback? = null
 
-    private var workIsRunning: Boolean = false
-    private var callbackThread: Thread? = null
+    private var workIsRunning = AtomicBoolean(false)
 
     var totalDataRead: Long = 0
     var stepDataRead: Long = 0
@@ -81,16 +82,19 @@ class LimitedStreamCopier(
 
         this.progressCallback = progressCallback
         this.finishCallback = finishCallback
-        this.workIsRunning = true
 
-        callbackThread = thread {
-            while(workIsRunning) {
+        thread {
+            while(workIsRunning.get()) {
                 progressCallback?.invoke(totalDataRead)
                 TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
             }
-            println("Завершение вспомогательного потока")
-            callbackThread?.join(10)
+            Log.d(TAG, "progressCallback: $totalDataRead")
+            progressCallback?.invoke(totalDataRead)
+            Log.d(TAG, "finishCallback: $totalDataRead")
+            finishCallback?.invoke(totalDataRead)
         }
+
+        this.workIsRunning.set(true)
 
         while(true) {
 
@@ -101,8 +105,7 @@ class LimitedStreamCopier(
             // Данные закончились.
             if (-1 == readBytes) {
                 logD( "прочитано, -1 == readBytes")
-                workIsRunning = true
-                finishCallback?.invoke(totalDataRead)
+                workIsRunning.set(false)
                 break
             }
 

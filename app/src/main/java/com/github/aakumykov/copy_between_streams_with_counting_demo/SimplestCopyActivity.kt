@@ -17,9 +17,12 @@ import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
 import com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
@@ -135,10 +138,16 @@ class SimplestCopyActivity : AppCompatActivity() {
                             inputStream = inputStream,
                             outputStream = outputStream,
                             progressCallback = { transferredBytes ->
-                                Log.d(TAG, "transferredBytes: $transferredBytes")
+                                Log.d(TAG, "[1] transferredBytes: $transferredBytes")
                                 val progress = (100f * transferredBytes / dataSize).roundToInt()
-                                launch (Dispatchers.Main) {
-                                    showProgress(progress)
+                                lifecycleScope.launch (Dispatchers.Main) {
+                                    try {
+                                        showProgress(progress)
+                                    } catch (t: Throwable) {
+                                        Log.d(TAG, "ОТОБРАЖЕНИЕ ПРЕРВАНО")
+                                    }
+                                }.invokeOnCompletion {
+                                    Log.d(TAG, "корутина отображения прогресса завершена")
                                 }
                             },
                             finishCallback = {
@@ -158,7 +167,7 @@ class SimplestCopyActivity : AppCompatActivity() {
 
 
     fun showProgress(progress: Int) {
-        Log.d(TAG, "прогресс: $progress")
+        Log.d(TAG, "прогресс: $progress %")
         binding.progressBar.progress = progress
     }
 

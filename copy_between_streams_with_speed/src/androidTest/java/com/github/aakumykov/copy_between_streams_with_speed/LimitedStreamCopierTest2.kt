@@ -24,6 +24,9 @@ class LimitedStreamCopierTest2 : TestBase() {
             targetFileStream,
             progressCallback = {
                 println("прогресс: $it")
+            },
+            finishCallback = {
+                println("копирование завершено: $it")
             }
         )
     }
