@@ -12,7 +12,6 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
-import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.uniqueId
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -22,6 +21,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.UUID
 import kotlin.math.roundToInt
 
 class SimplestCopyActivity : AppCompatActivity() {
@@ -193,3 +193,7 @@ class SimplestCopyActivity : AppCompatActivity() {
         val TAG: String = SimplestCopyActivity::class.java.simpleName
     }
 }
+
+
+// Чтобы logcat не скрывал повторяющиеся записи...
+val uniqueId: String get() = UUID.randomUUID().toString().split("-").first()

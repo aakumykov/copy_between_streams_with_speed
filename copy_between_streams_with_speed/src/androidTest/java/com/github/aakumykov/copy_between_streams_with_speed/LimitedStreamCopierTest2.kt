@@ -22,8 +22,8 @@ class LimitedStreamCopierTest2 : TestBase() {
         ).copyFromStreamToStream(
             sourceFileStream,
             targetFileStream,
-            progressCallback = {
-                println("прогресс: $it")
+            progressCallback = { b,s ->
+                println("прогресс: $b")
             },
             finishCallback = {
                 println("копирование завершено: $it")
@@ -98,8 +98,8 @@ class LimitedStreamCopierTest2 : TestBase() {
         lsc.copyFromStreamToStream(
             sourceFileStream,
             targetFileStream,
-            progressCallback = {
-                println("скопировано: $it")
+            progressCallback = { b,s ->
+                println("скопировано: $b")
             }
         )
         val durationNs = currentTimeNanos - startTimeNs

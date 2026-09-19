@@ -3,7 +3,6 @@ package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copie
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -13,21 +12,27 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-typealias ProgressCallback = ((transferredBytes: Long, speedBytedPerSecond: Long) -> Unit)
-typealias FinishCallback = ((transferredBytes: Long) -> Unit)
+//typealias ProgressCallback = ((transferredBytes: Long, speedBytedPerSecond: Long) -> Unit)
+//typealias FinishCallback = ((transferredBytes: Long) -> Unit)
 
 /**
  * ПотокоНЕБЕЗОПАСЕН.
  *
+ * @param speedBytesPerSecond
+ *
  * @param progressRatePerSecond Частота срабатывания коллбека прогресса.
+ *
+ * @param dataCopyingStepsPerSecond Для равномерного "размазывания" данных
+ * по времени во имя поддержания заданной скорости служит этот параметр.
+ * Можно передать все данные за 1 мс и ждать оставшиеся 999 мс,
+ * средняя скорость при этом будет заданной, но "мгновенная" значительно выше.
  */
 class LimitedStreamCopier(
     private val speedBytesPerSecond: Int,
     private val progressRatePerSecond: Int,
     dataCopyingStepsPerSecond: Int = 1000,
-): Stream2StreamCopier {
 
-    val stepsPerSecond = min(speedBytesPerSecond, dataCopyingStepsPerSecond)
+): Stream2StreamCopier {
 
     init {
         if (speedBytesPerSecond <= 0)
@@ -35,27 +40,22 @@ class LimitedStreamCopier(
 
         if (dataCopyingStepsPerSecond <= 0)
             throw IllegalArgumentException("dataCopyingStepsPerSecond cannot be zero")
-
-//        if (dataCopyingStepsPerSecond > speedBytesPerSecond)
-//            throw IllegalArgumentException("data copying steps per second cannot be greater than speed")
     }
 
-    private var progressCallback: ProgressCallback? = null
-    private var finishCallback: FinishCallback? = null
-
-    private var workIsRunning = AtomicBoolean(false)
-
-    var totalDataRead: Long = 0
-    var stepDataRead: Long = 0
+    //
+    // Количество шагов в секунду не может быть меньше количества байт
+    // передаваемых за эту же секунду, поэтому выбирается меньшее значение.
+    //
+    private val stepsPerSecond
+        = min(speedBytesPerSecond, dataCopyingStepsPerSecond)
 
     //
-    // Скорость может быть задана огромная, параметр "количество данных, которые должны быть
-    // переданы за шаг [steps]", потенциально (но не всегда!) самый большой.
-    //
-    // get() - для динамического изменения скорости
+    // При огромной заданной скорости, параметр "количество данных, которые должны быть
+    // переданы за шаг", потенциально (но не всегда!) самый большой.
+    // Будучи задаваемым здесь, округляется в большую сторону.
     //
     private val dataSizeToBeCopiedByStep: Int
-        get() = ceil(1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
+        = ceil(1f * speedBytesPerSecond / stepsPerSecond).roundToInt()
 
     //
     // Оперирую данными (черпаю данные) в размере, равном размеру данных "на шаг", или
@@ -66,11 +66,26 @@ class LimitedStreamCopier(
     private val operatingPortionSize = min(dataSizeToBeCopiedByStep, DEFAULT_BUFFER_SIZE)
 
     private val dataCopyingIntervalMs: Long = floor(1000f / stepsPerSecond).roundToLong()
+
     private val progressCallbackIntervalMs: Long = floor(1000f / progressRatePerSecond).roundToLong()
 
     private val dataBuffer = ByteArray(operatingPortionSize)
 
-    @Throws(IllegalStateException::class, IllegalArgumentException::class, IOException::class)
+    private val workIsRunning = AtomicBoolean(false)
+
+
+    var totalDataRead: Long = 0
+    var oneStepDataRead: Long = 0
+
+
+    // Объёмы данных в порядке уменьшения:
+    // Полный размер данных.
+    // Размер данных, которые должны быть скопировать за шаг.
+    // Размер данных, которыми оперируют в процессе перекидывания данных.
+
+
+    @Throws(IllegalStateException::class,
+        IllegalArgumentException::class, IOException::class)
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
@@ -80,9 +95,6 @@ class LimitedStreamCopier(
         try {
             logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
-            this.progressCallback = progressCallback
-            this.finishCallback = finishCallback
-
             thread {
                 var startTime: Long = System.currentTimeMillis()
                 var startBytes = totalDataRead
@@ -91,17 +103,20 @@ class LimitedStreamCopier(
 
                     TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
 
-                    val speed = calcSpeed(startTime, startBytes)
-
-                    progressCallback?.invoke(totalDataRead, speed)
+                    progressCallback?.invoke(
+                        totalDataRead,
+                        calcSpeed(startTime, startBytes)
+                    )
 
                     startTime = System.currentTimeMillis()
                     startBytes = totalDataRead
                 }
 
                 // Отправка остатков прогресса, потерянного из-за задержек.
-                val speed = calcSpeed(startTime, startBytes)
-                progressCallback?.invoke(totalDataRead, speed)
+                progressCallback?.invoke(
+                    totalDataRead,
+                    calcSpeed(startTime, startBytes)
+                )
                 finishCallback?.invoke(totalDataRead)
             }
 
@@ -122,13 +137,8 @@ class LimitedStreamCopier(
 
                 outputStream.write(dataBuffer, 0, readBytes)
 
-                stepDataRead += readBytes
+                oneStepDataRead += readBytes
                 totalDataRead += readBytes
-
-                // Объёмы данных в порядке уменьшения:
-                // Полный размер данных.
-                // Размер данных, которые должны быть скопировать за шаг.
-                // Размер данных, которыми оперируют в процессе перекидывания данных.
 
                 if (readBytes < operatingPortionSize) {
                     logD( "прочитано, readBytes ($readBytes) < operatingPortionSize ($operatingPortionSize)")
@@ -138,10 +148,10 @@ class LimitedStreamCopier(
                     logD( "прочитано, readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
                     sleepIfNeeded(startTime)
                 }
-                else if (stepDataRead >= dataSizeToBeCopiedByStep) {
-                    logD( "прочитано, thisStepDataRead ($stepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
+                else if (oneStepDataRead >= dataSizeToBeCopiedByStep) {
+                    logD( "прочитано, thisStepDataRead ($oneStepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
                     sleepIfNeeded(startTime)
-                    stepDataRead = 0
+                    oneStepDataRead = 0
                 }
             }
         } finally {
@@ -149,8 +159,9 @@ class LimitedStreamCopier(
         }
     }
 
+
     private fun sleepIfNeeded(startTime: Long) {
-        if (stepDataRead >= dataSizeToBeCopiedByStep) {
+        if (oneStepDataRead >= dataSizeToBeCopiedByStep) {
             sleepingLackTimeMs(System.currentTimeMillis() - startTime).also {
                 if (it > 0) Thread.sleep(it)
             }
@@ -159,16 +170,19 @@ class LimitedStreamCopier(
         }
     }
 
+
     private fun sleepingLackTimeMs(stepDurationMs: Long): Long {
-        val bytesOverrunPercentage: Float = (stepDataRead.toFloat() / dataSizeToBeCopiedByStep)
+        val bytesOverrunPercentage: Float = (oneStepDataRead.toFloat() / dataSizeToBeCopiedByStep)
         return (bytesOverrunPercentage * dataCopyingIntervalMs - stepDurationMs).roundToLong()
     }
+
 
     private fun calcSpeed(startTime: Long, startBytes: Long): Long {
         val durationMs = System.currentTimeMillis() - startTime
         val amount = totalDataRead - startBytes
         return if (durationMs > 0) amount / durationMs else 0
     }
+
 
     private fun logD(text: String) {
 //        Log.d(TAG, "[$uniqueId] $text")
@@ -182,6 +196,3 @@ class LimitedStreamCopier(
         val TAG: String = LimitedStreamCopier::class.java.simpleName
     }
 }
-
-// Чтобы logcat не скрывал повторяющиеся записи...
-val uniqueId: String get() = UUID.randomUUID().toString().split("-").first()
