@@ -4,13 +4,10 @@ import java.io.InputStream
 import java.io.OutputStream
 
 interface Stream2StreamCopier {
-
     fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
         progressCallback: ((transferredBytes: Long, speedBytesPerSecond: Long) -> Unit)? = null,
         finishCallback: ((transferredBytes: Long) -> Unit)? = null,
     )
-
-    fun setSpeed(speedBytesPerSec: Int)
 }
