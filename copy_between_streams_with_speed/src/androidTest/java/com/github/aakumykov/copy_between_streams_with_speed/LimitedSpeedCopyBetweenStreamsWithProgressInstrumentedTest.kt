@@ -542,7 +542,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         limitedStreamCopier(speed,rate).copyFromStreamToStream(
             inputStream = sourceFileStream,
             outputStream = targetFileStream,
-            progressCallback = { transferredBytes ->
+            progressCallback = { transferredBytes, speed ->
                 progressList.add(transferredBytes)
             }
         )
