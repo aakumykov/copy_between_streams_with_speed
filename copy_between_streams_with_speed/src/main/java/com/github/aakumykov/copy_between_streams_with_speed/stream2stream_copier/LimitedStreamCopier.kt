@@ -1,6 +1,5 @@
 package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 
-import android.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -14,7 +13,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-typealias ProgressCallback = ((transferredBytes: Long) -> Unit)
+typealias ProgressCallback = ((transferredBytes: Long, speedBytedPerSecond: Long) -> Unit)
 typealias FinishCallback = ((transferredBytes: Long) -> Unit)
 
 /**
@@ -75,8 +74,8 @@ class LimitedStreamCopier(
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ProgressCallback?,
-        finishCallback: FinishCallback?,
+        progressCallback: ((transferredBytes: Long, speedBytesPerSecond: Long) -> Unit)?,
+        finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
         try {
             logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
@@ -85,12 +84,24 @@ class LimitedStreamCopier(
             this.finishCallback = finishCallback
 
             thread {
+                var startTime: Long = System.currentTimeMillis()
+                var startBytes = totalDataRead
+
                 while(workIsRunning.get()) {
-                    progressCallback?.invoke(totalDataRead)
+
                     TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
+
+                    val speed = calcSpeed(startTime, startBytes)
+
+                    progressCallback?.invoke(totalDataRead, speed)
+
+                    startTime = System.currentTimeMillis()
+                    startBytes = totalDataRead
                 }
+
                 // Отправка остатков прогресса, потерянного из-за задержек.
-                progressCallback?.invoke(totalDataRead)
+                val speed = calcSpeed(startTime, startBytes)
+                progressCallback?.invoke(totalDataRead, speed)
                 finishCallback?.invoke(totalDataRead)
             }
 
@@ -153,6 +164,11 @@ class LimitedStreamCopier(
         return (bytesOverrunPercentage * dataCopyingIntervalMs - stepDurationMs).roundToLong()
     }
 
+    private fun calcSpeed(startTime: Long, startBytes: Long): Long {
+        val durationMs = System.currentTimeMillis() - startTime
+        val amount = totalDataRead - startBytes
+        return if (durationMs > 0) amount / durationMs else 0
+    }
 
     private fun logD(text: String) {
 //        Log.d(TAG, "[$uniqueId] $text")

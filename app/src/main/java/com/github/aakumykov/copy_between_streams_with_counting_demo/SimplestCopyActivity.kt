@@ -2,15 +2,12 @@ package com.github.aakumykov.copy_between_streams_with_counting_demo
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.ProgressBar
-import android.widget.SeekBar
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
-import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.newRandomId
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
@@ -18,13 +15,9 @@ import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.uniqueId
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
-import com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
@@ -139,8 +132,8 @@ class SimplestCopyActivity : AppCompatActivity() {
                         .copyFromStreamToStream(
                             inputStream = inputStream,
                             outputStream = outputStream,
-                            progressCallback = { transferredBytes ->
-                                showProgress(transferredBytes, dataSize.toLong())
+                            progressCallback = { transferredBytes, speedBytesPerSec ->
+                                showProgress(dataSize.toLong(), transferredBytes, speedBytesPerSec)
                             },
                             finishCallback = {
                                 showInfo("Готово (${it.humanSizeBinary()})")
@@ -158,9 +151,10 @@ class SimplestCopyActivity : AppCompatActivity() {
     }
 
 
-    fun showProgress(transferredBytes: Long, dataSize: Long) {
+    fun showProgress(dataSize: Long, transferredBytes: Long, speedBytesPerSec: Long) {
         val progress = (100f * transferredBytes / dataSize).roundToInt()
-        Log.d(TAG, "[$uniqueId] $transferredBytes / $dataSize ($progress %)")
+
+        Log.d(TAG, "[$uniqueId] $transferredBytes / $dataSize ($progress %), скорость ${speedBytesPerSec.humanSizeBinary()} байт/с")
 
         lifecycleScope.launch (Dispatchers.Main) {
             binding.progressBar.progress = progress

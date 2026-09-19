@@ -12,7 +12,7 @@ class UnlimitedStreamCopier(
     override fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
-        progressCallback: ((transferredBytes: Long) -> Unit)?,
+        progressCallback: ((transferredBytes: Long, speedBytesPerSecond: Long) -> Unit)?,
         finishCallback: ((transferredBytes: Long) -> Unit)?,
     ) {
         val minimumProgressCallbackPeriodMs = (1000f / progressRatePerSecond).roundToLong()
@@ -21,7 +21,7 @@ class UnlimitedStreamCopier(
         fun publishProgressIfItsTime(totalDataRead: Long) {
             val interval = System.currentTimeMillis() - lastProgressPublishTimeMs
             if (interval >= minimumProgressCallbackPeriodMs) {
-                progressCallback?.invoke(totalDataRead)
+                progressCallback?.invoke(totalDataRead, -1)
                 lastProgressPublishTimeMs = System.currentTimeMillis()
             }
         }
