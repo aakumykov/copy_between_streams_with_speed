@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 
+import android.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -22,15 +23,14 @@ typealias FinishCallback = ((transferredBytes: Long) -> Unit)
  * @param progressRatePerSecond Частота срабатывания коллбека прогресса.
  */
 class LimitedStreamCopier(
-    private val speedBytesPerSecond: Int,
+    initialSpeedBytesPerSecond: Int,
     private val progressRatePerSecond: Int,
-    dataCopyingStepsPerSecond: Int = 1000,
-): Stream2StreamCopier {
-
-    val stepsPerSecond = min(speedBytesPerSecond, dataCopyingStepsPerSecond)
-
+    private val dataCopyingStepsPerSecond: Int = 1000,
+)
+    : Stream2StreamCopier
+{
     init {
-        if (speedBytesPerSecond <= 0)
+        if (initialSpeedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero.")
 
         if (dataCopyingStepsPerSecond <= 0)
@@ -39,6 +39,12 @@ class LimitedStreamCopier(
 //        if (dataCopyingStepsPerSecond > speedBytesPerSecond)
 //            throw IllegalArgumentException("data copying steps per second cannot be greater than speed")
     }
+
+    private var _speedBytesPerSecond: Int = initialSpeedBytesPerSecond
+    private val speedBytesPerSecond: Int get() = _speedBytesPerSecond
+
+    val stepsPerSecond
+        get() = min(speedBytesPerSecond, dataCopyingStepsPerSecond)
 
     private var progressCallback: ProgressCallback? = null
     private var finishCallback: FinishCallback? = null
@@ -63,12 +69,19 @@ class LimitedStreamCopier(
     // Смысл: скорость может быть задана такой большой, что данные такого размера
     // исчерпают память.
     //
-    private val operatingPortionSize = min(dataSizeToBeCopiedByStep, DEFAULT_BUFFER_SIZE)
+    private val operatingPortionSize
+        get() = min(dataSizeToBeCopiedByStep, DEFAULT_BUFFER_SIZE)
 
-    private val dataCopyingIntervalMs: Long = floor(1000f / stepsPerSecond).roundToLong()
-    private val progressCallbackIntervalMs: Long = floor(1000f / progressRatePerSecond).roundToLong()
+    private val dataCopyingIntervalMs: Long
+        get() = floor(1000f / stepsPerSecond).roundToLong()
 
+    private val progressCallbackIntervalMs: Long
+        get() = floor(1000f / progressRatePerSecond).roundToLong()
+
+
+    // А вот это как динамически менять, в зависимости от скорости?
     private val dataBuffer = ByteArray(operatingPortionSize)
+
 
     @Throws(IllegalStateException::class, IllegalArgumentException::class, IOException::class)
     override fun copyFromStreamToStream(
@@ -167,7 +180,15 @@ class LimitedStreamCopier(
     private fun calcSpeed(startTime: Long, startBytes: Long): Long {
         val durationMs = System.currentTimeMillis() - startTime
         val amount = totalDataRead - startBytes
-        return if (durationMs > 0) amount / durationMs else 0
+        return if (durationMs > 0) (amount / (durationMs/1000f)).roundToLong() else 0
+    }
+
+    override fun setSpeed(speedBytesPerSec: Int) {
+        if (speedBytesPerSec > 0) {
+            this.speedBytesPerSecond
+        } else {
+            Log.w(TAG, "Speed must be greater than zero!")
+        }
     }
 
     private fun logD(text: String) {
