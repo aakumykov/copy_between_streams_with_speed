@@ -78,60 +78,63 @@ class LimitedStreamCopier(
         progressCallback: ProgressCallback?,
         finishCallback: FinishCallback?,
     ) {
-        logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
+        try {
+            logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
-        this.progressCallback = progressCallback
-        this.finishCallback = finishCallback
+            this.progressCallback = progressCallback
+            this.finishCallback = finishCallback
 
-        thread {
-            while(workIsRunning.get()) {
+            thread {
+                while(workIsRunning.get()) {
+                    progressCallback?.invoke(totalDataRead)
+                    TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
+                }
+                // Отправка остатков прогресса, потерянного из-за задержек.
                 progressCallback?.invoke(totalDataRead)
-                TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
-            }
-            Log.d(TAG, "progressCallback: $totalDataRead")
-            progressCallback?.invoke(totalDataRead)
-            Log.d(TAG, "finishCallback: $totalDataRead")
-            finishCallback?.invoke(totalDataRead)
-        }
-
-        this.workIsRunning.set(true)
-
-        while(true) {
-
-            val startTime = System.currentTimeMillis()
-
-            val readBytes = inputStream.read(dataBuffer, 0, operatingPortionSize)
-
-            // Данные закончились.
-            if (-1 == readBytes) {
-                logD( "прочитано, -1 == readBytes")
-                workIsRunning.set(false)
-                break
+                finishCallback?.invoke(totalDataRead)
             }
 
-            outputStream.write(dataBuffer, 0, readBytes)
+            this.workIsRunning.set(true)
 
-            stepDataRead += readBytes
-            totalDataRead += readBytes
+            while(true) {
 
-            // Объёмы данных в порядке уменьшения:
-            // Полный размер данных.
-            // Размер данных, которые должны быть скопировать за шаг.
-            // Размер данных, которыми оперируют в процессе перекидывания данных.
+                val startTime = System.currentTimeMillis()
 
-            if (readBytes < operatingPortionSize) {
-                logD( "прочитано, readBytes ($readBytes) < operatingPortionSize ($operatingPortionSize)")
-                sleepIfNeeded(startTime)
+                val readBytes = inputStream.read(dataBuffer, 0, operatingPortionSize)
+
+                // Данные закончились.
+                if (-1 == readBytes) {
+                    logD( "прочитано, -1 == readBytes")
+                    workIsRunning.set(false)
+                    break
+                }
+
+                outputStream.write(dataBuffer, 0, readBytes)
+
+                stepDataRead += readBytes
+                totalDataRead += readBytes
+
+                // Объёмы данных в порядке уменьшения:
+                // Полный размер данных.
+                // Размер данных, которые должны быть скопировать за шаг.
+                // Размер данных, которыми оперируют в процессе перекидывания данных.
+
+                if (readBytes < operatingPortionSize) {
+                    logD( "прочитано, readBytes ($readBytes) < operatingPortionSize ($operatingPortionSize)")
+                    sleepIfNeeded(startTime)
+                }
+                else if (readBytes < dataSizeToBeCopiedByStep) {
+                    logD( "прочитано, readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
+                    sleepIfNeeded(startTime)
+                }
+                else if (stepDataRead >= dataSizeToBeCopiedByStep) {
+                    logD( "прочитано, thisStepDataRead ($stepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
+                    sleepIfNeeded(startTime)
+                    stepDataRead = 0
+                }
             }
-            else if (readBytes < dataSizeToBeCopiedByStep) {
-                logD( "прочитано, readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
-                sleepIfNeeded(startTime)
-            }
-            else if (stepDataRead >= dataSizeToBeCopiedByStep) {
-                logD( "прочитано, thisStepDataRead ($stepDataRead) >= dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
-                sleepIfNeeded(startTime)
-                stepDataRead = 0
-            }
+        } finally {
+            workIsRunning.set(false)
         }
     }
 
@@ -159,10 +162,10 @@ class LimitedStreamCopier(
 //        Log.i(tag, "[$uniqueId] $text")
     }
 
-    // Чтобы logcat не скрывал повторяющиеся записи.
-    private val uniqueId: String get() = UUID.randomUUID().toString().split("-").first()
-
     companion object {
         val TAG: String = LimitedStreamCopier::class.java.simpleName
     }
 }
+
+// Чтобы logcat не скрывал повторяющиеся записи...
+val uniqueId: String get() = UUID.randomUUID().toString().split("-").first()
