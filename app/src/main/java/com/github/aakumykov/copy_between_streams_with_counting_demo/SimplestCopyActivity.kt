@@ -10,10 +10,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
+import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.newRandomId
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.uniqueId
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
 import com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
@@ -138,17 +140,7 @@ class SimplestCopyActivity : AppCompatActivity() {
                             inputStream = inputStream,
                             outputStream = outputStream,
                             progressCallback = { transferredBytes ->
-                                Log.d(TAG, "[1] transferredBytes: $transferredBytes")
-                                val progress = (100f * transferredBytes / dataSize).roundToInt()
-                                lifecycleScope.launch (Dispatchers.Main) {
-                                    try {
-                                        showProgress(progress)
-                                    } catch (t: Throwable) {
-                                        Log.d(TAG, "ОТОБРАЖЕНИЕ ПРЕРВАНО")
-                                    }
-                                }.invokeOnCompletion {
-                                    Log.d(TAG, "корутина отображения прогресса завершена")
-                                }
+                                showProgress(transferredBytes, dataSize.toLong())
                             },
                             finishCallback = {
                                 showInfo("Готово (${it.humanSizeBinary()})")
@@ -166,25 +158,34 @@ class SimplestCopyActivity : AppCompatActivity() {
     }
 
 
-    fun showProgress(progress: Int) {
-        Log.d(TAG, "прогресс: $progress %")
-        binding.progressBar.progress = progress
+    fun showProgress(transferredBytes: Long, dataSize: Long) {
+        val progress = (100f * transferredBytes / dataSize).roundToInt()
+        Log.d(TAG, "[$uniqueId] $transferredBytes / $dataSize ($progress %)")
+
+        lifecycleScope.launch (Dispatchers.Main) {
+            binding.progressBar.progress = progress
+        }
     }
 
     fun showInfo(message: String) {
-        binding.infoView.apply {
-            text = message
-            setTextColor(getColor(R.color.black_white_day_night))
+        Log.i(TAG, message)
+        lifecycleScope.launch (Dispatchers.Main) {
+            binding.infoView.apply {
+                text = message
+                setTextColor(getColor(R.color.black_white_day_night))
+            }
         }
     }
 
     fun showError(throwable: Throwable) {
-        throwable.errorMsg.also {
-            binding.infoView.apply {
-                text = it
-                setTextColor(getColor(R.color.error))
+        throwable.errorMsg.also { message ->
+            Log.e(TAG, message, throwable)
+            lifecycleScope.launch (Dispatchers.Main) {
+                binding.infoView.apply {
+                    text = message
+                    setTextColor(getColor(R.color.error))
+                }
             }
-            Log.e(TAG, it, throwable)
         }
     }
 
