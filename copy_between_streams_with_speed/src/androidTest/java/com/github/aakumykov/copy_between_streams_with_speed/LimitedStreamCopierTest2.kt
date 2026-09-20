@@ -1,16 +1,87 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.R.attr.duration
+import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.ext.toHMS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
+import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
 import org.junit.Test
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 class LimitedStreamCopierTest2 : TestBase() {
+
+    @Test
+    fun a1() {
+        repeat(10) {
+            val dataSizeBytes = random.nextInt(10, 1001)
+            val speedBytesPerSec = random.nextInt(100, 10_001)
+            val progressRate = random.nextInt(1, 101)
+            test_with(dataSizeBytes, speedBytesPerSec, progressRate)
+        }
+    }
+
+    private fun test_with(dataSizeBytes: Int, speedBytesPerSec: Int, progressRatePerSec: Int) {
+
+        Log.d(
+            TAG,
+            "test_with() called with: dataSizeBytes = $dataSizeBytes, speedBytesPerSec = $speedBytesPerSec, progressRatePerSec = $progressRatePerSec"
+        )
+
+        val finishCallbackTriggered = AtomicBoolean(false)
+        var progressCallbackRealCount = 0
+
+        prepareSourceAndTargetFiles(dataSizeBytes)
+
+        val lsc = LimitedStreamCopier(
+            speedBytesPerSecond = speedBytesPerSec,
+            progressRatePerSecond = progressRatePerSec,
+        )
+
+        val startTime = currentTimeMs
+
+        lsc.copyFromStreamToStream(
+            sourceFileStream,
+            targetFileStream,
+            progressCallback = { transferred, speed ->
+                progressCallbackRealCount++
+                println("скопировано: $transferred, скорость: $speed")
+            },
+            finishCallback = { transferredBytes ->
+                finishCallbackTriggered.set(true)
+                println("завершено, $transferredBytes")
+            }
+        )
+
+        val durationMs = currentTimeMs - startTime
+
+        // TODO: сделать специальный метод StreamCopier-а "calcProgressPeriod"?
+        val progressPeriodMs = floor(1000f / progressRatePerSec).roundToInt()
+        val progressCallbacksEstimatedCount = floor(1f * durationMs / progressPeriodMs).roundToInt()
+
+        Assert.assertEquals(
+            dataSizeBytes.toLong(),
+            targetFile.length()
+        )
+
+        Assert.assertEquals(
+            sourceFileContents,
+            targetFileContents
+        )
+
+        Assert.assertTrue(finishCallbackTriggered.get())
+
+        println("$progressCallbacksEstimatedCount, $progressCallbackRealCount")
+    }
+
 
     @Test
     fun simple_test() = runBlocking {
@@ -116,4 +187,10 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     private val currentTimeNanos: Long
         get() = System.currentTimeMillis() + System.nanoTime()
+
+    companion object {
+        val TAG: String = LimitedStreamCopierTest2::class.java.simpleName
+    }
 }
+
+val currentTimeMs: Long get() = System.currentTimeMillis()
