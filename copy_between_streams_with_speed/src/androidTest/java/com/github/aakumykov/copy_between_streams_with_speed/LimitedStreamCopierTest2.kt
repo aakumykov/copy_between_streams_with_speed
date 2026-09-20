@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.R.attr.duration
 import android.util.Log
+import android.util.Log.i
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.ext.toHMS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
@@ -13,28 +14,70 @@ import org.junit.Assert
 import org.junit.Test
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 class LimitedStreamCopierTest2 : TestBase() {
 
+    /*
+    План теста:
+    а) данные копируются
+    б) ограничения работают:
+        - исключение при отрицательной скорости
+        - исключение при отрицательном количестве шагов в секунду
+    в) коллбеки вызываются
+     */
+
     @Test
-    fun a1() {
-        repeat(10) {
-            val dataSizeBytes = random.nextInt(10, 1001)
-            val speedBytesPerSec = random.nextInt(100, 10_001)
-            val progressRate = random.nextInt(1, 101)
-            test_with(dataSizeBytes, speedBytesPerSec, progressRate)
+    fun test_10_bytes() {
+        test_with(
+            10,
+            10,
+            1
+        )
+    }
+
+    @Test
+    fun test_674_107() {
+        repeat(3) {
+            Log.d(TAG, "Прогон $it")
+            listOf(83).forEach { progressRate ->
+                test_with(
+                    674,
+                    107,
+                    progressRate
+                ) { log, diff ->
+                    Log.d(TAG, "[$diff] -> $log")
+                }
+            }
         }
     }
 
-    private fun test_with(dataSizeBytes: Int, speedBytesPerSec: Int, progressRatePerSec: Int) {
+    @Test
+    fun a1() {
+        buildMap<String,Int> {
+            repeat(1000) {
+                val dataSizeBytes = random.nextInt(10, 1001)
+                val speedBytesPerSec = random.nextInt(100, 10_001)
+                val progressRate = random.nextInt(1, 101)
+                test_with(dataSizeBytes, speedBytesPerSec, progressRate) { log,diff ->
+                    put(log, diff)
+                }
+            }
+        }.maxBy { me ->
+            me.value
+        }.also { maxDiffItem ->
+            Log.d(TAG, "Наибольшее расхождение:")
+            Log.d(TAG, "diff: ${maxDiffItem.value}: ${maxDiffItem.key}")
+        }
+    }
 
-        Log.d(
-            TAG,
-            "test_with() called with: dataSizeBytes = $dataSizeBytes, speedBytesPerSec = $speedBytesPerSec, progressRatePerSec = $progressRatePerSec"
-        )
+    private fun test_with(dataSizeBytes: Int, speedBytesPerSec: Int, progressRatePerSec: Int,
+                          logCallback: ((log: String, diff: Int) -> Unit)? = null) {
+
+//        Log.d(TAG, "test_with() called with: dataSizeBytes = $dataSizeBytes, speedBytesPerSec = $speedBytesPerSec, progressRatePerSec = $progressRatePerSec")
 
         val finishCallbackTriggered = AtomicBoolean(false)
         var progressCallbackRealCount = 0
@@ -77,9 +120,20 @@ class LimitedStreamCopierTest2 : TestBase() {
             targetFileContents
         )
 
+        // Это ожидание нужно
+        TimeUnit.MILLISECONDS.sleep((2 * progressPeriodMs).toLong())
+
         Assert.assertTrue(finishCallbackTriggered.get())
 
-        println("$progressCallbacksEstimatedCount, $progressCallbackRealCount")
+        val log = "size:$dataSizeBytes, " +
+                "speed:$speedBytesPerSec, " +
+                "rate:${progressRatePerSec}, " +
+                "ecnt: $progressCallbacksEstimatedCount, " +
+                "rcnt: $progressCallbackRealCount, " +
+                "duration:${durationMs}"
+        val diff = abs(progressCallbacksEstimatedCount - progressCallbackRealCount)
+
+        logCallback?.invoke(log,diff)
     }
 
 

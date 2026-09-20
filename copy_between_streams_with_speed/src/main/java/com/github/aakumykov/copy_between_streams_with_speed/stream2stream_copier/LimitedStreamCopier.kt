@@ -31,7 +31,6 @@ class LimitedStreamCopier(
     private val speedBytesPerSecond: Int,
     private val progressRatePerSecond: Int,
     dataCopyingStepsPerSecond: Int = 1000,
-
 ): Stream2StreamCopier {
 
     init {
@@ -99,18 +98,18 @@ class LimitedStreamCopier(
                 var startTime: Long = System.currentTimeMillis()
                 var startBytes = totalDataRead
 
-                while(workIsRunning.get()) {
-
-                    TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
-
+                do {
                     progressCallback?.invoke(
                         totalDataRead,
                         calcSpeed(startTime, startBytes)
                     )
 
+                    TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
+
                     startTime = System.currentTimeMillis()
                     startBytes = totalDataRead
-                }
+
+                } while(workIsRunning.get())
 
                 // Отправка остатков прогресса, потерянного из-за задержек.
                 progressCallback?.invoke(
@@ -131,7 +130,6 @@ class LimitedStreamCopier(
                 // Данные закончились.
                 if (-1 == readBytes) {
                     logD( "прочитано, -1 == readBytes")
-                    workIsRunning.set(false)
                     break
                 }
 
@@ -154,6 +152,7 @@ class LimitedStreamCopier(
                     oneStepDataRead = 0
                 }
             }
+
         } finally {
             workIsRunning.set(false)
         }
