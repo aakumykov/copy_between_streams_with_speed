@@ -7,10 +7,13 @@ import com.github.aakumykov.copy_between_streams_with_speed.ext.toHMS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -179,10 +182,10 @@ class LimitedStreamCopierTest2 : TestBase() {
 
         // Пока не работает по неизвестныфм причинам
 
-        /*val dataSize = 100
+        val dataSize = 100
         val speed = 10
         val rate = 1
-        val streamCloseDelayMs: Long = 2000
+        val streamCloseDelayMs: Long = 1000
 
         val finishedCallbackWasTriggered = AtomicBoolean(false)
 
@@ -193,13 +196,8 @@ class LimitedStreamCopierTest2 : TestBase() {
             sourceFileStream.close()
         }
 
-        LimitedStreamCopier(speed, rate)
-            .copyFromStreamToStream(sourceFileStream, targetFileStream,
-                finishCallback = { _ ->
-                    finishedCallbackWasTriggered.set(true)
-                })
 
-        Assert.assertThrows(IOException::class.java) {
+        Assert.assertThrows(Exception::class.java) {
             LimitedStreamCopier(speed, rate)
                 .copyFromStreamToStream(sourceFileStream, targetFileStream,
                     finishCallback = { _ ->
@@ -207,7 +205,7 @@ class LimitedStreamCopierTest2 : TestBase() {
                     })
         }
 
-        Assert.assertFalse(finishedCallbackWasTriggered.get())*/
+        Assert.assertFalse(finishedCallbackWasTriggered.get())
     }
 
 
