@@ -103,6 +103,8 @@ class SimplestCopyActivity : AppCompatActivity() {
     fun startCopy() {
 
         hideInfo()
+        hideError()
+
         binding.progressBar.progress = 0
 
         if (!sourceFile.exists()) throw FileNotFoundException("source file does not exists")
@@ -175,19 +177,15 @@ class SimplestCopyActivity : AppCompatActivity() {
         throwable.errorMsg.also { message ->
             Log.e(TAG, message, throwable)
             lifecycleScope.launch (Dispatchers.Main) {
-                binding.infoView.apply {
+                binding.errorView.apply {
                     text = message
-                    setTextColor(getColor(R.color.error))
                 }
             }
         }
     }
 
-    fun hideInfo() {
-        binding.infoView.apply {
-            text = ""
-        }
-    }
+    fun hideInfo() = binding.infoView.apply { text = "" }
+    fun hideError() = binding.errorView.apply { text = "" }
 
     companion object {
         val TAG: String = SimplestCopyActivity::class.java.simpleName
