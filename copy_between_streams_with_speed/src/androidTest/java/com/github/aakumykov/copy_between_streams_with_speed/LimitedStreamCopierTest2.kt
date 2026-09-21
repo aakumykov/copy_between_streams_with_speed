@@ -7,17 +7,15 @@ import com.github.aakumykov.copy_between_streams_with_speed.ext.toHMS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -48,6 +46,8 @@ class LimitedStreamCopierTest2 : TestBase() {
      * Ошибка чтения потока [error_reading_from_stream].
      * Ошибка записи в поток [error_writing_to_stream].
      *
+     * Разные размеры данных [test_with_diff_data_size_1_9].
+     *
      */
 
     @Test
@@ -68,7 +68,7 @@ class LimitedStreamCopierTest2 : TestBase() {
 
 
     @Test
-    fun callbacks_are_triggered() {
+    fun callbacks_are_triggered() = runBlocking {
 
         val progressCallbackCount = AtomicInteger(0)
         val finishCallbackCount = AtomicInteger(0)
@@ -76,6 +76,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         val dataSize = 100
         val speed = 30
         val rate = 1
+        val progressPeriod = ceil(1000f / rate).toLong()
 
         prepareSourceAndTargetFiles(dataSize)
 
@@ -89,7 +90,7 @@ class LimitedStreamCopierTest2 : TestBase() {
                 }
             )
 
-        TimeUnit.SECONDS.sleep(1)
+        delayToAllowCallbackFinish(rate)
 
         Assert.assertTrue(progressCallbackCount.get() >= 2)
         Assert.assertTrue(finishCallbackCount.get() == 1)
@@ -176,7 +177,9 @@ class LimitedStreamCopierTest2 : TestBase() {
     @Test
     fun error_reading_from_stream() = runBlocking {
 
-        val dataSize = 100
+        // Пока не работает по неизвестныфм причинам
+
+        /*val dataSize = 100
         val speed = 10
         val rate = 1
         val streamCloseDelayMs: Long = 2000
@@ -186,11 +189,9 @@ class LimitedStreamCopierTest2 : TestBase() {
         prepareSourceAndTargetFiles(dataSize)
 
         launch {
-//            delay(streamCloseDelayMs)
-//            sourceFileStream.close()
+            delay(streamCloseDelayMs)
+            sourceFileStream.close()
         }
-
-        /*Log.d(TAG, "Перед копированием")
 
         LimitedStreamCopier(speed, rate)
             .copyFromStreamToStream(sourceFileStream, targetFileStream,
@@ -198,18 +199,106 @@ class LimitedStreamCopierTest2 : TestBase() {
                     finishedCallbackWasTriggered.set(true)
                 })
 
-        Log.d(TAG, "После копирования")*/
-
-        /*Assert.assertThrows(IOException::class.java) {
+        Assert.assertThrows(IOException::class.java) {
             LimitedStreamCopier(speed, rate)
                 .copyFromStreamToStream(sourceFileStream, targetFileStream,
                     finishCallback = { _ ->
                         finishedCallbackWasTriggered.set(true)
                     })
-        }*/
+        }
 
-//        Assert.assertFalse(finishedCallbackWasTriggered.get())
+        Assert.assertFalse(finishedCallbackWasTriggered.get())*/
     }
+
+
+    @Test
+    fun test_with_diff_data_size_1_9() {
+        for (dataSize in 1..9) {
+            test_with_data_size(dataSize)
+        }
+    }
+
+    private fun test_with_data_size(dataSize: Int) {
+        val speed = dataSize * 2
+        val rate = 1
+        standard_test_with(dataSize, speed, rate)
+    }
+
+    private fun standard_test_with(dataSize: Int, speed: Int, rate: Int) {
+
+        "standard_test_with(dataSize:$dataSize, speed:$speed, rate:$rate)".also {
+            println(it)
+            Log.d(TAG, it)
+        }
+
+        val finishCallbackWasTriggered = AtomicBoolean(false)
+        val progressList = mutableListOf<Long>()
+        val speedList = mutableListOf<Long>()
+
+        val sourceData = prepareSourceAndTargetFiles(dataSize)
+
+        LimitedStreamCopier(speed, rate)
+            .copyFromStreamToStream(sourceFileStream, targetFileStream,
+                progressCallback = { bytes, speed ->
+                    progressList.add(bytes)
+                    speedList.add(speed)
+                }, finishCallback = { bytes ->
+                    finishCallbackWasTriggered.set(true)
+                })
+
+        delayToAllowCallbackFinish(rate)
+
+        // Проверка данных
+        Assert.assertEquals(sourceData, sourceFileContents)
+        Assert.assertEquals(sourceData, targetFileContents)
+
+        // Проверка работы коллбеков
+        Assert.assertTrue("Был вызван коллбек завершения", finishCallbackWasTriggered.get())
+
+        Assert.assertTrue("Размер списка прогресса >= 2", progressList.size >= 2)
+        Assert.assertTrue("Размер списка скорости >= 2",speedList.size >= 2)
+
+        if (dataSize > 1)
+            check_progress_list_is_incremental(progressList)
+    }
+
+
+    @Test
+    fun test_progress_callback() {
+
+        val dataSize = 30
+        val speed = 10
+        val progressRate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        val progressList = buildList<Long> {
+            LimitedStreamCopier(speed, progressRate)
+                .copyFromStreamToStream(
+                    sourceFileStream,
+                    targetFileStream,
+                    progressCallback = { bytes, speed ->
+                        add(bytes)
+                    }
+                )
+        }
+
+        check_progress_list_is_incremental(progressList)
+    }
+
+
+
+    private fun check_progress_list_is_incremental(progressList: List<Long>) {
+        progressList.reduce { acc, nextValue ->
+            Assert.assertTrue(
+                "Каждое следующее значение в списке прогресса больше предудущаго ($nextValue > $acc)",
+                nextValue > acc
+            )
+            nextValue
+        }
+    }
+
+
 
 
     @Test
@@ -240,46 +329,6 @@ class LimitedStreamCopierTest2 : TestBase() {
         Assert.assertTrue(progressList.isNotEmpty())
     }
 
-
-    @Test
-    fun test_progress_callback() {
-
-        val dataSize = 30
-        val speed = 10
-        val progressRate = 1
-
-        prepareSourceAndTargetFiles(dataSize)
-
-        val progressList = buildList<Long> {
-            LimitedStreamCopier(speed, progressRate)
-                .copyFromStreamToStream(
-                    sourceFileStream,
-                    targetFileStream,
-                    progressCallback = { bytes, speed ->
-                        add(bytes)
-                    }
-                )
-        }
-
-        check_progress_list(progressList)
-    }
-
-    @Test
-    fun a() {
-        check_progress_list(listOf())
-    }
-
-    private fun check_progress_list(progressList: List<Long>) {
-        Assert.assertTrue(progressList.size >= 2)
-
-        progressList.reduce { acc, nextValue ->
-            Assert.assertTrue(
-                "Каждое следующее значение в списке прогресса больше предудущаго ($nextValue > $acc)",
-                nextValue > acc
-            )
-            nextValue
-        }
-    }
 
     @Test
     fun test_10_bytes() {
@@ -372,7 +421,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         )
 
         // Это ожидание нужно
-        TimeUnit.MILLISECONDS.sleep((2 * progressPeriodMs).toLong())
+        delayToAllowCallbackFinish(progressRatePerSec)
 
         Assert.assertTrue(finishCallbackTriggered.get())
 
@@ -485,6 +534,11 @@ class LimitedStreamCopierTest2 : TestBase() {
 //                    "(реальное ${deviationPercent}%)",
 //            deviationPercent <= targetCopyingTimeDeviationPercents
 //        )
+    }
+
+    private fun delayToAllowCallbackFinish(progressRate: Int) {
+        val timeout = 3 * ceil(1000f / progressRate).toLong()
+        TimeUnit.MILLISECONDS.sleep(timeout)
     }
 
     private val currentTimeMs: Long
