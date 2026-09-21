@@ -101,7 +101,7 @@ class LimitedStreamCopier(
             logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
             thread {
-                try {
+//                try {
                     var startTime: Long = System.currentTimeMillis()
                     var startBytes = totalDataRead
 
@@ -126,9 +126,9 @@ class LimitedStreamCopier(
                     if (!exceptionThrown.get())
                         finishCallback?.invoke(totalDataRead)
 
-                } catch (t: Throwable) {
-                    Log.e(TAG, "", t)
-                }
+//                } catch (t: Throwable) {
+//                    Log.e(TAG, "", t)
+//                }
             }
 
             this.workIsRunning.set(true)

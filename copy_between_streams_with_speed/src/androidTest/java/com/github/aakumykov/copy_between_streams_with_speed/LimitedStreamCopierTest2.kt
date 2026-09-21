@@ -308,7 +308,7 @@ class LimitedStreamCopierTest2 : TestBase() {
                     newSourceFileStream,
                     newTargetFileStream,
                     progressCallback = { bytes, speed ->
-                        Log.d(TAG, "add(${bytes})")
+                        Log.d(TAG, "add(${bytes}), ${this.javaClass.simpleName}")
                         add(bytes)
                     }
                 )
