@@ -2,33 +2,284 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.R.attr.duration
 import android.util.Log
-import android.util.Log.i
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.ext.toHMS
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
+
 class LimitedStreamCopierTest2 : TestBase() {
 
-    /*
-    План теста:
-    а) данные копируются
-    б) ограничения работают:
-        - исключение при отрицательной скорости
-        - исключение при отрицательном количестве шагов в секунду
-    в) коллбеки вызываются
+    /**
+     * План теста:
+     *
+     * Данные просто копируются [data_simply_copied]
+     *
+     * Коллбеки [callbacks_are_triggered]:
+     *  - вызываются
+     *  - коллбек завершения вызывается один раз
+     *  - коллбек прогресса вызывается минимум 2 раза
+     *
+     * Ограничения работают:
+     *   - исключение при нулевой скорости [throws_exception_on_zero_speed]
+     *   - исключение при отрицательной скорости [throws_exception_on_negative_speed]
+     *   - исключение при отрицательном нулевом количестве шагов в секунду [throws_exception_on_zero_rate]
+     *   - исключение при отрицательном количестве шагов в секунду [throws_exception_on_negative_rate]
+     *
+     * Файл нулевого размера [zero_size_file]:
+     *  - исходный и целевой файлы остаются нулевого размера.
+     *  - массив прогресса пустой.
+     *
+     * Ошибка чтения потока [error_reading_from_stream].
+     * Ошибка записи в поток [error_writing_to_stream].
+     *
      */
+
+    @Test
+    fun data_simply_copied() {
+        val dataSize = 100
+        val speed = dataSize * 2
+        val progressRate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        LimitedStreamCopier(speed, progressRate)
+            .copyFromStreamToStream(sourceFileStream, targetFileStream)
+
+        Assert.assertEquals(dataSize.toLong(), targetFile.length())
+        Assert.assertEquals(dataSize.toLong(), sourceFile.length())
+        Assert.assertEquals(sourceFileContents, targetFileContents)
+    }
+
+
+    @Test
+    fun callbacks_are_triggered() {
+
+        val progressCallbackCount = AtomicInteger(0)
+        val finishCallbackCount = AtomicInteger(0)
+
+        val dataSize = 100
+        val speed = 30
+        val rate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        LimitedStreamCopier(speed, rate)
+            .copyFromStreamToStream(sourceFileStream, targetFileStream,
+                progressCallback = { _, _ ->
+                    progressCallbackCount.getAndIncrement()
+                },
+                finishCallback = { _ ->
+                    finishCallbackCount.getAndIncrement()
+                }
+            )
+
+        TimeUnit.SECONDS.sleep(1)
+
+        Assert.assertTrue(progressCallbackCount.get() >= 2)
+        Assert.assertTrue(finishCallbackCount.get() == 1)
+    }
+
+
+    @Test
+    fun throws_exception_on_zero_speed() {
+        checkOnExceptionWithSpeed(0)
+    }
+
+    @Test
+    fun throws_exception_on_negative_speed() {
+        checkOnExceptionWithSpeed(-1)
+    }
+
+    private fun checkOnExceptionWithSpeed(speed: Int) {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            prepareSourceAndTargetFiles()
+            runBlocking {
+                LimitedStreamCopier(speed, 1).copyFromStreamToStream(
+                    inputStream = sourceFileStream,
+                    outputStream = targetFileStream,
+                )
+            }
+        }
+    }
+
+
+    @Test
+    fun throws_exception_on_zero_rate() {
+        checkOnExceptionWithRate(0)
+    }
+
+    @Test
+    fun throws_exception_on_negative_rate() {
+        checkOnExceptionWithRate(-1)
+    }
+
+    private fun checkOnExceptionWithRate(rate: Int) {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            prepareSourceAndTargetFiles()
+            runBlocking {
+                LimitedStreamCopier(1, rate).copyFromStreamToStream(
+                    inputStream = sourceFileStream,
+                    outputStream = targetFileStream,
+                )
+            }
+        }
+    }
+
+
+    @Test
+    fun zero_size_file() {
+
+        val dataSize = 0
+        val speed = 10
+        val progressRate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        val progressList = buildList<Long> {
+            LimitedStreamCopier(speed, progressRate)
+                .copyFromStreamToStream(
+                    sourceFileStream,
+                    targetFileStream,
+                    progressCallback = { bytes, speed ->
+                        add(bytes)
+                    }
+                )
+        }
+
+        Assert.assertEquals(dataSize.toLong(), sourceFile.length())
+        Assert.assertEquals(dataSize.toLong(), targetFile.length())
+
+        Assert.assertTrue(progressList.isEmpty())
+    }
+
+    @Test
+    fun qw() = runBlocking {
+        Assert.assertTrue(true)
+    }
+
+    @Test
+    fun error_reading_from_stream() = runBlocking {
+
+        val dataSize = 100
+        val speed = 10
+        val rate = 1
+        val streamCloseDelayMs: Long = 2000
+
+        val finishedCallbackWasTriggered = AtomicBoolean(false)
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        launch {
+//            delay(streamCloseDelayMs)
+//            sourceFileStream.close()
+        }
+
+        /*Log.d(TAG, "Перед копированием")
+
+        LimitedStreamCopier(speed, rate)
+            .copyFromStreamToStream(sourceFileStream, targetFileStream,
+                finishCallback = { _ ->
+                    finishedCallbackWasTriggered.set(true)
+                })
+
+        Log.d(TAG, "После копирования")*/
+
+        /*Assert.assertThrows(IOException::class.java) {
+            LimitedStreamCopier(speed, rate)
+                .copyFromStreamToStream(sourceFileStream, targetFileStream,
+                    finishCallback = { _ ->
+                        finishedCallbackWasTriggered.set(true)
+                    })
+        }*/
+
+//        Assert.assertFalse(finishedCallbackWasTriggered.get())
+    }
+
+
+    @Test
+    fun tiny_file() {
+
+        val dataSize = 1
+        val speed = 1
+        val progressRate = 1
+
+        val progressList = mutableListOf<Long>()
+        val finishCallbackWasTriggered = AtomicBoolean(false)
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        LimitedStreamCopier(speed, progressRate)
+            .copyFromStreamToStream(sourceFileStream, targetFileStream,
+                progressCallback = { b,_ ->
+                    progressList.add(b)
+                }, finishCallback = { _ ->
+                    finishCallbackWasTriggered.set(true)
+                })
+
+        Assert.assertEquals(dataSize.toLong(), targetFile.length())
+        Assert.assertEquals(dataSize.toLong(), sourceFile.length())
+        Assert.assertEquals(sourceFileContents, targetFileContents)
+
+        Assert.assertTrue(finishCallbackWasTriggered.get())
+        Assert.assertTrue(progressList.isNotEmpty())
+    }
+
+
+    @Test
+    fun test_progress_callback() {
+
+        val dataSize = 30
+        val speed = 10
+        val progressRate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        val progressList = buildList<Long> {
+            LimitedStreamCopier(speed, progressRate)
+                .copyFromStreamToStream(
+                    sourceFileStream,
+                    targetFileStream,
+                    progressCallback = { bytes, speed ->
+                        add(bytes)
+                    }
+                )
+        }
+
+        check_progress_list(progressList)
+    }
+
+    @Test
+    fun a() {
+        check_progress_list(listOf())
+    }
+
+    private fun check_progress_list(progressList: List<Long>) {
+        Assert.assertTrue(progressList.size >= 2)
+
+        progressList.reduce { acc, nextValue ->
+            Assert.assertTrue(
+                "Каждое следующее значение в списке прогресса больше предудущаго ($nextValue > $acc)",
+                nextValue > acc
+            )
+            nextValue
+        }
+    }
 
     @Test
     fun test_10_bytes() {
