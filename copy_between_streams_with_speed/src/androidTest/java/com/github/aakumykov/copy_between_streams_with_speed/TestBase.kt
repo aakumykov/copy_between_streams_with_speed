@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Assert
 import org.junit.runner.RunWith
@@ -30,8 +29,8 @@ abstract class TestBase {
     protected val sourceFileContents: String get() = fileContents(sourceFile)
     protected val targetFileContents: String get() = fileContents(targetFile)
 
-    protected val sourceFileStream: InputStream get() = sourceFile.inputStream()
-    protected val targetFileStream: OutputStream get() = targetFile.outputStream()
+    protected val newSourceFileStream: InputStream get() = sourceFile.inputStream()
+    protected val newTargetFileStream: OutputStream get() = targetFile.outputStream()
 
     protected val storageFreeSpace: Long = appContext.cacheDir.usableSpace
 

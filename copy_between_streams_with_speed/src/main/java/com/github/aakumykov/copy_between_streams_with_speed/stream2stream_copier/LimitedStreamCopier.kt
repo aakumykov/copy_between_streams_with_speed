@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 
+import android.util.Log
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -74,6 +75,9 @@ class LimitedStreamCopier(
 
     private val workIsRunning = AtomicBoolean(false)
 
+    // Костыль для того, чтобы поток мог понять, было ли в основном коде исключение.
+    private val exceptionThrown = AtomicBoolean(false)
+
 
     var totalDataRead: Long = 0
     var oneStepDataRead: Long = 0
@@ -97,28 +101,34 @@ class LimitedStreamCopier(
             logD( "speed: $speedBytesPerSecond, rate: $progressRatePerSecond, operatingPortionSize: $operatingPortionSize")
 
             thread {
-                var startTime: Long = System.currentTimeMillis()
-                var startBytes = totalDataRead
+                try {
+                    var startTime: Long = System.currentTimeMillis()
+                    var startBytes = totalDataRead
 
-                do {
+                    do {
+                        progressCallback?.invoke(
+                            totalDataRead,
+                            calcSpeed(startTime, startBytes)
+                        )
+
+                        TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
+
+                        startTime = System.currentTimeMillis()
+                        startBytes = totalDataRead
+
+                    } while(workIsRunning.get())
+
+                    // Отправка остатков прогресса, потерянного из-за задержек.
                     progressCallback?.invoke(
                         totalDataRead,
                         calcSpeed(startTime, startBytes)
                     )
+                    if (!exceptionThrown.get())
+                        finishCallback?.invoke(totalDataRead)
 
-                    TimeUnit.MILLISECONDS.sleep(progressCallbackIntervalMs)
-
-                    startTime = System.currentTimeMillis()
-                    startBytes = totalDataRead
-
-                } while(workIsRunning.get())
-
-                // Отправка остатков прогресса, потерянного из-за задержек.
-                progressCallback?.invoke(
-                    totalDataRead,
-                    calcSpeed(startTime, startBytes)
-                )
-                finishCallback?.invoke(totalDataRead)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "", t)
+                }
             }
 
             this.workIsRunning.set(true)
@@ -155,6 +165,10 @@ class LimitedStreamCopier(
                 }
             }
 
+        } catch (t: Throwable) {
+//            workIsRunning.set(false)
+            exceptionThrown.set(true)
+            throw t
         } finally {
             workIsRunning.set(false)
         }
