@@ -2,8 +2,6 @@ package com.github.aakumykov.copy_between_streams_with_counting_demo
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.ProgressBar
-import android.widget.SeekBar
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -16,7 +14,6 @@ import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
-import com.github.aakumykov.seek_bar_with_text_input.SeekBarWithTextInput
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -134,11 +131,12 @@ class SimplestCopyActivity : AppCompatActivity() {
                         .copyFromStreamToStream(
                             inputStream = inputStream,
                             outputStream = outputStream,
-                            progressCallback = { transferredBytes ->
+                            progressCallback = { transferredBytes, speedBytesPerSecond ->
                                 Log.d(TAG, "transferredBytes: $transferredBytes")
                                 val progress = (100f * transferredBytes / dataSize).roundToInt()
                                 launch (Dispatchers.Main) {
                                     showProgress(progress)
+                                    showSpeed(speedBytesPerSecond)
                                 }
                             },
                             finishCallback = {
@@ -160,6 +158,12 @@ class SimplestCopyActivity : AppCompatActivity() {
     fun showProgress(progress: Int) {
         Log.d(TAG, "прогресс: $progress")
         binding.progressBar.progress = progress
+    }
+
+    fun showSpeed(speed: Number) {
+        val textShort = "$speed байт / с"
+        Log.d(TAG, "скорость: $textShort")
+        binding.speedView.text = textShort
     }
 
     fun showInfo(message: String) {
