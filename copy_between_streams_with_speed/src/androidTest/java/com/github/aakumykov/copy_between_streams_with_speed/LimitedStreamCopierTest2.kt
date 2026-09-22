@@ -1,8 +1,11 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.R.attr.value
+import android.R.attr.duration
 import android.util.Log
+import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +20,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 
 class LimitedStreamCopierTest2 : TestBase() {
@@ -29,7 +36,7 @@ class LimitedStreamCopierTest2 : TestBase() {
      * Коллбеки [callbacks_are_triggered]:
      *  - вызываются
      *  - коллбек завершения вызывается один раз
-     *  - коллбек прогресса вызывается минимум 2 раза
+     *  - коллбек прогресса вызывается минимум 1 раз
      *
      * Ограничения работают:
      *   - исключение при нулевой скорости [throws_exception_on_zero_speed]
@@ -46,30 +53,77 @@ class LimitedStreamCopierTest2 : TestBase() {
      *
      * Разные размеры данных:
      * [test_with_diff_data_size_1_9]
-     * [test_with_diff_data_size_10_19]
-     * [test_with_diff_data_size_20_99]
+     * [test_with_diff_data_size_10_99]
+     * [test_with_diff_data_size_100_999]
+     * [test_with_diff_data_size_1000_9999]
      *
      * Разные скорости:
      * [test_with_diff_speed_1_9]
      * [test_with_diff_speed_10_99]
+     * [test_with_diff_speed_100_999]
+     * [test_with_diff_speed_1000_9999]
      *
      * Разные частоты прогресса:
      * [test_with_diff_rate_1_9]
+     * [test_with_diff_rate_10_99]
+     * [test_with_diff_rate_100_999]
+     * [test_with_diff_rate_1000_9999]
+     *
+     * Фиксированный размер с разными скоростями и частотами:
+     * [fixed_data_size_10_with_diff_speed_and_rate]
+     * [fixed_data_size_100_with_diff_speed_and_rate]
+     * [fixed_data_size_1000_with_diff_speed_and_rate]
+     *
+     * Фиксированная скорость с разными размерами и частотами:
+     * [fixed_speed_10_with_diff_size_and_rate]
+     * [fixed_speed_100_with_diff_size_and_rate]
+     * [fixed_speed_1000_with_diff_size_and_rate]
+     *
+     * Фиксированная частота с разными размерами и скоростями:
+     * [fixed_rate_10_with_diff_size_and_speed]
+     * [fixed_rate_100_with_diff_size_and_speed]
+     * [fixed_rate_1000_with_diff_size_and_speed]
+     *
+     * Копирование большаго файла разными вариациями:
+     * [big_file_with_variations]
      */
 
     @Test
+    fun test_data_size_hundreds_bytes() {
+        for(base in 1.. 9) {
+            val dataSize = base * 100
+            val speed = dataSize * 10
+            val rate = 1
+            standard_test_with(dataSize,speed,rate)
+        }
+    }
+
+    @Test
+    fun test_data_size_kilobytes() {
+        for(base in 1..10) {
+            val dataSize = base.KILOBYTES
+            val speed = dataSize * 10
+            val rate = 1
+            standard_test_with(dataSize,speed,rate)
+        }
+    }
+
+    @Test
     fun simple_test_for_speed() {
-        val dataSize = 100
-        val speed = 10
-        val rate = 10
-        prepareSourceAndTargetFiles(dataSize)
-        Log.d(TAG, "старт")
-        LimitedStreamCopier(speed, rate).copyFromStreamToStream(
-            sourceFileStreamGetNew,
-            targetFileStreamGetNew
-        )
-        Log.d(TAG, "финиш")
-        standard_test_with(dataSize, speed, rate)
+        for (sizeBase in listOf(1, 10, 100, 500, 1000)) {
+            val dataSize = sizeBase.KILOBYTES
+            val speed = 5 * dataSize
+            val rate = 1
+            prepareSourceAndTargetFiles(dataSize)
+            Log.d(TAG, "simple_test_for_speed(sizeBase:$sizeBase), старт")
+            LimitedStreamCopier(speed, rate).copyFromStreamToStream(
+                sourceFileStream,
+                targetFileStream
+            )
+            Log.d(TAG, "simple_test_for_speed(sizeBase:$sizeBase), финиш")
+            Log.d(TAG, "")
+            standard_test_with(dataSize, speed, rate)
+        }
     }
 
     @Test
@@ -82,7 +136,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         prepareSourceAndTargetFiles(dataSize)
 
         LimitedStreamCopier(speed, progressRate)
-            .copyFromStreamToStream(sourceFileStreamGetNew, targetFileStreamGetNew)
+            .copyFromStreamToStream(sourceFileStream, targetFileStream)
 
         Assert.assertEquals(dataSize.toLong(), targetFile.length())
         Assert.assertEquals(dataSize.toLong(), sourceFile.length())
@@ -103,7 +157,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         prepareSourceAndTargetFiles(dataSize)
 
         LimitedStreamCopier(speed, rate)
-            .copyFromStreamToStream(sourceFileStreamGetNew, targetFileStreamGetNew,
+            .copyFromStreamToStream(sourceFileStream, targetFileStream,
                 progressCallback = { _,_ ->
                     progressCallbackCount.getAndIncrement()
                 },
@@ -135,8 +189,8 @@ class LimitedStreamCopierTest2 : TestBase() {
             prepareSourceAndTargetFiles(1)
             runBlocking {
                 LimitedStreamCopier(speed, 1).copyFromStreamToStream(
-                    inputStream = sourceFileStreamGetNew,
-                    outputStream = targetFileStreamGetNew,
+                    inputStream = sourceFileStream,
+                    outputStream = targetFileStream,
                 )
             }
         }
@@ -158,8 +212,8 @@ class LimitedStreamCopierTest2 : TestBase() {
             prepareSourceAndTargetFiles(1)
             runBlocking {
                 LimitedStreamCopier(1, rate).copyFromStreamToStream(
-                    inputStream = sourceFileStreamGetNew,
-                    outputStream = targetFileStreamGetNew,
+                    inputStream = sourceFileStream,
+                    outputStream = targetFileStream,
                 )
             }
         }
@@ -178,8 +232,8 @@ class LimitedStreamCopierTest2 : TestBase() {
         val progressList = buildList<Long> {
             LimitedStreamCopier(speed, progressRate)
                 .copyFromStreamToStream(
-                    sourceFileStreamGetNew,
-                    targetFileStreamGetNew,
+                    sourceFileStream,
+                    targetFileStream,
                     progressCallback = { bytes,_ ->
                         add(bytes)
                     }
@@ -220,8 +274,8 @@ class LimitedStreamCopierTest2 : TestBase() {
 
         prepareSourceAndTargetFiles(dataSize)
 
-        val sourceStream = sourceFileStreamGetNew
-        val targetStream = targetFileStreamGetNew
+        val sourceStream = sourceFileStream
+        val targetStream = targetFileStream
 
         scope.launch (Dispatchers.IO) {
             delay(errorDelayMs)
@@ -241,89 +295,240 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun test_with_diff_data_size_1_9() {
-        for (dataSize in 1..9) {
-            test_with_data_size(dataSize)
+        repeat_with_params(1..9, 1,0){ dataSize ->
+            standard_test_with(dataSize, 1, 1)
         }
     }
 
     @Test
-    fun test_with_diff_data_size_10_19() {
-        for (dataSize in 10..19) {
-            test_with_data_size(dataSize)
+    fun test_with_diff_data_size_10_99() {
+        repeat_with_params(10..99, 10,5){ dataSize ->
+            standard_test_with(dataSize, dataSize * 2, 10)
         }
     }
 
     @Test
-    fun test_with_diff_data_size_20_99() {
-        for (dataSize in 20..99) {
-            test_with_data_size(dataSize)
+    fun test_with_diff_data_size_100_999() {
+        repeat_with_params(100..999, 100,50){ dataSize ->
+            standard_test_with(dataSize, dataSize * 2, 10)
         }
     }
 
-    private fun test_with_data_size(dataSize: Int) {
-        val speed = dataSize * 2
-        val rate = 1
-        standard_test_with(dataSize, speed, rate)
+    @Test
+    fun test_with_diff_data_size_1000_9999() {
+        repeat_with_params(1000..9999, 1000,500){ dataSize ->
+            standard_test_with(dataSize, dataSize * 2, 10)
+        }
     }
+
 
 
     @Test
     fun test_with_diff_speed_1_9() {
-        test_in_interval(1..9, 1, randomRange = 0) { speed ->
+        repeat_with_params(1..9, 1, randomSize = 0) { speed ->
             standard_test_with(10, speed, speed)
         }
     }
 
     @Test
     fun test_with_diff_speed_10_99() {
-        test_in_interval(10..99, 10) { speed ->
+        repeat_with_params(10..99, 10, 5) { speed ->
             standard_test_with(10, speed, 10)
         }
     }
 
     @Test
     fun test_with_diff_speed_100_999() {
-        test_in_interval(100..999, 100) { speed ->
+        repeat_with_params(100..999, 100, 50) { speed ->
             standard_test_with(10, speed, 10)
         }
     }
 
-    private fun test_in_interval(range: IntRange, step: Int, randomRange: Int = step, action: (value:Int) -> Unit) {
-        var base = range.first
-        while(base <= range.last) {
-            val value = base + (if (randomRange > 0) random.nextInt(randomRange) else 0)
-            action.invoke(value)
-            base += step
+    @Test
+    fun test_with_diff_speed_1000_9999() {
+        repeat_with_params(1000..9999, 1000, 500) { speed ->
+            standard_test_with(10, speed, 10)
         }
-    }
-
-    private fun test_with_speed(speed: Int) {
-        val dataSize = 1
-        val rate = 1
-        standard_test_with(dataSize, speed, rate)
     }
 
 
     @Test
     fun test_with_diff_rate_1_9() {
-        for (rate in 1..9) {
-            for (dataSize in 1..9) {
-                test_with_rate(dataSize, rate)
+        repeat_with_params(1..9, 1, randomSize = 0) { rate ->
+            standard_test_with(10, 10, rate)
+        }
+    }
+
+    @Test
+    fun test_with_diff_rate_10_99() {
+        repeat_with_params(10..99, 10, 5) { rate ->
+            standard_test_with(10, 100, rate)
+        }
+    }
+
+    @Test
+    fun test_with_diff_rate_100_999() {
+        repeat_with_params(100..999, 100, 50) { rate ->
+            standard_test_with(10, 1000, rate)
+        }
+    }
+
+    @Test
+    fun test_with_diff_rate_1000_9999() {
+        repeat_with_params(1000..9999, 1000, 500) { rate ->
+            standard_test_with(10, 100_000, rate)
+        }
+    }
+
+
+    @Test
+    fun fixed_data_size_10_with_diff_speed_and_rate() {
+        val dataSize = 10
+        val otherParamsRange = 1..9
+        val otherParamsStep = 1
+        repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
             }
         }
     }
 
-    // TODO: разные превышения скорости над частотой
-    private fun test_with_rate(dataSize: Int, rate: Int) {
-        val speed = 2 * rate
-        standard_test_with(dataSize, speed, rate)
+    @Test
+    fun fixed_data_size_100_with_diff_speed_and_rate() {
+        val dataSize = 100
+        val otherParamsRange = 10..99
+        val otherParamsStep = 10
+        repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_data_size_1000_with_diff_speed_and_rate() {
+        val dataSize = 100
+        val otherParamsRange = 1000..9999
+        val otherParamsStep = 1000
+        repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
     }
 
 
-    private fun standard_test_with(dataSize: Int, speed: Int, rate: Int) {
+    @Test
+    fun fixed_speed_10_with_diff_size_and_rate() {
+        val speed = 10
+        val otherParamsRange = 1..9
+        val otherParamsStep = 1
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
 
-        "standard_test_with(dataSize:$dataSize, speed:$speed, rate:$rate)".also {
-            println(it)
+    @Test
+    fun fixed_speed_100_with_diff_size_and_rate() {
+        val speed = 100
+        val otherParamsRange = 10..99
+        val otherParamsStep = 10
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_speed_1000_with_diff_size_and_rate() {
+        val speed = 1000
+        val otherParamsRange = 100..999
+        val otherParamsStep = 100
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+
+
+    @Test
+    fun fixed_rate_10_with_diff_size_and_speed() {
+        val rate = 10
+        val otherParamsRange = 1..9
+        val otherParamsStep = 1
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_rate_100_with_diff_size_and_speed() {
+        val rate = 100
+        val otherParamsRange = 10..99
+        val otherParamsStep = 10
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_rate_1000_with_diff_size_and_speed() {
+        val rate = 100
+        val otherParamsRange = 100..999
+        val otherParamsStep = 100
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+
+    @Test
+    fun big_file_with_variations() {
+        repeat(10) { i ->
+            val dataSize = 1.MEGABYTES * random.nextInt(10)
+            val speed = 1.KILOBYTES * random.nextInt(100, 1001)
+            val rate = random.nextInt(1, 100)
+            standard_test_with(dataSize, speed, rate)
+        }
+    }
+
+
+    private fun repeat_with_params(range: IntRange,
+                                   step: Int,
+                                   randomSize: Int = floor(step/2f).roundToInt(),
+                                   action: (value:Int) -> Unit) {
+        var base = range.first
+        while(base <= range.last) {
+            val value = base + (if (randomSize > 0) random.nextInt(randomSize) else 0)
+            action.invoke(value)
+            base += step
+        }
+    }
+
+    private fun standard_test_with(dataSizeBytes: Int, speedBytesPerSec: Int, progressRatePerSec: Int) {
+
+        "standard_test_with(dataSize:$dataSizeBytes, speed:$speedBytesPerSec, rate:$progressRatePerSec)".also {
+//            println(it)
 //            Log.d(TAG, it)
         }
 
@@ -331,10 +536,15 @@ class LimitedStreamCopierTest2 : TestBase() {
         val progressList = mutableListOf<Long>()
         val speedList = mutableListOf<Long>()
 
-        val sourceData = prepareSourceAndTargetFiles(dataSize)
+        val sourceData = prepareSourceAndTargetFiles(dataSizeBytes)
 
-        LimitedStreamCopier(speed, rate)
-            .copyFromStreamToStream(sourceFileStreamGetNew, targetFileStreamGetNew,
+
+        val estimatedCopyTimeMs: Long = (1000f * dataSizeBytes / speedBytesPerSec).roundToLong()
+
+        val startTimeMs = System.currentTimeMillis()
+
+        LimitedStreamCopier(speedBytesPerSec, progressRatePerSec)
+            .copyFromStreamToStream(sourceFileStream, targetFileStream,
                 progressCallback = { bytes,speed ->
                     progressList.add(bytes)
                     speedList.add(speed)
@@ -342,7 +552,11 @@ class LimitedStreamCopierTest2 : TestBase() {
                     finishCallbackWasTriggered.set(true)
                 })
 
-        delayToAllowCallbackFinish(rate)
+        val realCopyTimeMs = System.currentTimeMillis() - startTimeMs
+        val timeDiffMs = estimatedCopyTimeMs - realCopyTimeMs
+        val timeDiffPercents = (1.toDouble() * timeDiffMs / estimatedCopyTimeMs).roundToFloatingDigits(2)
+
+        delayToAllowCallbackFinish(progressRatePerSec)
 
         // Проверка данных
         Assert.assertEquals(sourceData, sourceFileContents)
@@ -352,62 +566,40 @@ class LimitedStreamCopierTest2 : TestBase() {
         Assert.assertTrue("Был вызван коллбек завершения",
             finishCallbackWasTriggered.get())
 
-        Log.d(TAG,
-            "size: ${dataSize}, " +
-                "speed:$speed, " +
-                "rate:$rate, " +
-                "progressList[${progressList.size}]: ${progressList.joinToString(",")}, " +
-                "speedList[${speedList.size}]: ${speedList.joinToString(",")}"
-        )
+        val msg = "sz:${dataSizeBytes.humanSizeBinary()}, " +
+                "sp:${speedBytesPerSec.humanSizeBinary()}, " +
+                "rt:$progressRatePerSec, " +
+                "est.time:${estimatedCopyTimeMs.humanDecimalPlaces}, " +
+                "real.time:${realCopyTimeMs.humanDecimalPlaces}, " +
+                "t.diff:${timeDiffMs} (${timeDiffPercents}%), " +
+                "prList[${progressList.size}]: ${progressList.joinToString(",")}, " +
+                "spList[${speedList.size}]: ${speedList.joinToString(",")}"
+        Log.d(TAG,msg)
 
-        val minProgressListSize = 1
-        val minSpeedListSize = 1
+        val minimumProgressListSize = 1
+        val minimumSpeedListSize = 1
 
-        Assert.assertTrue("Размер списка прогресса (${progressList.size}) >= $minProgressListSize",
-            progressList.size >= minProgressListSize)
+        Assert.assertTrue("Размер списка прогресса (${progressList.size}) >= $minimumProgressListSize",
+            progressList.size >= minimumProgressListSize)
 
-        Assert.assertTrue("Размер списка скорости >= $minSpeedListSize",
-            speedList.size >= minSpeedListSize)
+        Assert.assertTrue("Размер списка скорости >= $minimumSpeedListSize",
+            speedList.size >= minimumSpeedListSize)
 
-        if (dataSize > 1)
-            check_progress_list_is_incremental(progressList)
-    }
-
-
-    @Test
-    fun test_progress_callback() {
-
-        val dataSize = 30
-        val speed = 10
-        val progressRate = 1
-
-        prepareSourceAndTargetFiles(dataSize)
-
-        val progressList = buildList<Long> {
-            LimitedStreamCopier(speed, progressRate)
-                .copyFromStreamToStream(
-                    sourceFileStreamGetNew,
-                    targetFileStreamGetNew,
-                    progressCallback = { bytes,_ ->
-//                        Log.d(TAG, "add(${bytes}), ${this.javaClass.simpleName}")
-                        add(bytes)
-                    }
+        if (dataSizeBytes > 1) {
+            progressList.reduce { acc, nextValue ->
+                Assert.assertTrue(
+                    "Каждое следующее значение в списке прогресса больше предыдущего ($nextValue > $acc)",
+                    nextValue > acc
                 )
+                nextValue
+            }
         }
 
-        check_progress_list_is_incremental(progressList)
-    }
-
-
-
-    private fun check_progress_list_is_incremental(progressList: List<Long>) {
-        progressList.reduce { acc, nextValue ->
-            Assert.assertTrue(
-                "Каждое следующее значение в списке прогресса больше предудущаго ($nextValue > $acc)",
-                nextValue > acc
-            )
-            nextValue
-        }
+        Assert.assertEquals(
+            "Последнее значение списка прогресса (${progressList.last()}) == размеру данных ($dataSizeBytes)",
+            dataSizeBytes.toLong(),
+            progressList.last()
+        )
     }
 
 
@@ -428,3 +620,6 @@ class LimitedStreamCopierTest2 : TestBase() {
 }
 
 val currentTimeMs: Long get() = System.currentTimeMillis()
+
+val Int.MEGABYTES: Int get() = this * 1024 * 1024
+val Int.KILOBYTES: Int get() = this * 1024

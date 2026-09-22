@@ -29,8 +29,8 @@ abstract class TestBase {
     protected val sourceFileContents: String get() = fileContents(sourceFile)
     protected val targetFileContents: String get() = fileContents(targetFile)
 
-    protected val sourceFileStreamGetNew: InputStream get() = sourceFile.inputStream()
-    protected val targetFileStreamGetNew: OutputStream get() = targetFile.outputStream()
+    protected val sourceFileStream: InputStream get() = sourceFile.inputStream()
+    protected val targetFileStream: OutputStream get() = targetFile.outputStream()
 
     protected val storageFreeSpace: Long = appContext.cacheDir.usableSpace
 
