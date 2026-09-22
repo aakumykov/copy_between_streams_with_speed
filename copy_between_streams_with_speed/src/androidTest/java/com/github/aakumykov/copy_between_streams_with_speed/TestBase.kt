@@ -29,8 +29,8 @@ abstract class TestBase {
     protected val sourceFileContents: String get() = fileContents(sourceFile)
     protected val targetFileContents: String get() = fileContents(targetFile)
 
-    protected val newSourceFileStream: InputStream get() = sourceFile.inputStream()
-    protected val newTargetFileStream: OutputStream get() = targetFile.outputStream()
+    protected val sourceFileStreamGetNew: InputStream get() = sourceFile.inputStream()
+    protected val targetFileStreamGetNew: OutputStream get() = targetFile.outputStream()
 
     protected val storageFreeSpace: Long = appContext.cacheDir.usableSpace
 
@@ -39,7 +39,7 @@ abstract class TestBase {
     protected val ByteArray.asString: String get() = this.joinToString("")
 
 
-    protected fun prepareSourceAndTargetFiles(dataSizeBytes: Int = 100): String {
+    protected fun prepareSourceAndTargetFiles(dataSizeBytes: Int): String {
         prepareSourceFile(dataSizeBytes)
         prepareTargetFile()
         return sourceFileContents

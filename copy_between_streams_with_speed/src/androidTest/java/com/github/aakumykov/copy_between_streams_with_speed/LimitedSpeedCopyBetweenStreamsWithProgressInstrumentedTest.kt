@@ -79,7 +79,7 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
                 prepareSourceAndTargetFiles(fileSize)
 
                 limitedStreamCopier(1000, 1)
-                    .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,)
+                    .copyFromStreamToStream(sourceFileStreamGetNew, targetFileStreamGetNew,)
 
                 test_files(fileSize)
             }
@@ -119,11 +119,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     private fun checkOnExceptionWithSpeed(speed: Int) {
         Assert.assertThrows(IllegalArgumentException::class.java) {
-            prepareSourceAndTargetFiles()
+            prepareSourceAndTargetFiles(1)
             runBlocking {
                 limitedStreamCopier(speed = speed, rate = 1).copyFromStreamToStream(
-                    inputStream = newSourceFileStream,
-                    outputStream = newTargetFileStream,
+                    inputStream = sourceFileStreamGetNew,
+                    outputStream = targetFileStreamGetNew,
                 )
             }
         }
@@ -144,11 +144,11 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     private fun checkOnExceptionWithRate(rate: Int) {
         Assert.assertThrows(IllegalArgumentException::class.java) {
-            prepareSourceAndTargetFiles()
+            prepareSourceAndTargetFiles(1)
             runBlocking {
                 limitedStreamCopier(speed = 1, rate = rate).copyFromStreamToStream(
-                    inputStream = newSourceFileStream,
-                    outputStream = newTargetFileStream,
+                    inputStream = sourceFileStreamGetNew,
+                    outputStream = targetFileStreamGetNew,
                 )
             }
         }
@@ -158,10 +158,10 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
     @Test
     fun throws_exception_on_rate_greater_than_speed() {
         Assert.assertThrows(IllegalArgumentException::class.java) {
-            prepareSourceAndTargetFiles()
+            prepareSourceAndTargetFiles(1)
             limitedStreamCopier(1, 2).copyFromStreamToStream(
-                inputStream = newSourceFileStream,
-                outputStream = newTargetFileStream,
+                inputStream = sourceFileStreamGetNew,
+                outputStream = targetFileStreamGetNew,
             )
         }
     }
@@ -540,9 +540,9 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
         val progressList = mutableListOf<Long>()
 
         limitedStreamCopier(speed,rate).copyFromStreamToStream(
-            inputStream = newSourceFileStream,
-            outputStream = newTargetFileStream,
-            progressCallback = { transferredBytes ->
+            inputStream = sourceFileStreamGetNew,
+            outputStream = targetFileStreamGetNew,
+            progressCallback = { transferredBytes,_ ->
                 progressList.add(transferredBytes)
             }
         )
@@ -704,8 +704,8 @@ class LimitedSpeedCopyBetweenStreamsWithProgressInstrumentedTest : TestBase() {
 
     private fun copyWithoutCheck() = runBlocking {
         limitedStreamCopier(100,10).copyFromStreamToStream(
-            inputStream = newSourceFileStream,
-            outputStream = newTargetFileStream,
+            inputStream = sourceFileStreamGetNew,
+            outputStream = targetFileStreamGetNew,
         )
     }
 

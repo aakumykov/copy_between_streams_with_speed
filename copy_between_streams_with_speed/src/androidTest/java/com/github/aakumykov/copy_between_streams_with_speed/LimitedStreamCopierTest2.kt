@@ -55,6 +55,21 @@ class LimitedStreamCopierTest2 : TestBase() {
      */
 
     @Test
+    fun simple_test_for_speed() {
+        val dataSize = 100
+        val speed = 10
+        val rate = 10
+        prepareSourceAndTargetFiles(dataSize)
+        Log.d(TAG, "старт")
+        LimitedStreamCopier(speed, rate).copyFromStreamToStream(
+            sourceFileStreamGetNew,
+            targetFileStreamGetNew
+        )
+        Log.d(TAG, "финиш")
+        standard_test_with(dataSize, speed, rate)
+    }
+
+    @Test
     fun data_simply_copied() {
 
         val dataSize = 100
@@ -64,7 +79,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         prepareSourceAndTargetFiles(dataSize)
 
         LimitedStreamCopier(speed, progressRate)
-            .copyFromStreamToStream(newSourceFileStream, newTargetFileStream)
+            .copyFromStreamToStream(sourceFileStreamGetNew, targetFileStreamGetNew)
 
         Assert.assertEquals(dataSize.toLong(), targetFile.length())
         Assert.assertEquals(dataSize.toLong(), sourceFile.length())
@@ -85,8 +100,8 @@ class LimitedStreamCopierTest2 : TestBase() {
         prepareSourceAndTargetFiles(dataSize)
 
         LimitedStreamCopier(speed, rate)
-            .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
-                progressCallback = { _ ->
+            .copyFromStreamToStream(sourceFileStreamGetNew, targetFileStreamGetNew,
+                progressCallback = { _,_ ->
                     progressCallbackCount.getAndIncrement()
                 },
                 finishCallback = { _ ->
@@ -114,11 +129,11 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     private fun checkOnExceptionWithSpeed(speed: Int) {
         Assert.assertThrows(IllegalArgumentException::class.java) {
-            prepareSourceAndTargetFiles()
+            prepareSourceAndTargetFiles(1)
             runBlocking {
                 LimitedStreamCopier(speed, 1).copyFromStreamToStream(
-                    inputStream = newSourceFileStream,
-                    outputStream = newTargetFileStream,
+                    inputStream = sourceFileStreamGetNew,
+                    outputStream = targetFileStreamGetNew,
                 )
             }
         }
@@ -137,11 +152,11 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     private fun checkOnExceptionWithRate(rate: Int) {
         Assert.assertThrows(IllegalArgumentException::class.java) {
-            prepareSourceAndTargetFiles()
+            prepareSourceAndTargetFiles(1)
             runBlocking {
                 LimitedStreamCopier(1, rate).copyFromStreamToStream(
-                    inputStream = newSourceFileStream,
-                    outputStream = newTargetFileStream,
+                    inputStream = sourceFileStreamGetNew,
+                    outputStream = targetFileStreamGetNew,
                 )
             }
         }
@@ -160,9 +175,9 @@ class LimitedStreamCopierTest2 : TestBase() {
         val progressList = buildList<Long> {
             LimitedStreamCopier(speed, progressRate)
                 .copyFromStreamToStream(
-                    newSourceFileStream,
-                    newTargetFileStream,
-                    progressCallback = { bytes ->
+                    sourceFileStreamGetNew,
+                    targetFileStreamGetNew,
+                    progressCallback = { bytes,_ ->
                         add(bytes)
                     }
                 )
@@ -202,8 +217,8 @@ class LimitedStreamCopierTest2 : TestBase() {
 
         prepareSourceAndTargetFiles(dataSize)
 
-        val sourceStream = newSourceFileStream
-        val targetStream = newTargetFileStream
+        val sourceStream = sourceFileStreamGetNew
+        val targetStream = targetFileStreamGetNew
 
         scope.launch (Dispatchers.IO) {
             delay(errorDelayMs)
@@ -293,11 +308,11 @@ class LimitedStreamCopierTest2 : TestBase() {
         val sourceData = prepareSourceAndTargetFiles(dataSize)
 
         LimitedStreamCopier(speed, rate)
-            .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
-                progressCallback = { bytes ->
+            .copyFromStreamToStream(sourceFileStreamGetNew, targetFileStreamGetNew,
+                progressCallback = { bytes,speed ->
                     progressList.add(bytes)
-//                    speedList.add(speed)
-                }, finishCallback = { bytes ->
+                    speedList.add(speed)
+                }, finishCallback = { _ ->
                     finishCallbackWasTriggered.set(true)
                 })
 
@@ -307,10 +322,17 @@ class LimitedStreamCopierTest2 : TestBase() {
         Assert.assertEquals(sourceData, sourceFileContents)
         Assert.assertEquals(sourceData, targetFileContents)
 
-        // Проверка работы коллбеков
-        Assert.assertTrue("Был вызван коллбек завершения", finishCallbackWasTriggered.get())
+        // Проверка коллбеков
+        Assert.assertTrue("Был вызван коллбек завершения",
+            finishCallbackWasTriggered.get())
 
-        Log.d(TAG, "size: ${dataSize}, speed:$speed, rate:$rate, progressList [${progressList.size}]: ${progressList.joinToString(",")}")
+        Log.d(TAG,
+            "size: ${dataSize}, " +
+                "speed:$speed, " +
+                "rate:$rate, " +
+                "progressList[${progressList.size}]: ${progressList.joinToString(",")}, " +
+                "speedList[${speedList.size}]: ${speedList.joinToString(",")}"
+        )
 
         val minProgressListSize = 1
         val minSpeedListSize = 1
@@ -318,7 +340,8 @@ class LimitedStreamCopierTest2 : TestBase() {
         Assert.assertTrue("Размер списка прогресса (${progressList.size}) >= $minProgressListSize",
             progressList.size >= minProgressListSize)
 
-//        Assert.assertTrue("Размер списка скорости >= 2",speedList.size >= 2)
+        Assert.assertTrue("Размер списка скорости >= $minSpeedListSize",
+            speedList.size >= minSpeedListSize)
 
         if (dataSize > 1)
             check_progress_list_is_incremental(progressList)
@@ -337,9 +360,9 @@ class LimitedStreamCopierTest2 : TestBase() {
         val progressList = buildList<Long> {
             LimitedStreamCopier(speed, progressRate)
                 .copyFromStreamToStream(
-                    newSourceFileStream,
-                    newTargetFileStream,
-                    progressCallback = { bytes ->
+                    sourceFileStreamGetNew,
+                    targetFileStreamGetNew,
+                    progressCallback = { bytes,_ ->
 //                        Log.d(TAG, "add(${bytes}), ${this.javaClass.simpleName}")
                         add(bytes)
                     }
