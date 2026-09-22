@@ -1,7 +1,9 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.R.attr.value
 import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -49,6 +51,7 @@ class LimitedStreamCopierTest2 : TestBase() {
      *
      * Разные скорости:
      * [test_with_diff_speed_1_9]
+     * [test_with_diff_speed_10_99]
      *
      * Разные частоты прогресса:
      * [test_with_diff_rate_1_9]
@@ -266,8 +269,31 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun test_with_diff_speed_1_9() {
-        for (speed in 1..9) {
-            test_with_speed(speed)
+        test_in_interval(1..9, 1, randomRange = 0) { speed ->
+            standard_test_with(10, speed, speed)
+        }
+    }
+
+    @Test
+    fun test_with_diff_speed_10_99() {
+        test_in_interval(10..99, 10) { speed ->
+            standard_test_with(10, speed, 10)
+        }
+    }
+
+    @Test
+    fun test_with_diff_speed_100_999() {
+        test_in_interval(100..999, 100) { speed ->
+            standard_test_with(10, speed, 10)
+        }
+    }
+
+    private fun test_in_interval(range: IntRange, step: Int, randomRange: Int = step, action: (value:Int) -> Unit) {
+        var base = range.first
+        while(base <= range.last) {
+            val value = base + (if (randomRange > 0) random.nextInt(randomRange) else 0)
+            action.invoke(value)
+            base += step
         }
     }
 
