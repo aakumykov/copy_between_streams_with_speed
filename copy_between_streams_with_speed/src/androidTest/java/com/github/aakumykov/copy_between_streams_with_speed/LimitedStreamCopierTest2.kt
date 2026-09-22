@@ -47,6 +47,11 @@ class LimitedStreamCopierTest2 : TestBase() {
      * [test_with_diff_data_size_10_19]
      * [test_with_diff_data_size_20_99]
      *
+     * Разные скорости:
+     * [test_with_diff_speed_1_9]
+     *
+     * Разные частоты прогресса:
+     * [test_with_diff_rate_1_9]
      */
 
     @Test
@@ -237,12 +242,42 @@ class LimitedStreamCopierTest2 : TestBase() {
         }
     }
 
-
     private fun test_with_data_size(dataSize: Int) {
         val speed = dataSize * 2
         val rate = 1
         standard_test_with(dataSize, speed, rate)
     }
+
+
+    @Test
+    fun test_with_diff_speed_1_9() {
+        for (speed in 1..9) {
+            test_with_speed(speed)
+        }
+    }
+
+    private fun test_with_speed(speed: Int) {
+        val dataSize = 1
+        val rate = 1
+        standard_test_with(dataSize, speed, rate)
+    }
+
+
+    @Test
+    fun test_with_diff_rate_1_9() {
+        for (rate in 1..9) {
+            for (dataSize in 1..9) {
+                test_with_rate(dataSize, rate)
+            }
+        }
+    }
+
+    // TODO: разные превышения скорости над частотой
+    private fun test_with_rate(dataSize: Int, rate: Int) {
+        val speed = 2 * rate
+        standard_test_with(dataSize, speed, rate)
+    }
+
 
     private fun standard_test_with(dataSize: Int, speed: Int, rate: Int) {
 
@@ -325,23 +360,6 @@ class LimitedStreamCopierTest2 : TestBase() {
             nextValue
         }
     }
-
-    /*@Test
-    fun test_674_107() {
-        repeat(3) {
-            Log.d(TAG, "Прогон $it")
-            listOf(83).forEach { progressRate ->
-                test_with(
-                    674,
-                    107,
-                    progressRate
-                ) { log, diff ->
-                    Log.d(TAG, "[$diff] -> $log")
-                }
-            }
-        }
-    }*/
-
 
 
     private fun delayToAllowCallbackFinish(progressRate: Int) {
