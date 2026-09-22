@@ -77,12 +77,11 @@ class LimitedStreamCopier(
             val sleepingLackTimeMs =
                 if (bytesRealCopiedInStep >= bytesNeedToBeCopiedInStep) {
                     // Если за единицу времени, выделенную под передачу данных,
-                    // ушло больше байт, чем назначено, жду...
+                    // ушло больше байт, чем назначено, жду, чтобы .
                     val bytesOverrunPercentage: Float = (bytesRealCopiedInStep.toFloat() / bytesNeedToBeCopiedInStep)
                     (bytesOverrunPercentage * timeAllocatedForStep - realStepDurationMs).roundToLong()
                 } else {
-                    // Если меньше (остаток данных), то тоже жду,
-                    // чтобы добить скорость до заданной (это довольно спорно).
+                    // Это имитация заданной скорости для коллбека.
                     timeAllocatedForStep - realStepDurationMs
                 }
 
