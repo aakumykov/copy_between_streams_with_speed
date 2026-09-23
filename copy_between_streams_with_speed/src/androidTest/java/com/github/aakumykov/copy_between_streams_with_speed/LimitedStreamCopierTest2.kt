@@ -1,9 +1,10 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.R.attr.duration
 import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
+import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -619,7 +620,3 @@ class LimitedStreamCopierTest2 : TestBase() {
     }
 }
 
-val currentTimeMs: Long get() = System.currentTimeMillis()
-
-val Int.MEGABYTES: Int get() = this * 1024 * 1024
-val Int.KILOBYTES: Int get() = this * 1024

@@ -45,8 +45,8 @@ class LimitedStreamCopierNew {
         fun sleepIfNeeded(realDurationMs: Long, expectedDurationMs: Long,
                           realDataSize: Int, expectedDataSize: Int) {
 
-            logD("sleepIfNeeded(), rd:$realDurationMs, ed:$expectedDurationMs")
-            logD("sleepIfNeeded(), rs:$realDataSize, es:$expectedDataSize")
+//            logD("sleepIfNeeded(), rd:$realDurationMs, ed:$expectedDurationMs")
+//            logD("sleepIfNeeded(), rs:$realDataSize, es:$expectedDataSize")
 
             // Время, необходимое для копирования данных, пересчитывается
             // согласно их объёму, обработанному на этом шаге.
@@ -55,14 +55,16 @@ class LimitedStreamCopierNew {
             val correctedExpectedDurationMs = (dataFraction * expectedDurationMs).roundToLong()
 
             val timeFraction: Double = (1.toDouble() * realDurationMs / correctedExpectedDurationMs)
-            logD("timeFraction: $timeFraction")
+//            logD("timeFraction: $timeFraction")
 
             // Если данные скопировались за время, меньшее положенного,
             // делаем паузу.
             if (timeFraction < 1.0) {
                 val sleepDiff = correctedExpectedDurationMs - realDurationMs
-                logD("досыпаю $sleepDiff мс")
+                logD("досыпаю $sleepDiff мс (timeFraction:$timeFraction)")
                 TimeUnit.MILLISECONDS.sleep(sleepDiff)
+            } else {
+                logD("Спать не нужно (timeFraction:$timeFraction)")
             }
 
             // Если копирование данных заняло
@@ -101,8 +103,8 @@ class LimitedStreamCopierNew {
                         stepDurationMs, dataCopyingTimeQuantMs,
                         stepDataCopied, dataSizeToBeCopiedByQuant
                     )
+                    stepDataCopied = 0
                 }
-                stepDataCopied = 0
             } else {
                 throw RuntimeException("readBytes ($readBytes) > operationPortionSize ($operationPortionSize)")
             }

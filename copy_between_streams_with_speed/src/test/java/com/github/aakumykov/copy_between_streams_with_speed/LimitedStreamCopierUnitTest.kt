@@ -2,12 +2,8 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
-import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Assert
 import org.junit.Test
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
 import kotlin.math.roundToLong
 
 class LimitedStreamCopierUnitTest : StreamCopierTestBase() {
@@ -24,7 +20,7 @@ class LimitedStreamCopierUnitTest : StreamCopierTestBase() {
 
         val startTime = System.currentTimeMillis()
         LimitedStreamCopier(speed, rate)
-            .copyFromStreamToStream(sourceFileStream, targetFileStream)
+            .copyFromStreamToStream(getSourceFileStream, getTargetFileStream)
         val duration = System.currentTimeMillis() - startTime
 
         val estimatedTime = (1000f * dataSize / speed).roundToLong()
@@ -40,7 +36,7 @@ class LimitedStreamCopierUnitTest : StreamCopierTestBase() {
         Assert.assertEquals(dataSize.toLong(), sourceFile.length())
         Assert.assertEquals(dataSize.toLong(), targetFile.length())
 
-        Assert.assertEquals(sourceFileData, targetFileData)
+        Assert.assertEquals(getSourceFileData, getTargetFileData)
     }
 
 

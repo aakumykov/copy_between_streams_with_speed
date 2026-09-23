@@ -39,14 +39,18 @@ open class StreamCopierTestBase() {
 
     companion object {
         val TAG: String = LimitedStreamCopierUnitTest::class.java.simpleName
+
         protected const val TEMP_DIR_NAME = "test_temp_dir"
         protected const val SOURCE_FILE_NAME = "source.file"
         protected const val TARGET_FILE_NAME = "target.file"
+
         @JvmStatic protected val sourceFile = File(TEMP_DIR_NAME, SOURCE_FILE_NAME)
         @JvmStatic protected val targetFile = File(TEMP_DIR_NAME, TARGET_FILE_NAME)
-        @JvmStatic protected val sourceFileStream: InputStream get() = sourceFile.inputStream()
-        @JvmStatic protected val targetFileStream: OutputStream get() = targetFile.outputStream()
-        @JvmStatic protected val sourceFileData: String get() = sourceFile.readBytes().joinToString("")
-        @JvmStatic protected val targetFileData: String get() = targetFile.readBytes().joinToString("")
+
+        @JvmStatic protected val getSourceFileStream: InputStream get() = sourceFile.inputStream()
+        @JvmStatic protected val getTargetFileStream: OutputStream get() = targetFile.outputStream()
+
+        @JvmStatic protected val getSourceFileData: String get() = sourceFile.readBytes().joinToString("")
+        @JvmStatic protected val getTargetFileData: String get() = targetFile.readBytes().joinToString("")
     }
 }
