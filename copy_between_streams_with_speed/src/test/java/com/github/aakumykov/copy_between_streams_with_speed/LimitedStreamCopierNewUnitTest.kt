@@ -29,7 +29,7 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
     }
 
     @Test
-    fun anomaly_test_speed_kb() {
+    fun anomaly_65_4_kb_240_kbs() {
         doCopy(
             (6.54 * 1.KILOBYTES).roundToInt(),
             (240.00 * 1.KILOBYTES).roundToInt(),
