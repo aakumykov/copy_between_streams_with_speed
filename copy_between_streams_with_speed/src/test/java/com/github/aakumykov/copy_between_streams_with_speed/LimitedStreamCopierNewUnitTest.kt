@@ -13,12 +13,12 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
 
     @Test
     fun b() {
-        /*repeat(100) {
-            val size = random.nextInt(1, 10*1024*1024)
-            val speed = random.nextInt(1, 10*1024*1024)
-            val steps = 10
+        repeat(10) {
+            val size = random.nextInt(1, 10) * 1.MEGABYTES
+            val speed = random.nextInt(100, 900) * 1.MEGABYTES
+            val steps = 1000
             doCopy(size, speed, steps)
-        }*/
+        }
     }
 
     @Test
@@ -33,7 +33,7 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
         doCopy(
             (6.54 * 1.KILOBYTES).roundToInt(),
             (240.00 * 1.KILOBYTES).roundToInt(),
-            1000)
+            100)
     }
 
     @Test
@@ -70,7 +70,7 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
         val durationPercent = (100 * duration / expectedDurationMs).roundToFloatingDigits(5)
 
         val resultMsg = "size:${dataSizeBytes.humanSizeBinary()}, " +
-                "speed:${speedBytesPerSec.humanSizeBinary()}, " +
+                "speed:${speedBytesPerSec.humanSizeBinary()}/s, " +
                 "steps:$stepsPerSec, " +
                 "время: ${duration.humanDecimalPlaces} мс / ${expectedDurationMs.humanDecimalPlaces} мс (${durationPercent}%)"
 
