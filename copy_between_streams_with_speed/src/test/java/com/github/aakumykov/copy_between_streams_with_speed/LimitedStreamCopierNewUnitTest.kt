@@ -12,10 +12,20 @@ import kotlin.math.roundToInt
 class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
 
     @Test
+    fun a() {
+        repeat(10) { i ->
+            val size = 100.KILOBYTES
+            val speed = 2*size
+            val steps = 1000
+            doCopy(size, speed, steps)
+        }
+    }
+
+    @Test
     fun b() {
         repeat(10) {
-            val size = random.nextInt(1, 10) * 1.MEGABYTES
-            val speed = random.nextInt(100, 900) * 1.MEGABYTES
+            val size = random.nextInt(1, 10) * 1.KILOBYTES
+            val speed = random.nextInt(1, 10) * 1.KILOBYTES
             val steps = 1000
             doCopy(size, speed, steps)
         }
