@@ -153,11 +153,15 @@ class LimitedStreamCopier(
             else if (readBytes < dataSizeToBeCopiedByStep) {
                 logD( "прочитано, readBytes ($readBytes) < dataSizeToBeCopiedByStep ($dataSizeToBeCopiedByStep)")
 
+                val dataSizePercent = 1f * readBytes / dataSizeToBeCopiedByStep
+                val correctedTime4stepMs = (dataSizePercent * timeForStepMs).roundToLong()
+                val correctedSize4stepBytes = (dataSizePercent * dataSizeToBeCopiedByStep).roundToLong()
+
                 sleepIfNeeded(
                     dataCopyDuration,
-                    timeForStepMs,
+                    correctedTime4stepMs,
                     thisStepDataRead,
-                    dataSizeToBeCopiedByStep.toLong()
+                    correctedSize4stepBytes
                 )
 
                 publishProgress(totalDataRead, calcSpeed(startTime, readBytes))

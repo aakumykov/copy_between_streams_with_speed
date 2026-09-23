@@ -14,10 +14,10 @@ class LimitedStreamCopierUnitTest {
 
     @Test
     fun simple_copy_test() {
-        val base = 1024
+        val base = 1024 * 1024 * 10
 
         val dataSize = base
-        val speed = base * 2
+        val speed = base * 10
         val rate = 1
 
         prepareSourceAndTargetFiles(dataSize)
@@ -28,7 +28,7 @@ class LimitedStreamCopierUnitTest {
         val duration = System.currentTimeMillis() - startTime
 
         val estimatedTime = (1000f * dataSize / speed).roundToLong()
-        val diffPercents = (1f * duration - estimatedTime) / estimatedTime
+        val diffPercents = 100f * duration / estimatedTime
 
         Log.d(TAG, "--------------------------------------------------------------------")
         Log.d(TAG, "dataSize:$dataSize, speed:$speed, est:$estimatedTime, real:$duration (${diffPercents})%")
