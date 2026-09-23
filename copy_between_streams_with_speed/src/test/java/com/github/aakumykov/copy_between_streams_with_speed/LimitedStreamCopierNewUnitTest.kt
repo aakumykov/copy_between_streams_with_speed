@@ -22,14 +22,38 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
     }
 
     @Test
-    fun anomaly_test() {
+    fun anomaly_test_speed_mb() {
         doCopy((6.54 * 1.KILOBYTES).roundToInt(), (2.01 * 1.MEGABYTES).roundToInt(), 10)
         doCopy((232.88 * 1.KILOBYTES).roundToInt(), (8.68 * 1.MEGABYTES).roundToInt(), 10)
         doCopy((320.08 * 1.KILOBYTES).roundToInt(), (1.11 * 1.MEGABYTES).roundToInt(), 10)
     }
 
+    @Test
+    fun anomaly_test_speed_kb() {
+        doCopy(
+            (6.54 * 1.KILOBYTES).roundToInt(),
+            (240.00 * 1.KILOBYTES).roundToInt(),
+            1000)
+    }
 
-    private fun doCopy(dataSizeBytes: Int, speedBytesPerSec: Int, stepsPerSec: Int) {
+    @Test
+    fun anomaly_6_54() {
+        listOf(10,20,30,40,50,60,70,80,90).forEach { base ->
+            repeat(10) { i ->
+                val speed = 1.KILOBYTES * (i+1) * base
+                doCopy((6.54 * 1.KILOBYTES).roundToInt(), speed, 10)
+            }
+        }
+        repeat(10) { i ->
+            val speed = 1.KILOBYTES * (i+1) * 100
+            doCopy((6.54 * 1.KILOBYTES).roundToInt(), speed, 10)
+        }
+    }
+
+
+    private fun doCopy(dataSizeBytes: Int,
+                       speedBytesPerSec: Int,
+                       stepsPerSec: Int) {
 
         val expectedDurationMs = 1000.toDouble() * dataSizeBytes / speedBytesPerSec
 

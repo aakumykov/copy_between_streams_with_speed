@@ -1,7 +1,8 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
-import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
@@ -19,9 +20,18 @@ class LimitedStreamCopierNew {
         progressRatePerSecond: Int = 1,
         stepsPerSecond: Int = 1000
     ) {
+        if (speedBytesPerSecond <= 0)
+            throw IllegalArgumentException("Speed must be greater than zero ($speedBytesPerSecond)")
+
+        if (progressRatePerSecond <= 0)
+            throw IllegalArgumentException("progress rate per second must be greater than zero ($progressRatePerSecond)")
+
+        if (stepsPerSecond <= 0)
+            throw IllegalArgumentException("Steps second must be greater than zero ($stepsPerSecond)")
+
         logD("")
         logD("------------------------------------------------------------------------------")
-        logD("copyFromStreamToStream() called with: speedBytesPerSecond = $speedBytesPerSecond, progressRatePerSecond = $progressRatePerSecond, stepsPerSecond = $stepsPerSecond")
+        logD("copyFromStreamToStream() called with: speedBytesPerSecond = ${speedBytesPerSecond.humanSizeBinary()}/s, progressRatePerSecond = $progressRatePerSecond, stepsPerSecond = $stepsPerSecond")
         logD("------------------------------------------------------------------------------")
 
         val dataCopyingSteps = min(speedBytesPerSecond, stepsPerSecond)
@@ -45,26 +55,28 @@ class LimitedStreamCopierNew {
         fun sleepIfNeeded(realDurationMs: Long, expectedDurationMs: Long,
                           realDataSize: Int, expectedDataSize: Int) {
 
-//            logD("sleepIfNeeded(), rd:$realDurationMs, ed:$expectedDurationMs")
-//            logD("sleepIfNeeded(), rs:$realDataSize, es:$expectedDataSize")
+            logD("sleepIfNeeded(), rldr:$realDurationMs, exdr:$expectedDurationMs, rlsz:$realDataSize, exsz:$expectedDataSize")
 
             // Время, необходимое для копирования данных, пересчитывается
             // согласно их объёму, обработанному на этом шаге.
             val dataFraction: Float = realDataSize.toFloat() / expectedDataSize
+            logD("dataFraction:$dataFraction")
 
             val correctedExpectedDurationMs = (dataFraction * expectedDurationMs).roundToLong()
+            logD("correctedExpectedDurationMs:$correctedExpectedDurationMs")
 
             val timeFraction: Double = (1.toDouble() * realDurationMs / correctedExpectedDurationMs)
-//            logD("timeFraction: $timeFraction")
+            logD("timeFraction: $timeFraction")
 
             // Если данные скопировались за время, меньшее положенного,
             // делаем паузу.
             if (timeFraction < 1.0) {
-                val sleepDiff = correctedExpectedDurationMs - realDurationMs
-                logD("досыпаю $sleepDiff мс (timeFraction:$timeFraction)")
-                TimeUnit.MILLISECONDS.sleep(sleepDiff)
+                val sleepDiffMs = correctedExpectedDurationMs - realDurationMs
+                logD("досыпаю[$currentTimeMs] $sleepDiffMs мс (timeFraction:$timeFraction < 1.0)")
+                TimeUnit.MILLISECONDS.sleep(sleepDiffMs)
+                logD("доспал [$currentTimeMs]")
             } else {
-                logD("Спать не нужно (timeFraction:$timeFraction)")
+                logD("Спать не нужно (timeFraction: $timeFraction >= 1.0)")
             }
 
             // Если копирование данных заняло
@@ -115,7 +127,7 @@ class LimitedStreamCopierNew {
     }
 
     private fun logD(text: String) {
-//        Log.d(TAG, text)
+        Log.d(TAG, text)
     }
 
     companion object {
