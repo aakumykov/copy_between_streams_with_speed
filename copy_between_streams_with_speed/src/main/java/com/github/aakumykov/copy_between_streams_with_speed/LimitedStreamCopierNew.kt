@@ -1,7 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
-import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import java.io.InputStream
 import java.io.OutputStream
@@ -37,8 +37,8 @@ class LimitedStreamCopierNew {
         val dataCopyingSteps = min(speedBytesPerSecond, stepsPerSecond)
         logD("dataCopyingSteps: $dataCopyingSteps")
 
-        val dataCopyingTimeQuantNs = ceil(1_000_000f / dataCopyingSteps).roundToLong()
-        logD("dataCopyingTimeQuantNs: $dataCopyingTimeQuantNs")
+        val dataCopyingTimeQuantMs = ceil(1000f / dataCopyingSteps).roundToLong()
+        logD("dataCopyingTimeQuantMs: $dataCopyingTimeQuantMs")
 
         val dataSizeToBeCopiedByQuant = ceil(1f * speedBytesPerSecond / dataCopyingSteps).roundToInt()
         logD("dataSizeToBeCopiedByQuant: $dataSizeToBeCopiedByQuant")
@@ -52,29 +52,29 @@ class LimitedStreamCopierNew {
         val dataBuffer = ByteArray(operationPortionSize)
 
 
-        fun sleepIfNeeded(realDurationNs: Long, expectedDurationNs: Long,
+        fun sleepIfNeeded(realDurationMs: Long, expectedDurationMs: Long,
                           realDataSize: Int, expectedDataSize: Int) {
 
-            logD("sleepIfNeeded(), rldr:$realDurationNs, exdr:$expectedDurationNs, rlsz:$realDataSize, exsz:$expectedDataSize")
+            logD("sleepIfNeeded(), rldr:$realDurationMs, exdr:$expectedDurationMs, rlsz:$realDataSize, exsz:$expectedDataSize")
 
             // Время, необходимое для копирования данных, пересчитывается
             // согласно их объёму, обработанному на этом шаге.
             val dataFraction: Float = realDataSize.toFloat() / expectedDataSize
             logD("dataFraction:$dataFraction")
 
-            val correctedExpectedDurationNs = (dataFraction * expectedDurationNs).roundToLong()
-            logD("correctedExpectedDurationNs:$correctedExpectedDurationNs")
+            val correctedExpectedDurationMs = (dataFraction * expectedDurationMs).roundToLong()
+            logD("correctedExpectedDurationMs:$correctedExpectedDurationMs")
 
-            val timeFraction: Double = (1.toDouble() * realDurationNs / correctedExpectedDurationNs)
+            val timeFraction: Double = (1.toDouble() * realDurationMs / correctedExpectedDurationMs)
             logD("timeFraction: $timeFraction")
 
             // Если данные скопировались за время, меньшее положенного,
             // делаем паузу.
             if (timeFraction < 1.0) {
-                val sleepDiffNs = correctedExpectedDurationNs - realDurationNs
-                logD("досыпаю[$currentTimeNanos] $sleepDiffNs нс (timeFraction:$timeFraction < 1.0)")
-                TimeUnit.MILLISECONDS.sleep(sleepDiffNs)
-                logD("доспал [$currentTimeNanos]")
+                val sleepDiffMs = correctedExpectedDurationMs - realDurationMs
+                logD("досыпаю[$currentTimeMs] $sleepDiffMs мс (timeFraction:$timeFraction < 1.0)")
+                TimeUnit.MILLISECONDS.sleep(sleepDiffMs)
+                logD("доспал [$currentTimeMs]")
             } else {
                 logD("Спать не нужно (timeFraction: $timeFraction >= 1.0)")
             }
@@ -91,18 +91,18 @@ class LimitedStreamCopierNew {
                 break
             }
 
-            val startTimeNs = currentTimeNanos
+            val startTimeMs = System.currentTimeMillis()
 
             outputStream.write(dataBuffer, 0, readBytes)
 
-            val stepDurationNs = currentTimeNanos - startTimeNs
+            val stepDurationMs = System.currentTimeMillis() - startTimeMs
 
             stepDataCopied += readBytes
             totalDataCopied += readBytes
 
             if (readBytes < operationPortionSize) {
                 sleepIfNeeded(
-                    stepDurationNs, dataCopyingTimeQuantNs,
+                    stepDurationMs, dataCopyingTimeQuantMs,
                     readBytes, operationPortionSize
                 )
                 stepDataCopied = 0
@@ -112,7 +112,7 @@ class LimitedStreamCopierNew {
                 if (stepDataCopied >= dataSizeToBeCopiedByQuant) {
                     // Пора считать скорость.
                     sleepIfNeeded(
-                        stepDurationNs, dataCopyingTimeQuantNs,
+                        stepDurationMs, dataCopyingTimeQuantMs,
                         stepDataCopied, dataSizeToBeCopiedByQuant
                     )
                     stepDataCopied = 0
@@ -127,10 +127,6 @@ class LimitedStreamCopierNew {
     }
 
     private fun logD(text: String) {
-        Log.d(TAG, text)
-    }
-
-    private fun logDD(text: String) {
         Log.d(TAG, text)
     }
 
