@@ -10,7 +10,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import kotlin.math.roundToLong
 
-class LimitedStreamCopierUnitTest {
+class LimitedStreamCopierUnitTest : StreamCopierTestBase() {
 
     @Test
     fun simple_copy_test() {
@@ -43,45 +43,7 @@ class LimitedStreamCopierUnitTest {
         Assert.assertEquals(sourceFileData, targetFileData)
     }
 
-    private fun prepareSourceAndTargetFiles(sizeBytes: Int) {
-        prepareTempDir()
-        deleteFile(sourceFile)
-        deleteFile(targetFile)
-        writeRandomBytesToFile(sourceFile, sizeBytes)
-    }
 
-    private fun prepareTempDir() {
-        val tempDir = File(TEMP_DIR_NAME)
-        if (!tempDir.exists()) Assert.assertTrue(tempDir.mkdirs())
-    }
 
-    private fun deleteFile(file: File) {
-        file.delete()
-        Assert.assertFalse(file.exists())
-    }
 
-    private fun writeRandomBytesToFile(file: File, sizeBytes: Int) {
-        val pieceSize = DEFAULT_BUFFER_SIZE
-        val mainSteps = sizeBytes / pieceSize
-        repeat(mainSteps) {
-            file.appendBytes(random.nextBytes(pieceSize))
-        }
-        val mainSize = pieceSize * mainSteps
-        val additionalSize = sizeBytes - mainSize
-        file.appendBytes(random.nextBytes(additionalSize))
-        Assert.assertEquals(sizeBytes.toLong(), file.length())
-    }
-
-    companion object {
-        val TAG: String = LimitedStreamCopierUnitTest::class.java.simpleName
-        private const val TEMP_DIR_NAME = "test_temp_dir"
-        private const val SOURCE_FILE_NAME = "source.file"
-        private const val TARGET_FILE_NAME = "target.file"
-        private val sourceFile = File(TEMP_DIR_NAME, SOURCE_FILE_NAME)
-        private val targetFile = File(TEMP_DIR_NAME, TARGET_FILE_NAME)
-        private val sourceFileStream: InputStream get() = sourceFile.inputStream()
-        private val targetFileStream: OutputStream get() = targetFile.outputStream()
-        private val sourceFileData: String get() = sourceFile.readBytes().joinToString("")
-        private val targetFileData: String get() = targetFile.readBytes().joinToString("")
-    }
 }
