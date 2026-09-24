@@ -12,8 +12,59 @@ import kotlin.math.roundToInt
 class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
 
     @Test
+    fun test_1mb_with_diff_speeds_in_kb() {
+        for(speedBase in 1..100 step 10) {
+            val speed = speedBase.KILOBYTES
+            doCopy(
+                1.MEGABYTES,
+                speed,
+                1000
+            )
+        }
+        for(speedBase in 100..1001 step 100) {
+            val speed = speedBase.KILOBYTES
+            doCopy(
+                1.MEGABYTES,
+                speed,
+                1000
+            )
+        }
+    }
+
+    // Как будет адекватно учитываться время,
+    // если для копирования 1кб со скоростью
+    // 1мб/с требуется 1мс, а минимальная
+    // единица внутреннего учёта как раз 1мс?
+    @Test
+    fun test_1kb_with_1mbs_with_diff_steps() {
+        for(steps in 1..100 step 10) {
+            doCopy(1.KILOBYTES,
+                1.MEGABYTES,
+                steps)
+        }
+        for(steps in 100..10001 step 100) {
+            doCopy(1.KILOBYTES,
+                1.MEGABYTES,
+                steps)
+        }
+    }
+
+    @Test
+    fun test_one_size_with_diff_speeds() {
+        val steps = 1000
+        for (sizeBase in 1 until 101 step 10) {
+            val size = sizeBase.KILOBYTES
+            println("------------------- size $sizeBase kb ----------------------")
+            for (speedBase in 1 until 101 step 10) {
+                val speed = speedBase.MEGABYTES
+                doCopy(size, speed, steps)
+            }
+        }
+    }
+
+    @Test
     fun a() {
-        repeat(10) { i ->
+        repeat(10) {
             val size = 100.KILOBYTES
             val speed = 2*size
             val steps = 1000
@@ -78,11 +129,12 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
         )
         val duration = System.currentTimeMillis() - startTime
         val durationPercent = (100 * duration / expectedDurationMs).roundToFloatingDigits(5)
+        val durationPercentAlert = if (durationPercent >= 150.0) " <----!----" else ""
 
         val resultMsg = "size:${dataSizeBytes.humanSizeBinary()}, " +
                 "speed:${speedBytesPerSec.humanSizeBinary()}/s, " +
                 "steps:$stepsPerSec, " +
-                "время: ${duration.humanDecimalPlaces} мс / ${expectedDurationMs.humanDecimalPlaces} мс (${durationPercent}%)"
+                "время: ${duration.humanDecimalPlaces} мс / ${expectedDurationMs.humanDecimalPlaces} мс (${durationPercent}%)$durationPercentAlert"
 
         println(resultMsg)
     }
