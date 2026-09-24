@@ -1,7 +1,8 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
-import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import java.io.InputStream
 import java.io.OutputStream
@@ -11,9 +12,9 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-class LimitedStreamCopierNew {
+class LimitedStreamCopierNs {
 
-    fun copyFromStreamToStream(
+    fun copyFromStreamToStreamNanos(
         inputStream: InputStream,
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
@@ -34,16 +35,17 @@ class LimitedStreamCopierNew {
         logD("copyFromStreamToStream() called with: speedBytesPerSecond = ${speedBytesPerSecond.humanSizeBinary()}/s, progressRatePerSecond = $progressRatePerSecond, stepsPerSecond = $stepsPerSecond")
         logD("------------------------------------------------------------------------------")
 
-        val dataCopyingSteps = min(speedBytesPerSecond, stepsPerSecond)
+        // Количество шагов в секунду не может быть больше скорости в байтах.
+        val dataCopyingSteps = min(stepsPerSecond, speedBytesPerSecond)
         logD("dataCopyingSteps: $dataCopyingSteps")
 
-        val dataCopyingTimeQuantMs = ceil(1000f / dataCopyingSteps).roundToLong()
-        logD("dataCopyingTimeQuantMs: $dataCopyingTimeQuantMs")
+        val expectedStepDurationNanos = ceil(NANOS_IN_SECOND / dataCopyingSteps).roundToLong()
+        logD("expectedStepDurationNanos: ${expectedStepDurationNanos.humanDecimalPlaces}")
 
-        val dataSizeToBeCopiedByQuant = ceil(1f * speedBytesPerSecond / dataCopyingSteps).roundToInt()
-        logD("dataSizeToBeCopiedByQuant: $dataSizeToBeCopiedByQuant")
+        val dataSizeToBeCopiedByStep = ceil(1f * speedBytesPerSecond / dataCopyingSteps).roundToInt()
+        logD("dataSizeToBeCopiedByStep: ${dataSizeToBeCopiedByStep.humanDecimalPlaces}")
 
-        val operationPortionSize = min(DEFAULT_BUFFER_SIZE, dataSizeToBeCopiedByQuant)
+        val operationPortionSize = min(DEFAULT_BUFFER_SIZE, dataSizeToBeCopiedByStep)
         logD("operationPortionSize: $operationPortionSize")
 
         var stepDataCopied = 0
@@ -52,29 +54,31 @@ class LimitedStreamCopierNew {
         val dataBuffer = ByteArray(operationPortionSize)
 
 
-        fun sleepIfNeeded(realDurationMs: Long, expectedDurationMs: Long,
-                          realDataSize: Int, expectedDataSize: Int) {
-
-            logD("sleepIfNeeded(), rldr:$realDurationMs, exdr:$expectedDurationMs, rlsz:$realDataSize, exsz:$expectedDataSize")
+        fun sleepIfNeeded(realDurationNanos: Long,
+                          expectedDurationNanos: Long,
+                          realDataSize: Int,
+                          expectedDataSize: Int
+        ) {
+            logD("sleepIfNeeded(), rldr:$realDurationNanos, exdr:${expectedDurationNanos.humanDecimalPlaces}, rlsz:$realDataSize, exsz:$expectedDataSize")
 
             // Время, необходимое для копирования данных, пересчитывается
             // согласно их объёму, обработанному на этом шаге.
             val dataFraction: Float = realDataSize.toFloat() / expectedDataSize
             logD("dataFraction:$dataFraction")
 
-            val correctedExpectedDurationMs = (dataFraction * expectedDurationMs).roundToLong()
-            logD("correctedExpectedDurationMs:$correctedExpectedDurationMs")
+            val correctedExpectedDurationNanos = (dataFraction * expectedDurationNanos).roundToLong()
+            logD("correctedExpectedDurationNanos:${correctedExpectedDurationNanos.humanDecimalPlaces}")
 
-            val timeFraction: Double = (1.toDouble() * realDurationMs / correctedExpectedDurationMs)
+            val timeFraction: Double = (1.toDouble() * realDurationNanos / correctedExpectedDurationNanos)
             logD("timeFraction: $timeFraction")
 
             // Если данные скопировались за время, меньшее положенного,
             // делаем паузу.
             if (timeFraction < 1.0) {
-                val sleepDiffMs = correctedExpectedDurationMs - realDurationMs
-                logD("досыпаю[$currentTimeMs] $sleepDiffMs мс (timeFraction:$timeFraction < 1.0)")
-                TimeUnit.MILLISECONDS.sleep(sleepDiffMs)
-                logD("доспал [$currentTimeMs]")
+                val sleepDiffNanos = correctedExpectedDurationNanos - realDurationNanos
+                logD("досыпаю[$currentTimeNanos] ${sleepDiffNanos.humanDecimalPlaces} нанос. (timeFraction:$timeFraction < 1.0)")
+                TimeUnit.NANOSECONDS.sleep(sleepDiffNanos)
+                logD("доспал [$currentTimeNanos]")
             } else {
                 logD("Спать не нужно (timeFraction: $timeFraction >= 1.0)")
             }
@@ -91,29 +95,31 @@ class LimitedStreamCopierNew {
                 break
             }
 
-            val startTimeMs = System.currentTimeMillis()
+            val startTimeNanos = currentTimeNanos
 
             outputStream.write(dataBuffer, 0, readBytes)
 
-            val stepDurationMs = System.currentTimeMillis() - startTimeMs
+            val realStepDurationNanos = currentTimeNanos - startTimeNanos
 
             stepDataCopied += readBytes
             totalDataCopied += readBytes
 
             if (readBytes < operationPortionSize) {
+                logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
                 sleepIfNeeded(
-                    stepDurationMs, dataCopyingTimeQuantMs,
+                    realStepDurationNanos, expectedStepDurationNanos,
                     readBytes, operationPortionSize
                 )
                 stepDataCopied = 0
             }
             else if (readBytes == operationPortionSize) {
+                logD("readBytes == operationPortionSize ($readBytes == $operationPortionSize)")
                 // Не последняя порция данных.
-                if (stepDataCopied >= dataSizeToBeCopiedByQuant) {
+                if (stepDataCopied >= dataSizeToBeCopiedByStep) {
                     // Пора считать скорость.
                     sleepIfNeeded(
-                        stepDurationMs, dataCopyingTimeQuantMs,
-                        stepDataCopied, dataSizeToBeCopiedByQuant
+                        realStepDurationNanos, expectedStepDurationNanos,
+                        stepDataCopied, dataSizeToBeCopiedByStep
                     )
                     stepDataCopied = 0
                 }
@@ -126,11 +132,13 @@ class LimitedStreamCopierNew {
         logD("")
     }
 
+
     private fun logD(text: String) {
-//        Log.d(TAG, text)
+        Log.d(TAG, text)
     }
 
     companion object {
-        val TAG: String = LimitedStreamCopierNew::class.java.simpleName
+        val TAG: String = LimitedStreamCopierNs::class.java.simpleName
+        const val NANOS_IN_SECOND: Double = 1_000_000_000.0
     }
 }

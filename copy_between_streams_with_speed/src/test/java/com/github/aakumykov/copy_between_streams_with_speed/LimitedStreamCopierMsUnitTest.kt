@@ -1,15 +1,18 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
+import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierMs.Companion.NANOS_IN_SECOND
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Test
 import kotlin.math.roundToInt
 
-class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
+class LimitedStreamCopierMsUnitTest : StreamCopierTestBase() {
 
     @Test
     fun test_1mb_with_diff_speeds_in_kb() {
@@ -31,23 +34,34 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
         }
     }
 
+
     // Как будет адекватно учитываться время,
     // если для копирования 1кб со скоростью
     // 1мб/с требуется 1мс, а минимальная
     // единица внутреннего учёта как раз 1мс?
     @Test
     fun test_1kb_with_1mbs_with_diff_steps() {
-        for(steps in 1..100 step 10) {
-            doCopy(1.KILOBYTES,
+        doCopyNanos(1000,
+            1_000_000,
+            1)
+
+        /*for(steps in 1..1 step 1) {
+            doCopyNanos(1.KILOBYTES,
+                1.MEGABYTES,
+                1000)
+        }*/
+        /*for(steps in 1..100 step 10) {
+            doCopyNanos(1.KILOBYTES,
                 1.MEGABYTES,
                 steps)
         }
         for(steps in 100..10001 step 100) {
-            doCopy(1.KILOBYTES,
+            doCopyNanos(1.KILOBYTES,
                 1.MEGABYTES,
                 steps)
-        }
+        }*/
     }
+
 
     @Test
     fun test_one_size_with_diff_speeds() {
@@ -144,7 +158,7 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
         prepareSourceAndTargetFiles(dataSizeBytes)
 
         val startTime = System.currentTimeMillis()
-        LimitedStreamCopierNew().copyFromStreamToStream(
+        LimitedStreamCopierMs().copyFromStreamToStream(
             getSourceFileStream,
             getTargetFileStream,
             speedBytesPerSec,
@@ -158,6 +172,38 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
                 "speed:${speedBytesPerSec.humanSizeBinary()}/s, " +
                 "steps:$stepsPerSec, " +
                 "время: ${duration.humanDecimalPlaces} мс / ${expectedDurationMs.humanDecimalPlaces} мс (${durationPercent}%)$durationPercentAlert"
+
+        println(resultMsg)
+    }
+
+    private fun doCopyNanos(dataSizeBytes: Int,
+                       speedBytesPerSec: Int,
+                       stepsPerSec: Int) {
+
+        val expectedDurationSeconds: Double = 1.0 * dataSizeBytes / speedBytesPerSec
+        val expectedDurationNanos: Double = expectedDurationSeconds * NANOS_IN_SECOND
+
+        prepareSourceAndTargetFiles(dataSizeBytes)
+
+        val startTime: Long = currentTimeNanos
+
+        LimitedStreamCopierNs().copyFromStreamToStreamNanos(
+            getSourceFileStream,
+            getTargetFileStream,
+            speedBytesPerSec,
+            stepsPerSecond = stepsPerSec
+        )
+
+        val duration: Long = currentTimeNanos - startTime
+        println("duration: ${duration.humanDecimalPlaces}")
+
+        val durationPercent: Double = (100 * duration / expectedDurationNanos).roundToFloatingDigits(5)
+        val durationPercentAlert = if (durationPercent >= 150.0) " <----!----" else ""
+
+        val resultMsg = "size:${dataSizeBytes.humanSizeBinary()}, " +
+                "speed:${speedBytesPerSec.humanSizeBinary()}/s, " +
+                "steps:$stepsPerSec, " +
+                "время: ${duration.humanDecimalPlaces} нс / ${expectedDurationNanos.humanDecimalPlaces} нс (${durationPercent}%)$durationPercentAlert"
 
         println(resultMsg)
     }
