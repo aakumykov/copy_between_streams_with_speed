@@ -54,10 +54,12 @@ class LimitedStreamCopierNs {
         val dataBuffer = ByteArray(operationPortionSize)
 
 
-        fun sleepIfNeeded(realDurationNanos: Long,
-                          expectedDurationNanos: Long,
-                          realDataSize: Int,
-                          expectedDataSize: Int
+        fun sleepIfNeeded(
+            copySteps: Int,
+            realDurationNanos: Long,
+            expectedDurationNanos: Long,
+            realDataSize: Int,
+            expectedDataSize: Int
         ) {
             logD("sleepIfNeeded(), rldr:$realDurationNanos, exdr:${expectedDurationNanos.humanDecimalPlaces}, rlsz:$realDataSize, exsz:$expectedDataSize")
 
@@ -86,9 +88,14 @@ class LimitedStreamCopierNs {
             // Если копирование данных заняло
         }
 
+
+        var copySteps = 0
+
         while(true) {
             val readBytes = inputStream.read(dataBuffer, 0, operationPortionSize)
 //            logD("readBytes: $readBytes")
+
+            copySteps++
 
             if (-1 == readBytes) {
                 logD("Данные закончились")
@@ -107,6 +114,7 @@ class LimitedStreamCopierNs {
             if (readBytes < operationPortionSize) {
                 logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
                 sleepIfNeeded(
+                    copySteps,
                     realStepDurationNanos, expectedStepDurationNanos,
                     readBytes, operationPortionSize
                 )
@@ -118,6 +126,7 @@ class LimitedStreamCopierNs {
                 if (stepDataCopied >= dataSizeToBeCopiedByStep) {
                     // Пора считать скорость.
                     sleepIfNeeded(
+                        copySteps,
                         realStepDurationNanos, expectedStepDurationNanos,
                         stepDataCopied, dataSizeToBeCopiedByStep
                     )
