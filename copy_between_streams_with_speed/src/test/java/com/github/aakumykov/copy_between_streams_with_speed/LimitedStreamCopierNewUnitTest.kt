@@ -51,7 +51,30 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
 
     @Test
     fun test_one_size_with_diff_speeds() {
-        val steps = 1000
+
+        for (timeout in 1..10 step 1) {
+            val m1 = System.currentTimeMillis()
+            val n1 = System.nanoTime()
+            Thread.sleep(timeout.toLong())
+            val m2 = System.currentTimeMillis()
+            val n2 = System.nanoTime()
+            val mDiff = m2 - m1
+            val nDiff = n2 - n1
+            println()
+        }
+
+        for (timeout in 10..100 step 10) {
+            val m1 = System.currentTimeMillis()
+            val n1 = System.nanoTime()
+            Thread.sleep(timeout.toLong())
+            val m2 = System.currentTimeMillis()
+            val n2 = System.nanoTime()
+            val mDiff = m2 - m1
+            val nDiff = n2 - n1
+            println()
+        }
+
+        /*val steps = 10
         for (sizeBase in 1 until 101 step 10) {
             val size = sizeBase.KILOBYTES
             println("------------------- size $sizeBase kb ----------------------")
@@ -59,7 +82,7 @@ class LimitedStreamCopierNewUnitTest : StreamCopierTestBase() {
                 val speed = speedBase.MEGABYTES
                 doCopy(size, speed, steps)
             }
-        }
+        }*/
     }
 
     @Test
