@@ -1,4 +1,4 @@
-package com.github.aakumykov.copy_between_streams_with_speed
+package com.github.aakumykov.copy_between_streams_with_speed.utils_tests
 
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random

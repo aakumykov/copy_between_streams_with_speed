@@ -11,18 +11,50 @@ import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Test
 import kotlin.math.roundToInt
 
-class LimitedStreamCopierMsUnitTest : StreamCopierTestBase() {
+class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
+
+    @Test
+    fun test_100_900kb_with_100_1000kbs() {
+        for(sizeBase in 100..900 step 100) {
+            val size = sizeBase.KILOBYTES
+            println("SIZE: ${size.humanSizeBinary()}")
+            for(speedBase in 100..900 step 100) {
+                val speed = speedBase.KILOBYTES
+                doCopy(
+                    size,
+                    speed,
+                    1000
+                )
+            }
+        }
+    }
+
+    @Test
+    fun test_1_10mb_with_1_10mbs() {
+        for(sizeBase in 1..10 step 1) {
+            val size = sizeBase.MEGABYTES
+            println("SIZE: ${size.humanSizeBinary()}")
+            for(speedBase in 1..10 step 1) {
+                val speed = speedBase.MEGABYTES
+                doCopy(
+                    size,
+                    speed,
+                    1000
+                )
+            }
+        }
+    }
 
     @Test
     fun test_1mb_with_diff_speeds_in_kb() {
-        for(speedBase in 1..100 step 10) {
+        /*for(speedBase in 1..100 step 10) {
             val speed = speedBase.KILOBYTES
             doCopy(
                 1.MEGABYTES,
                 speed,
                 1000
             )
-        }
+        }*/
         for(speedBase in 100..1001 step 100) {
             val speed = speedBase.KILOBYTES
             doCopy(

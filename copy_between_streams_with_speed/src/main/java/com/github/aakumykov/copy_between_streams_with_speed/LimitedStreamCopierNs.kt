@@ -142,7 +142,7 @@ class LimitedStreamCopierNs {
 
 
     private fun logD(text: String) {
-        Log.d(TAG, text)
+//        Log.d(TAG, text)
     }
 
     companion object {
