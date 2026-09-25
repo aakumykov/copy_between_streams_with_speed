@@ -234,7 +234,7 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
 
         val startTime: Long = currentTimeNanos
 
-        LimitedStreamCopierNs().copyFromStreamToStreamNanos(
+        LimitedStreamCopierNs().copyFromStreamToStream(
             getSourceFileStream,
             getTargetFileStream,
             speedBytesPerSec,

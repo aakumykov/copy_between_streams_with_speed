@@ -14,13 +14,14 @@ import kotlin.math.roundToLong
 
 class LimitedStreamCopierNs {
 
-    fun copyFromStreamToStreamNanos(
+    fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
         progressRatePerSecond: Int = 1,
         stepsPerSecond: Int = MILLIS_IN_SECOND,
-        progressCallback: ((bytesTransferred: Long) -> Unit)? = null
+        progressCallback: ((bytesTransferred: Long, speedBytesPerSec: Long) -> Unit)? = null,
+        finishCallback: ((bytesTransferred: Long) -> Unit)? = null,
     ) {
         if (speedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero ($speedBytesPerSecond)")
@@ -88,8 +89,12 @@ class LimitedStreamCopierNs {
 
         fun showProgressIfNeeded(totalDataCopied: Long, force: Boolean = false) {
             progressCallback?.also {
+
                 val currentTime = currentTimeMs
                 val timeElapsed = currentTime - lastProgressShowTimeMs
+
+                val speed =
+
                 if (timeElapsed >= progressPeriodMs || force) {
                     progressCallback.invoke(totalDataCopied)
                     lastProgressShowTimeMs = currentTime
@@ -103,6 +108,7 @@ class LimitedStreamCopierNs {
 
             if (-1 == readBytes) {
                 logD("Данные закончились")
+                finishCallback?.invoke(totalDataCopied)
                 break
             }
 
@@ -168,9 +174,4 @@ class LimitedStreamCopierNs {
         const val NANOS_IN_SECOND: Double = 1_000_000_000.0
         const val MILLIS_IN_SECOND: Int = 1_000
     }
-}
-
-
-fun Long.percentOf(other: Long): Double {
-    return 1.0 * this / other
 }
