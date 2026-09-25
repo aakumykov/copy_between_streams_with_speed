@@ -42,7 +42,7 @@ class LimitedStreamCopierMsUnitTest : StreamCopierTestBase() {
     fun test_1kb_with_1mbs_with_diff_steps() {
         doCopyNanos(1000,
             1_000_000,
-            1)
+            1_000)
 
         /*for(steps in 1..1 step 1) {
             doCopyNanos(1.KILOBYTES,
