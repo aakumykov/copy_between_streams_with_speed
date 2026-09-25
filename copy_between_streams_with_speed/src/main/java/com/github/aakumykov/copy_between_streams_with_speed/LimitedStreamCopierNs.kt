@@ -55,34 +55,26 @@ class LimitedStreamCopierNs {
 
 
         fun sleepIfNeeded(
-            copySteps: Int,
             realDurationNanos: Long,
             expectedDurationNanos: Long,
-            realDataSize: Int,
-            expectedDataSize: Int
         ) {
-            logD("sleepIfNeeded(), rldr:$realDurationNanos, exdr:${expectedDurationNanos.humanDecimalPlaces}, rlsz:$realDataSize, exsz:$expectedDataSize")
+            logD("sleepIfNeeded(), " +
+                    "rldr:$realDurationNanos, " +
+                    "exdr:${expectedDurationNanos.humanDecimalPlaces}")
 
-            // Время, необходимое для копирования данных, пересчитывается
-            // согласно их объёму, обработанному на этом шаге.
-            val dataFraction: Float = realDataSize.toFloat() / expectedDataSize
-            logD("dataFraction:$dataFraction")
-
-            val correctedExpectedDurationNanos = (dataFraction * expectedDurationNanos).roundToLong()
-            logD("correctedExpectedDurationNanos:${correctedExpectedDurationNanos.humanDecimalPlaces}")
-
-            val timeFraction: Double = (1.toDouble() * realDurationNanos / correctedExpectedDurationNanos)
-            logD("timeFraction: $timeFraction")
+            val sleepDiffNanos = expectedDurationNanos - realDurationNanos
+            logD("sleepDiffNanos: ${sleepDiffNanos.humanDecimalPlaces}")
 
             // Если данные скопировались за время, меньшее положенного,
             // делаем паузу.
-            if (timeFraction < 1.0) {
-                val sleepDiffNanos = correctedExpectedDurationNanos - realDurationNanos
-                logD("досыпаю[$currentTimeNanos] ${sleepDiffNanos.humanDecimalPlaces} нанос. (timeFraction:$timeFraction < 1.0)")
+            if (sleepDiffNanos > 0) {
+                val sleepStartNs = currentTimeNanos
+                logD("досыпаю ${sleepDiffNanos.humanDecimalPlaces} нанос.")
                 TimeUnit.NANOSECONDS.sleep(sleepDiffNanos)
-                logD("доспал [$currentTimeNanos]")
+                val realSleepDurationNs = currentTimeNanos - sleepStartNs
+                logD("доспал: ${realSleepDurationNs.humanDecimalPlaces} нанос.")
             } else {
-                logD("Спать не нужно (timeFraction: $timeFraction >= 1.0)")
+                logD("Спать не нужно (timeFraction: ${sleepDiffNanos.humanDecimalPlaces} <= 0)")
             }
 
             // Если копирование данных заняло
@@ -113,10 +105,18 @@ class LimitedStreamCopierNs {
 
             if (readBytes < operationPortionSize) {
                 logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
+
+                val dataFraction: Float = 1f * readBytes / operationPortionSize
+                logD("dataFraction: $dataFraction")
+
+                val correctedExpectedStepDuration = (dataFraction * expectedStepDurationNanos).roundToLong()
+                logD("correctedExpectedStepDuration: ${correctedExpectedStepDuration.humanDecimalPlaces}")
+
+                logD("realDurationNanos: ${realStepDurationNanos.humanDecimalPlaces}")
+
                 sleepIfNeeded(
-                    copySteps,
-                    realStepDurationNanos, expectedStepDurationNanos,
-                    readBytes, operationPortionSize
+                    realStepDurationNanos,
+                    correctedExpectedStepDuration,
                 )
                 stepDataCopied = 0
             }
@@ -126,9 +126,8 @@ class LimitedStreamCopierNs {
                 if (stepDataCopied >= dataSizeToBeCopiedByStep) {
                     // Пора считать скорость.
                     sleepIfNeeded(
-                        copySteps,
-                        realStepDurationNanos, expectedStepDurationNanos,
-                        stepDataCopied, dataSizeToBeCopiedByStep
+                        realStepDurationNanos,
+                        expectedStepDurationNanos
                     )
                     stepDataCopied = 0
                 }
@@ -150,4 +149,9 @@ class LimitedStreamCopierNs {
         val TAG: String = LimitedStreamCopierNs::class.java.simpleName
         const val NANOS_IN_SECOND: Double = 1_000_000_000.0
     }
+}
+
+
+fun Long.percentOf(other: Long): Double {
+    return 1.0 * this / other
 }

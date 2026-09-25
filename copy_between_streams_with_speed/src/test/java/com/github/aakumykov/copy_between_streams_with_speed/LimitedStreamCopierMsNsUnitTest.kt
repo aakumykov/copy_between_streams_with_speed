@@ -1,6 +1,5 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierMs.Companion.NANOS_IN_SECOND
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
@@ -195,7 +194,7 @@ class LimitedStreamCopierMsUnitTest : StreamCopierTestBase() {
         )
 
         val duration: Long = currentTimeNanos - startTime
-        println("duration: ${duration.humanDecimalPlaces}")
+        println("in test duration: ${duration.humanDecimalPlaces}")
 
         val durationPercent: Double = (100 * duration / expectedDurationNanos).roundToFloatingDigits(5)
         val durationPercentAlert = if (durationPercent >= 150.0) " <----!----" else ""
