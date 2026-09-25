@@ -8,6 +8,7 @@ import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNan
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
+import org.junit.Assert
 import org.junit.Test
 import kotlin.math.roundToInt
 
@@ -15,9 +16,13 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
 
     @Test
     fun test_progress_callback() {
-        doCopyNanos(1.MEGABYTES, 300.KILOBYTES, stepsPerSec = 1000) { transferred ->
+        val progressList = mutableListOf<Long>()
+        val dataSize = 1.MEGABYTES
+        doCopyNanos(dataSize, 300.KILOBYTES, stepsPerSec = 1000) { transferred: Long ->
             println("прогресс: ${transferred.humanDecimalPlaces} (${transferred.humanSizeBinary()})")
+            progressList.add(transferred)
         }
+        Assert.assertEquals(dataSize.toLong(), progressList.last())
     }
 
     @Test

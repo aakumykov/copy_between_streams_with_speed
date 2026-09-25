@@ -86,11 +86,11 @@ class LimitedStreamCopierNs {
         }
 
 
-        fun showProgressIfNeeded(totalDataCopied: Long) {
+        fun showProgressIfNeeded(totalDataCopied: Long, force: Boolean = false) {
             progressCallback?.also {
                 val currentTime = currentTimeMs
                 val timeElapsed = currentTime - lastProgressShowTimeMs
-                if (timeElapsed >= progressPeriodMs) {
+                if (timeElapsed >= progressPeriodMs || force) {
                     progressCallback.invoke(totalDataCopied)
                     lastProgressShowTimeMs = currentTime
                 }
@@ -131,7 +131,7 @@ class LimitedStreamCopierNs {
                     correctedExpectedStepDuration,
                 )
 
-                showProgressIfNeeded(totalDataCopied)
+                showProgressIfNeeded(totalDataCopied, true)
 
                 stepDataCopied = 0
             }
