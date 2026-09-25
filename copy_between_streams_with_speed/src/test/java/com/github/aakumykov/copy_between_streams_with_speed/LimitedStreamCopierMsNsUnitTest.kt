@@ -14,6 +14,13 @@ import kotlin.math.roundToInt
 class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
 
     @Test
+    fun test_progress_callback() {
+        doCopyNanos(1.MEGABYTES, 300.KILOBYTES, stepsPerSec = 1000) { transferred ->
+            println("прогресс: ${transferred.humanDecimalPlaces} (${transferred.humanSizeBinary()})")
+        }
+    }
+
+    @Test
     fun test_100_900kb_with_100_1000kbs() {
         for(sizeBase in 100..900 step 100) {
             val size = sizeBase.KILOBYTES
@@ -182,7 +189,8 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
 
     private fun doCopy(dataSizeBytes: Int,
                        speedBytesPerSec: Int,
-                       stepsPerSec: Int) {
+                       stepsPerSec: Int,
+    ) {
 
         val expectedDurationMs = 1000.toDouble() * dataSizeBytes / speedBytesPerSec
 
@@ -193,7 +201,7 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
             getSourceFileStream,
             getTargetFileStream,
             speedBytesPerSec,
-            stepsPerSecond = stepsPerSec
+            stepsPerSecond = stepsPerSec,
         )
         val duration = System.currentTimeMillis() - startTime
         val durationPercent = (100 * duration / expectedDurationMs).roundToFloatingDigits(5)
@@ -207,9 +215,12 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
         println(resultMsg)
     }
 
+
     private fun doCopyNanos(dataSizeBytes: Int,
                        speedBytesPerSec: Int,
-                       stepsPerSec: Int) {
+                       stepsPerSec: Int,
+                        progressCallback: ((bytesTransferred: Long) -> Unit)? = null
+    ) {
 
         val expectedDurationSeconds: Double = 1.0 * dataSizeBytes / speedBytesPerSec
         val expectedDurationNanos: Double = expectedDurationSeconds * NANOS_IN_SECOND
@@ -222,7 +233,8 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
             getSourceFileStream,
             getTargetFileStream,
             speedBytesPerSec,
-            stepsPerSecond = stepsPerSec
+            stepsPerSecond = stepsPerSec,
+            progressCallback = progressCallback
         )
 
         val duration: Long = currentTimeNanos - startTime

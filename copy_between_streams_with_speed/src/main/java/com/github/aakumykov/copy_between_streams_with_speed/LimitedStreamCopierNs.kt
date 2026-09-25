@@ -1,6 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.util.Log
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
@@ -19,7 +19,8 @@ class LimitedStreamCopierNs {
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
         progressRatePerSecond: Int = 1,
-        stepsPerSecond: Int = 1000
+        stepsPerSecond: Int = MILLIS_IN_SECOND,
+        progressCallback: ((bytesTransferred: Long) -> Unit)? = null
     ) {
         if (speedBytesPerSecond <= 0)
             throw IllegalArgumentException("Speed must be greater than zero ($speedBytesPerSecond)")
@@ -48,16 +49,20 @@ class LimitedStreamCopierNs {
         val operationPortionSize = min(DEFAULT_BUFFER_SIZE, dataSizeToBeCopiedByStep)
         logD("operationPortionSize: $operationPortionSize")
 
-        var stepDataCopied = 0
-        var totalDataCopied: Long = 0
+        val progressPeriodMs: Long = (MILLIS_IN_SECOND / progressRatePerSecond).toLong()
+        logD("progressPeriodMs: $progressPeriodMs")
+
 
         val dataBuffer = ByteArray(operationPortionSize)
 
 
-        fun sleepIfNeeded(
-            realDurationNanos: Long,
-            expectedDurationNanos: Long,
-        ) {
+        var stepDataCopied = 0
+        var totalDataCopied: Long = 0
+        var lastProgressShowTimeMs: Long = currentTimeMs
+
+
+        fun sleepIfNeeded(realDurationNanos: Long, expectedDurationNanos: Long, ) {
+
             logD("sleepIfNeeded(), " +
                     "rldr:$realDurationNanos, " +
                     "exdr:${expectedDurationNanos.humanDecimalPlaces}")
@@ -81,13 +86,20 @@ class LimitedStreamCopierNs {
         }
 
 
-        var copySteps = 0
+        fun showProgressIfNeeded(totalDataCopied: Long) {
+            progressCallback?.also {
+                val currentTime = currentTimeMs
+                val timeElapsed = currentTime - lastProgressShowTimeMs
+                if (timeElapsed >= progressPeriodMs) {
+                    progressCallback.invoke(totalDataCopied)
+                    lastProgressShowTimeMs = currentTime
+                }
+            }
+        }
+
 
         while(true) {
             val readBytes = inputStream.read(dataBuffer, 0, operationPortionSize)
-//            logD("readBytes: $readBytes")
-
-            copySteps++
 
             if (-1 == readBytes) {
                 logD("Данные закончились")
@@ -118,6 +130,9 @@ class LimitedStreamCopierNs {
                     realStepDurationNanos,
                     correctedExpectedStepDuration,
                 )
+
+                showProgressIfNeeded(totalDataCopied)
+
                 stepDataCopied = 0
             }
             else if (readBytes == operationPortionSize) {
@@ -129,6 +144,9 @@ class LimitedStreamCopierNs {
                         realStepDurationNanos,
                         expectedStepDurationNanos
                     )
+
+                    showProgressIfNeeded(totalDataCopied)
+
                     stepDataCopied = 0
                 }
             } else {
@@ -148,6 +166,7 @@ class LimitedStreamCopierNs {
     companion object {
         val TAG: String = LimitedStreamCopierNs::class.java.simpleName
         const val NANOS_IN_SECOND: Double = 1_000_000_000.0
+        const val MILLIS_IN_SECOND: Int = 1_000
     }
 }
 
