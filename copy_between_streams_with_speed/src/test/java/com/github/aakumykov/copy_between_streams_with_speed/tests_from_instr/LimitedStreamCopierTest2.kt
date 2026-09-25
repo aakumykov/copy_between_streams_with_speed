@@ -4,7 +4,6 @@ import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
-import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -22,7 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -164,7 +162,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         limitedStreamCopier
             .copyFromStreamToStream(sourceFileStream, targetFileStream,
                 speed, rate,
-                progressCallback = { _ ->
+                progressCallback = { _,_ ->
                     progressCallbackCount.getAndIncrement()
                 },
                 finishCallback = { _ ->
@@ -246,7 +244,7 @@ class LimitedStreamCopierTest2 : TestBase() {
                     targetFileStream,
                     speed,
                     progressRate,
-                    progressCallback = { bytes ->
+                    progressCallback = { bytes,_ ->
                         add(bytes)
                     }
                 )
@@ -563,15 +561,15 @@ class LimitedStreamCopierTest2 : TestBase() {
                 targetFileStream,
                 speedBytesPerSec,
                 progressRatePerSec,
-                progressCallback = { bytes ->
+                progressCallback = { bytes, speed ->
                     progressList.add(bytes)
-//                    speedList.add(speed)
+                    speedList.add(speed)
                 }, finishCallback = { _ ->
                     finishCallbackWasTriggered.set(true)
                 })
 
         val realCopyTimeMs = System.currentTimeMillis() - startTimeMs
-        val timeDiffMs = estimatedCopyTimeMs - realCopyTimeMs
+        val timeDiffMs = realCopyTimeMs - estimatedCopyTimeMs
         val timeDiffPercents = (1.toDouble() * timeDiffMs / estimatedCopyTimeMs).roundToFloatingDigits(2)
 
         delayToAllowCallbackFinish(progressRatePerSec)
@@ -584,8 +582,8 @@ class LimitedStreamCopierTest2 : TestBase() {
         Assert.assertTrue("Был вызван коллбек завершения",
             finishCallbackWasTriggered.get())
 
-        val msg = "sz:${dataSizeBytes.humanSizeBinary()}, " +
-                "sp:${speedBytesPerSec.humanSizeBinary()}, " +
+        val msg = "sz:${dataSizeBytes.humanDecimalPlaces}, " +
+                "sp:${speedBytesPerSec.humanDecimalPlaces}, " +
                 "rt:$progressRatePerSec, " +
                 "est.time:${estimatedCopyTimeMs.humanDecimalPlaces}, " +
                 "real.time:${realCopyTimeMs.humanDecimalPlaces}, " +
@@ -600,7 +598,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         Assert.assertTrue("Размер списка прогресса (${progressList.size}) >= $minimumProgressListSize",
             progressList.size >= minimumProgressListSize)
 
-        Assert.assertTrue("Размер списка скорости >= $minimumSpeedListSize",
+        Assert.assertTrue("Размер списка скорости (${speedList.size}) >= $minimumSpeedListSize",
             speedList.size >= minimumSpeedListSize)
 
         if (dataSizeBytes > 1) {

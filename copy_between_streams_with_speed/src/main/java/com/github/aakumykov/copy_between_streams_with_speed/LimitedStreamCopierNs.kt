@@ -12,6 +12,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
+// TODO: избавться от преобразований данных
 class LimitedStreamCopierNs {
 
     fun copyFromStreamToStream(
@@ -87,16 +88,22 @@ class LimitedStreamCopierNs {
         }
 
 
-        fun showProgressIfNeeded(totalDataCopied: Long, force: Boolean = false) {
+        fun showProgressIfNeeded(
+            totalDataSize: Long,
+            stepDataSize: Int,
+            stepDurationNanos: Long,
+            force: Boolean = false
+        ) {
             progressCallback?.also {
 
                 val currentTime = currentTimeMs
                 val timeElapsed = currentTime - lastProgressShowTimeMs
 
-                val speed =
+                // TODO: избавиться от округления
+                val speed = (stepDataSize / stepDurationNanos / NANOS_IN_SECOND).roundToLong()
 
                 if (timeElapsed >= progressPeriodMs || force) {
-                    progressCallback.invoke(totalDataCopied)
+                    progressCallback.invoke(totalDataSize, speed)
                     lastProgressShowTimeMs = currentTime
                 }
             }
@@ -137,7 +144,12 @@ class LimitedStreamCopierNs {
                     correctedExpectedStepDuration,
                 )
 
-                showProgressIfNeeded(totalDataCopied, true)
+                showProgressIfNeeded(
+                    totalDataCopied,
+                    readBytes,
+                    realStepDurationNanos,
+                    true
+                )
 
                 stepDataCopied = 0
             }
@@ -151,7 +163,11 @@ class LimitedStreamCopierNs {
                         expectedStepDurationNanos
                     )
 
-                    showProgressIfNeeded(totalDataCopied)
+                    showProgressIfNeeded(
+                        totalDataCopied,
+                        stepDataCopied,
+                        realStepDurationNanos
+                    )
 
                     stepDataCopied = 0
                 }
@@ -171,7 +187,7 @@ class LimitedStreamCopierNs {
 
     companion object {
         val TAG: String = LimitedStreamCopierNs::class.java.simpleName
-        const val NANOS_IN_SECOND: Double = 1_000_000_000.0
+        const val NANOS_IN_SECOND: Double = 1_000_000_000.0 // TODO: переделать в Long
         const val MILLIS_IN_SECOND: Int = 1_000
     }
 }

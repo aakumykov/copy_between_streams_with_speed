@@ -18,10 +18,15 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
     fun test_progress_callback() {
         val progressList = mutableListOf<Long>()
         val dataSize = 1.MEGABYTES
-        doCopyNanos(dataSize, 300.KILOBYTES, stepsPerSec = 1000) { transferred: Long ->
-            println("прогресс: ${transferred.humanDecimalPlaces} (${transferred.humanSizeBinary()})")
-            progressList.add(transferred)
-        }
+        doCopyNanos(
+            dataSize,
+            300.KILOBYTES,
+            stepsPerSec = 1000,
+            progressCallback = { transferred: Long, speedBytesPerSec: Long ->
+                println("прогресс: ${transferred.humanDecimalPlaces} (${transferred.humanSizeBinary()})")
+                progressList.add(transferred)
+            }
+        )
         Assert.assertEquals(dataSize.toLong(), progressList.last())
     }
 
@@ -224,7 +229,8 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
     private fun doCopyNanos(dataSizeBytes: Int,
                        speedBytesPerSec: Int,
                        stepsPerSec: Int,
-                        progressCallback: ((bytesTransferred: Long) -> Unit)? = null
+                        progressCallback: ((bytesTransferred: Long, speedBytesPerSec: Long) -> Unit)? = null,
+                        finishCallback: ((totalBytesTransferred: Long) -> Unit)? = null,
     ) {
 
         val expectedDurationSeconds: Double = 1.0 * dataSizeBytes / speedBytesPerSec
@@ -239,7 +245,8 @@ class LimitedStreamCopierMsNsUnitTest : StreamCopierTestBase() {
             getTargetFileStream,
             speedBytesPerSec,
             stepsPerSecond = stepsPerSec,
-            progressCallback = progressCallback
+            progressCallback = progressCallback,
+            finishCallback = finishCallback
         )
 
         val duration: Long = currentTimeNanos - startTime
