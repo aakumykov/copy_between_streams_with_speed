@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
@@ -58,8 +59,8 @@ class LimitedStreamCopierNs {
         val dataBuffer = ByteArray(operationPortionSize)
 
 
-        var stepDataCopied = 0
         var totalDataCopied: Long = 0
+        var stepDataCopied = 0
         var lastProgressShowTimeMs: Long = currentTimeMs
 
 
@@ -100,7 +101,7 @@ class LimitedStreamCopierNs {
                 val timeElapsed = currentTime - lastProgressShowTimeMs
 
                 // TODO: избавиться от округления
-                val speed = (stepDataSize / stepDurationNanos / NANOS_IN_SECOND).roundToLong()
+                val speed = (1f * stepDataSize / stepDurationNanos).roundToLong()
 
                 if (timeElapsed >= progressPeriodMs || force) {
                     progressCallback.invoke(totalDataSize, speed)
@@ -119,14 +120,16 @@ class LimitedStreamCopierNs {
                 break
             }
 
-            val startTimeNanos = currentTimeNanos
+
+            val stepStartTimeNanos = currentTimeNanos
 
             outputStream.write(dataBuffer, 0, readBytes)
 
-            val realStepDurationNanos = currentTimeNanos - startTimeNanos
+            val stepDurationNanos = currentTimeNanos - stepStartTimeNanos
 
             stepDataCopied += readBytes
             totalDataCopied += readBytes
+
 
             if (readBytes < operationPortionSize) {
                 logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
@@ -137,17 +140,17 @@ class LimitedStreamCopierNs {
                 val correctedExpectedStepDuration = (dataFraction * expectedStepDurationNanos).roundToLong()
                 logD("correctedExpectedStepDuration: ${correctedExpectedStepDuration.humanDecimalPlaces}")
 
-                logD("realDurationNanos: ${realStepDurationNanos.humanDecimalPlaces}")
+                logD("realDurationNanos: ${stepDurationNanos.humanDecimalPlaces}")
 
                 sleepIfNeeded(
-                    realStepDurationNanos,
+                    stepDurationNanos,
                     correctedExpectedStepDuration,
                 )
 
                 showProgressIfNeeded(
                     totalDataCopied,
                     readBytes,
-                    realStepDurationNanos,
+                    stepDurationNanos,
                     true
                 )
 
@@ -159,14 +162,14 @@ class LimitedStreamCopierNs {
                 if (stepDataCopied >= dataSizeToBeCopiedByStep) {
                     // Пора считать скорость.
                     sleepIfNeeded(
-                        realStepDurationNanos,
+                        stepDurationNanos,
                         expectedStepDurationNanos
                     )
 
                     showProgressIfNeeded(
                         totalDataCopied,
                         stepDataCopied,
-                        realStepDurationNanos
+                        stepDurationNanos
                     )
 
                     stepDataCopied = 0
@@ -182,7 +185,7 @@ class LimitedStreamCopierNs {
 
 
     private fun logD(text: String) {
-//        Log.d(TAG, text)
+        Log.d(TAG, text)
     }
 
     companion object {

@@ -82,7 +82,7 @@ abstract class TestBase {
 
 
     protected fun writeTestDataToFile(file: File, dataSizeBytes: Int) {
-        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) СТАРТ")
+//        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) СТАРТ")
 
         val pieceSize = DEFAULT_BUFFER_SIZE
         val mainSteps = dataSizeBytes / pieceSize
@@ -95,7 +95,7 @@ abstract class TestBase {
                 outputStream.write(data)
                 val count = data.size
                 alreadyWritten += count
-                println("записано ${count}, всего ${alreadyWritten.humanDecimalPlaces}")
+//                println("записано ${count}, всего ${alreadyWritten.humanDecimalPlaces}")
             }
 
             repeat(mainSteps) {
@@ -111,6 +111,6 @@ abstract class TestBase {
             file.length()
         )
 
-        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) ФИНИШ")
+//        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) ФИНИШ")
     }
 }

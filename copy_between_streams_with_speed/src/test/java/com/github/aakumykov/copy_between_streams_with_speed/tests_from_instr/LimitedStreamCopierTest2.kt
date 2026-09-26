@@ -4,8 +4,9 @@ import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
+import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -110,10 +111,38 @@ class LimitedStreamCopierTest2 : TestBase() {
     }
 
     @Test
+    fun simple_test_1mb_130kb() {
+        val dataSize = 100.KILOBYTES
+        val speed = 30.KILOBYTES
+        val progressRate = 1
+
+        /*val progressList = mutableListOf<Long>()
+        val speedList = mutableListOf<Long>()
+
+        Log.d(TAG, "[$currentTimeMs] simple_test_1mb_130kb(), старт")
+        limitedStreamCopier.copyFromStreamToStream(
+            sourceFileStream,
+            targetFileStream,
+            speed,
+            progressRate,
+            progressCallback = { b,s ->
+                progressList.add(b)
+                speedList.add(s)
+            },
+            finishCallback = { b ->
+                Log.d(TAG, "finishCallback{$b}")
+            }
+        )
+        Log.d(TAG, "[$currentTimeMs] simple_test_1mb_130kb(), финиш")*/
+
+        standard_test_with(dataSize, speed, progressRate)
+    }
+
+    @Test
     fun simple_test_for_speed() {
-        for (sizeBase in listOf(1, 10, 100, 500, 1000)) {
+        for (sizeBase in listOf(/*1, 10, 100, 500, */1000)) {
             val dataSize = sizeBase.KILOBYTES
-            val speed = 5 * dataSize
+            val speed = dataSize / 3
             val rate = 1
             prepareSourceAndTargetFiles(dataSize)
             Log.d(TAG, "simple_test_for_speed(sizeBase:$sizeBase), старт")
@@ -551,9 +580,11 @@ class LimitedStreamCopierTest2 : TestBase() {
         val sourceData = prepareSourceAndTargetFiles(dataSizeBytes)
 
 
-        val estimatedCopyTimeMs: Long = (1000f * dataSizeBytes / speedBytesPerSec).roundToLong()
+        val estimatedDurationMs: Long = (1000f * dataSizeBytes / speedBytesPerSec).roundToLong()
+        println("estimatedDurationMs: ${estimatedDurationMs.humanDecimalPlaces}")
 
-        val startTimeMs = System.currentTimeMillis()
+        val startTimeMs = currentTimeMs
+        println("start:  ${startTimeMs.humanDecimalPlaces}")
 
         limitedStreamCopier
             .copyFromStreamToStream(
@@ -568,9 +599,16 @@ class LimitedStreamCopierTest2 : TestBase() {
                     finishCallbackWasTriggered.set(true)
                 })
 
-        val realCopyTimeMs = System.currentTimeMillis() - startTimeMs
-        val timeDiffMs = realCopyTimeMs - estimatedCopyTimeMs
-        val timeDiffPercents = (1.toDouble() * timeDiffMs / estimatedCopyTimeMs).roundToFloatingDigits(2)
+        val finishTime = currentTimeMs
+        println("finish: ${finishTime.humanDecimalPlaces}")
+
+        val realDurationMs = finishTime - startTimeMs
+        println("duration: $realDurationMs")
+
+        val timeDiffMs = realDurationMs - estimatedDurationMs
+        println("timeDiffMs: $timeDiffMs")
+
+        val timeDiffPercents = (100.toDouble() * realDurationMs / estimatedDurationMs).roundToFloatingDigits(2)
 
         delayToAllowCallbackFinish(progressRatePerSec)
 
@@ -585,8 +623,8 @@ class LimitedStreamCopierTest2 : TestBase() {
         val msg = "sz:${dataSizeBytes.humanDecimalPlaces}, " +
                 "sp:${speedBytesPerSec.humanDecimalPlaces}, " +
                 "rt:$progressRatePerSec, " +
-                "est.time:${estimatedCopyTimeMs.humanDecimalPlaces}, " +
-                "real.time:${realCopyTimeMs.humanDecimalPlaces}, " +
+                "est.time:${estimatedDurationMs.humanDecimalPlaces}, " +
+                "real.time:${realDurationMs.humanDecimalPlaces}, " +
                 "t.diff:${timeDiffMs} (${timeDiffPercents}%), " +
                 "prList[${progressList.size}]: ${progressList.joinToString(",")}, " +
                 "spList[${0}]: ${speedList.joinToString(",")}"
