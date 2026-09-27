@@ -92,14 +92,15 @@ class LimitedStreamCopierNs {
             totalDataSize: Long,
             stepDataSizeBytes: Int,
             stepWithSleepDurationNanos: Long,
-            force: Boolean = false
+            force: Boolean = false,
+            withSpeed: Boolean = true
         ) {
             progressCallback?.also {
 
                 val currentTime = currentTimeMs
                 val timeElapsed = currentTime - lastProgressShowTimeMs
 
-                val speed = if (!force) {
+                val speed = if (withSpeed) {
                     (NANOS_IN_SECOND * stepDataSizeBytes / stepWithSleepDurationNanos).roundToLong()
                 } else 0
 
@@ -116,7 +117,7 @@ class LimitedStreamCopierNs {
 
             val readBytes = inputStream.read( dataBuffer, 0, operationPortionSize)
             logD("")
-            logD("readBytes: $readBytes")
+            logDD("readBytes: $readBytes")
 
             if (-1 == readBytes) {
                 logD("Данные закончились")
@@ -125,7 +126,8 @@ class LimitedStreamCopierNs {
                         totalDataCopied,
                         stepDataCopied,
                         0,
-                        force = true
+                        force = true,
+                        withSpeed = false
                     )
                 }
                 finishCallback?.invoke(totalDataCopied)
@@ -147,7 +149,7 @@ class LimitedStreamCopierNs {
 
 
             if (readBytes < operationPortionSize) {
-                logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
+                logI("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
 
                 lastReadEndsOnDataBorder = false
 
@@ -207,6 +209,14 @@ class LimitedStreamCopierNs {
 
     private fun logD(text: String) {
 //        Log.d(TAG, text)
+    }
+
+    private fun logDD(text: String) {
+//        Log.d(TAG, text)
+    }
+
+    private fun logI(text: String) {
+//        Log.i(TAG, text)
     }
 
     companion object {
