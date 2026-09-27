@@ -6,6 +6,7 @@ import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingD
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -115,7 +116,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         val dataSize = 100.KILOBYTES
         val speed = 30.KILOBYTES
         val progressRate = 1
-        val steps = 6
+        val steps = 3
 
         standard_test_with(
             dataSize,
@@ -579,6 +580,7 @@ class LimitedStreamCopierTest2 : TestBase() {
         progressRatePerSec: Int,
         stepsPerSecond: Int = 1000
     ) {
+        println("steps: $stepsPerSecond")
 
         /*"standard_test_with(dataSize:$dataSizeBytes, speed:$speedBytesPerSec, rate:$progressRatePerSec)".also {
             println(it)
@@ -641,7 +643,7 @@ class LimitedStreamCopierTest2 : TestBase() {
                 "real.time:${realDurationMs.humanDecimalPlaces} (${timeDiffPercents}%), " +
                 "t.diff:${timeDiffMs}, " +
                 "prList[${progressList.size}]: ${progressList.joinToString(",")}, " +
-                "spList[${0}]: ${speedList.joinToString(",")}"
+                "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")}"
         Log.d(TAG,msg)
 
         val minimumProgressListSize = 1

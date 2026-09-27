@@ -59,7 +59,7 @@ abstract class TestBase {
     }
 
     protected fun prepareSourceFile(dataSizeBytes: Int) {
-        println("prepareSourceFile(${dataSizeBytes})")
+//        println("prepareSourceFile(${dataSizeBytes})")
         clearSourceFile()
 
         sourceFile.createNewFile()
@@ -71,7 +71,7 @@ abstract class TestBase {
     }
 
     protected fun prepareTargetFile() {
-        println("prepareTargetFile()")
+//        println("prepareTargetFile()")
         // Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
         // поэтому производится здесь.
         clearTargetFile()
