@@ -117,8 +117,8 @@ class LimitedStreamCopierNs {
         while(true) {
 
             val readBytes = inputStream.read( dataBuffer, 0, operationPortionSize)
-            logD("")
-            logD("readBytes: $readBytes")
+            logDD("")
+            logDD("readBytes: $readBytes")
 
             if (-1 == readBytes) {
                 logD("Данные закончились")
@@ -135,23 +135,25 @@ class LimitedStreamCopierNs {
             }
 
 
+            // TODO: перенести в начало цикла и т.о. включить время расчётов
+            //  в продолжительность копирования...
             val stepStartTimeNanos = currentTimeNanos
 
             outputStream.write(dataBuffer, 0, readBytes)
 
             val dataCopyDurationNanos = currentTimeNanos - stepStartTimeNanos
 
+
             stepDataCopied += readBytes
-            logD("stepDataCopied: $stepDataCopied")
+            logDD("stepDataCopied: $stepDataCopied")
 
             totalDataCopied += readBytes
-            logD("totalDataCopied: $totalDataCopied")
+            logDD("totalDataCopied: $totalDataCopied")
 
 
-            if (readBytes < operationPortionSize) {
-                logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
+            lastReadEndsOnDataBorder = readBytes == operationPortionSize
 
-                lastReadEndsOnDataBorder = false
+            if (stepDataCopied >= maxDataSizeCanCopiedByStep) {
 
                 val dataFraction: Float = 1f * readBytes / operationPortionSize
                 logD("dataFraction: $dataFraction")
@@ -170,35 +172,11 @@ class LimitedStreamCopierNs {
 
                 showProgressIfNeeded(
                     totalDataCopied,
-                    readBytes,
-                    copyAndSleepDurationNanos,
-                    true
+                    stepDataCopied,
+                    dataCopyDurationNanos
                 )
 
                 stepDataCopied = 0
-            }
-            else if (readBytes == operationPortionSize) {
-                logD("readBytes == operationPortionSize ($readBytes == $operationPortionSize)")
-
-                lastReadEndsOnDataBorder = true
-
-                if (stepDataCopied >= maxDataSizeCanCopiedByStep) {
-                    // Пора считать скорость.
-                    sleepIfNeeded(
-                        dataCopyDurationNanos,
-                        expectedStepDurationNanos
-                    )
-
-                    showProgressIfNeeded(
-                        totalDataCopied,
-                        stepDataCopied,
-                        dataCopyDurationNanos
-                    )
-
-                    stepDataCopied = 0
-                }
-            } else {
-                throw RuntimeException("readBytes ($readBytes) > operationPortionSize ($operationPortionSize)")
             }
         }
 
@@ -208,6 +186,10 @@ class LimitedStreamCopierNs {
 
 
     private fun logD(text: String) {
+//        Log.d(TAG, text)
+    }
+
+    private fun logDD(text: String) {
 //        Log.d(TAG, text)
     }
 
