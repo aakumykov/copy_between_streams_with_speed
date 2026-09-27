@@ -34,10 +34,10 @@ class LimitedStreamCopierNs {
         if (stepsPerSecond <= 0)
             throw IllegalArgumentException("Steps second must be greater than zero ($stepsPerSecond)")
 
-        logD("")
-        logD("------------------------------------------------------------------------------")
+//        logD("1")
+        logD("-----------------------------------------")
         logD("copyFromStreamToStream() called with: speedBytesPerSecond = ${speedBytesPerSecond.humanSizeBinary()}/s, progressRatePerSecond = $progressRatePerSecond, stepsPerSecond = $stepsPerSecond")
-        logD("------------------------------------------------------------------------------")
+        logD("-----------------------------------------")
 
         // Количество шагов в секунду не может быть больше скорости в байтах.
         val dataCopyingSteps = min(stepsPerSecond, speedBytesPerSecond)
@@ -46,10 +46,10 @@ class LimitedStreamCopierNs {
         val expectedStepDurationNanos = ceil(NANOS_IN_SECOND / dataCopyingSteps).roundToLong()
         logD("expectedStepDurationNanos: ${expectedStepDurationNanos.humanDecimalPlaces}")
 
-        val dataSizeToBeCopiedByStep = ceil(1f * speedBytesPerSecond / dataCopyingSteps).roundToInt()
-        logD("dataSizeToBeCopiedByStep: ${dataSizeToBeCopiedByStep.humanDecimalPlaces}")
+        val maxDataSizeCanCopiedByStep = ceil(1f * speedBytesPerSecond / dataCopyingSteps).roundToInt()
+        logD("maxDataSizeCanCopiedByStep: ${maxDataSizeCanCopiedByStep.humanDecimalPlaces}")
 
-        val operationPortionSize = min(DEFAULT_BUFFER_SIZE, dataSizeToBeCopiedByStep)
+        val operationPortionSize = min(DEFAULT_BUFFER_SIZE, maxDataSizeCanCopiedByStep)
         logD("operationPortionSize: $operationPortionSize")
 
         val progressPeriodMs: Long = (MILLIS_IN_SECOND / progressRatePerSecond).toLong()
@@ -92,7 +92,7 @@ class LimitedStreamCopierNs {
         fun showProgressIfNeeded(
             totalDataSize: Long,
             stepDataSize: Int,
-            stepDurationNanos: Long,
+            stepWithSleepDurationNanos: Long,
             force: Boolean = false
         ) {
             progressCallback?.also {
@@ -101,7 +101,9 @@ class LimitedStreamCopierNs {
                 val timeElapsed = currentTime - lastProgressShowTimeMs
 
                 // TODO: избавиться от округления
-                val speed = (1f * stepDataSize / stepDurationNanos).roundToLong()
+                val speed = if (!force) {
+                    (1f * stepDataSize / stepWithSleepDurationNanos).roundToLong()
+                } else 0
 
                 if (timeElapsed >= progressPeriodMs || force) {
                     progressCallback.invoke(totalDataSize, speed)
@@ -110,12 +112,24 @@ class LimitedStreamCopierNs {
             }
         }
 
+        var lastReadEndsOnDataBorder = false
 
         while(true) {
-            val readBytes = inputStream.read(dataBuffer, 0, operationPortionSize)
+
+            val readBytes = inputStream.read( dataBuffer, 0, operationPortionSize)
+            logD("")
+            logD("readBytes: $readBytes")
 
             if (-1 == readBytes) {
                 logD("Данные закончились")
+                if (lastReadEndsOnDataBorder) {
+                    showProgressIfNeeded(
+                        totalDataCopied,
+                        stepDataCopied,
+                        0,
+                        force = true
+                    )
+                }
                 finishCallback?.invoke(totalDataCopied)
                 break
             }
@@ -125,14 +139,19 @@ class LimitedStreamCopierNs {
 
             outputStream.write(dataBuffer, 0, readBytes)
 
-            val stepDurationNanos = currentTimeNanos - stepStartTimeNanos
+            val dataCopyDurationNanos = currentTimeNanos - stepStartTimeNanos
 
             stepDataCopied += readBytes
+            logD("stepDataCopied: $stepDataCopied")
+
             totalDataCopied += readBytes
+            logD("totalDataCopied: $totalDataCopied")
 
 
             if (readBytes < operationPortionSize) {
                 logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
+
+                lastReadEndsOnDataBorder = false
 
                 val dataFraction: Float = 1f * readBytes / operationPortionSize
                 logD("dataFraction: $dataFraction")
@@ -140,17 +159,19 @@ class LimitedStreamCopierNs {
                 val correctedExpectedStepDuration = (dataFraction * expectedStepDurationNanos).roundToLong()
                 logD("correctedExpectedStepDuration: ${correctedExpectedStepDuration.humanDecimalPlaces}")
 
-                logD("realDurationNanos: ${stepDurationNanos.humanDecimalPlaces}")
+                logD("realDurationNanos: ${dataCopyDurationNanos.humanDecimalPlaces}")
 
                 sleepIfNeeded(
-                    stepDurationNanos,
+                    dataCopyDurationNanos,
                     correctedExpectedStepDuration,
                 )
+
+                val copyAndSleepDurationNanos = currentTimeNanos - stepStartTimeNanos
 
                 showProgressIfNeeded(
                     totalDataCopied,
                     readBytes,
-                    stepDurationNanos,
+                    copyAndSleepDurationNanos,
                     true
                 )
 
@@ -158,18 +179,20 @@ class LimitedStreamCopierNs {
             }
             else if (readBytes == operationPortionSize) {
                 logD("readBytes == operationPortionSize ($readBytes == $operationPortionSize)")
-                // Не последняя порция данных.
-                if (stepDataCopied >= dataSizeToBeCopiedByStep) {
+
+                lastReadEndsOnDataBorder = true
+
+                if (stepDataCopied >= maxDataSizeCanCopiedByStep) {
                     // Пора считать скорость.
                     sleepIfNeeded(
-                        stepDurationNanos,
+                        dataCopyDurationNanos,
                         expectedStepDurationNanos
                     )
 
                     showProgressIfNeeded(
                         totalDataCopied,
                         stepDataCopied,
-                        stepDurationNanos
+                        dataCopyDurationNanos
                     )
 
                     stepDataCopied = 0
@@ -179,13 +202,13 @@ class LimitedStreamCopierNs {
             }
         }
 
-        logD("------------------------------------------------------------------------------")
-        logD("")
+        logD("-----------------------------------------")
+//        logD("2")
     }
 
 
     private fun logD(text: String) {
-        Log.d(TAG, text)
+//        Log.d(TAG, text)
     }
 
     companion object {
