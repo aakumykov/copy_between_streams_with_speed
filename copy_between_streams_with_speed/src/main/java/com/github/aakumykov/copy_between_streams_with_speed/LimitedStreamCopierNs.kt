@@ -1,6 +1,5 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
@@ -91,7 +90,7 @@ class LimitedStreamCopierNs {
 
         fun showProgressIfNeeded(
             totalDataSize: Long,
-            stepDataSize: Int,
+            stepDataSizeBytes: Int,
             stepWithSleepDurationNanos: Long,
             force: Boolean = false
         ) {
@@ -100,9 +99,8 @@ class LimitedStreamCopierNs {
                 val currentTime = currentTimeMs
                 val timeElapsed = currentTime - lastProgressShowTimeMs
 
-                // TODO: избавиться от округления
                 val speed = if (!force) {
-                    (1f * stepDataSize / stepWithSleepDurationNanos).roundToLong()
+                    (NANOS_IN_SECOND * stepDataSizeBytes / stepWithSleepDurationNanos).roundToLong()
                 } else 0
 
                 if (timeElapsed >= progressPeriodMs || force) {
