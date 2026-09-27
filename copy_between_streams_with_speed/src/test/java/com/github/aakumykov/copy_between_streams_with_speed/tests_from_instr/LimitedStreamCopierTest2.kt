@@ -4,6 +4,7 @@ import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
+import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -342,7 +344,7 @@ class LimitedStreamCopierTest2 : TestBase() {
     }
 
 
-    /*@Test
+    @Test
     fun test_with_diff_data_size_1_9() {
         repeat_with_params(1..9, 1,0){ dataSize ->
             standard_test_with(dataSize, 1, 1)
@@ -559,7 +561,7 @@ class LimitedStreamCopierTest2 : TestBase() {
             val rate = random.nextInt(1, 100)
             standard_test_with(dataSize, speed, rate)
         }
-    }*/
+    }
 
 
     private fun repeat_with_params(range: IntRange,
