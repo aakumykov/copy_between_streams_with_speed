@@ -127,8 +127,8 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun simple_test_100kb_30kb_with_diff_steps() {
-        listOf(1,2,3,4,5,  7,8,9,10).forEach { steps ->
-//        for (steps in 1..10 step 1) {
+//        listOf(1,2,3,4,5,6,7,8,9,10).forEach { steps ->
+        for (steps in 1..10 step 1) {
             println("steps: $steps")
 
             val dataSize = 100.KILOBYTES
