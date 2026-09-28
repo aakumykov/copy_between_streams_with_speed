@@ -1,7 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.ext.notEquals
-import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
@@ -61,7 +61,7 @@ class LimitedStreamCopierNs {
 
         var totalDataCopied: Long = 0
         var stepDataCopied = 0
-        var lastProgressShowTimeMs: Long = currentTimeMs
+        var lastProgressShowTimeNs: Long = currentTimeNanos
         var lastSentProgressValue: Long? = null
 
         fun sleepIfNeeded(realDurationNanos: Long, expectedDurationNanos: Long) {
@@ -90,29 +90,32 @@ class LimitedStreamCopierNs {
 
 
         fun showProgressIfNeeded(
-            totalDataSize: Long,
-            stepDataSizeBytes: Int,
+            stepDataCopied: Int,
             stepWithSleepDurationNanos: Long,
             force: Boolean = false,
             withSpeed: Boolean = true
         ) {
-            val isForceLog = if (force) "force" else ""
-            val withSpeedLog = if (withSpeed) "withSpeed" else ""
+            logDD("showProgressIfNeeded(stepWithSleepDurationNanos:$stepWithSleepDurationNanos, force:$force, withSpeed:$withSpeed)")
+
+            val textIisForced = if (force) "force" else ""
+            val textWithSpeed = if (withSpeed) "withSpeed" else ""
 
             progressCallback?.also {
 
-                val currentTime = currentTimeMs
-                val timeElapsed = currentTime - lastProgressShowTimeMs
+                val currentTimeNs = currentTimeNanos
+                val timeElapsedNs = currentTimeNs - lastProgressShowTimeNs
 
                 val speed = if (withSpeed) {
-                    (NANOS_IN_SECOND * stepDataSizeBytes / stepWithSleepDurationNanos).roundToLong()
+                    (NANOS_IN_SECOND * stepDataCopied / stepWithSleepDurationNanos).roundToLong()
                 } else 0
 
-                if (timeElapsed >= progressPeriodMs || force) {
-                    progressCallback.invoke(totalDataSize, speed)
-                    logDD("progressCallback(tot:$totalDataCopied, sp:$speed, $isForceLog, $withSpeedLog)")
-                    lastProgressShowTimeMs = currentTime
+                if (timeElapsedNs >= progressPeriodMs || force) {
+                    progressCallback.invoke(totalDataCopied, speed)
+                    logDD("progressCallback(tot:$totalDataCopied, sp:$speed, $textIisForced, $textWithSpeed)")
+                    lastProgressShowTimeNs = currentTimeNs
                     lastSentProgressValue = totalDataCopied
+                } else {
+                    println("Отсылать прогресс не нужно [timeElapsedNs ($timeElapsedNs) < progressPeriodMs ($progressPeriodMs)]")
                 }
             }
         }
@@ -129,8 +132,7 @@ class LimitedStreamCopierNs {
                 // Последняя порция данных не была сообщена или они закончились на первом чтении.
                 if (lastSentProgressValue?.notEquals(totalDataCopied) ?: false) {
                     showProgressIfNeeded(
-                        totalDataCopied,
-                        stepDataCopied,
+                        0,
                         0,
                         force = true,
                         withSpeed = false
@@ -173,10 +175,10 @@ class LimitedStreamCopierNs {
                 val copyAndSleepDurationNanos = currentTimeNanos - stepStartTimeNanos
 
                 showProgressIfNeeded(
-                    totalDataCopied,
-                    readBytes,
-                    copyAndSleepDurationNanos,
-                    true
+                    stepDataCopied = readBytes,
+                    stepWithSleepDurationNanos = copyAndSleepDurationNanos,
+                    force = true,
+                    withSpeed = true
                 )
 
                 stepDataCopied = 0
@@ -192,9 +194,10 @@ class LimitedStreamCopierNs {
                     )
 
                     showProgressIfNeeded(
-                        totalDataCopied,
-                        stepDataCopied,
-                        dataCopyDurationNanos
+                        stepDataCopied = stepDataCopied,
+                        stepWithSleepDurationNanos = dataCopyDurationNanos,
+                        force = false,
+                        withSpeed = true
                     )
 
                     stepDataCopied = 0

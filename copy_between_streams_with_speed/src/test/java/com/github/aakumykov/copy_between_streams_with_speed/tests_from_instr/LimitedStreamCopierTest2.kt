@@ -2,10 +2,11 @@ package com.github.aakumykov.copy_between_streams_with_speed.tests_from_instr
 
 import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
+import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs.Companion.NANOS_IN_SECOND
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
-import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
@@ -25,7 +26,6 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 
 
 class LimitedStreamCopierTest2 : TestBase() {
@@ -33,6 +33,13 @@ class LimitedStreamCopierTest2 : TestBase() {
     private val limitedStreamCopier = LimitedStreamCopierNs()
 
     /**
+     * [test_low_data_size]
+     * [test_data_size_hundreds_bytes]
+     * [test_data_size_kilobytes]
+     * [simple_test_100kb_30kb_with_specific_steps]
+     * [simple_test_for_speed]
+     * [simple_test_100kb_30kb_with_diff_steps]
+     *
      * План теста:
      *
      * Данные просто копируются [data_simply_copied]
@@ -92,6 +99,25 @@ class LimitedStreamCopierTest2 : TestBase() {
      * [big_file_with_variations]
      */
 
+
+
+    /**
+     * Этот тест ниже был сбойным...
+     * [test_with_diff_speed_100_999]
+     */
+    @Test
+    fun test_low_data_size() {
+        repeat(10) { i ->
+            logD("================= Прогон ${i+1} =================")
+            standard_test_with(
+                10,
+                126,
+                10
+            )
+        }
+    }
+
+
     @Test
     fun test_data_size_hundreds_bytes() {
         for(base in 1.. 9) {
@@ -132,7 +158,7 @@ class LimitedStreamCopierTest2 : TestBase() {
     fun simple_test_100kb_30kb_with_diff_steps() {
 //        listOf(1,2,3,4,5,6,7,8,9,10).forEach { steps ->
         for (steps in 1..10 step 1) {
-            println("steps: $steps")
+            logD("steps: $steps")
 
             val dataSize = 100.KILOBYTES
             val speed = 30.KILOBYTES
@@ -145,7 +171,7 @@ class LimitedStreamCopierTest2 : TestBase() {
                 stepsPerSecond = steps
             )
 
-            println("")
+            logD("")
         }
     }
 
@@ -156,14 +182,14 @@ class LimitedStreamCopierTest2 : TestBase() {
             val speed = dataSize / 3
             val rate = 1
             prepareSourceAndTargetFiles(dataSize)
-            Log.d(TAG, "simple_test_for_speed(sizeBase:$sizeBase), старт")
+            logD( "simple_test_for_speed(sizeBase:$sizeBase), старт")
             limitedStreamCopier.copyFromStreamToStream(
                 sourceFileStream,
                 targetFileStream,
                 speed,
                 rate
             )
-            Log.d(TAG, "simple_test_for_speed(sizeBase:$sizeBase), финиш")
+            logD( "simple_test_for_speed(sizeBase:$sizeBase), финиш")
             standard_test_with(dataSize, speed, rate,)
         }
     }
@@ -385,14 +411,26 @@ class LimitedStreamCopierTest2 : TestBase() {
     @Test
     fun test_with_diff_speed_10_99() {
         repeat_with_params(10..99, 10, 5) { speed ->
-            standard_test_with(10, speed, 10)
+            standard_test_with(
+                10,
+                speed,
+                10
+            )
         }
     }
 
+    /**
+     * При разных скоростях появляются сбои...
+     * Одиночный тест проходит [test_low_data_size] нормально...
+     */
     @Test
     fun test_with_diff_speed_100_999() {
         repeat_with_params(100..999, 100, 50) { speed ->
-            standard_test_with(10, speed, 10)
+            standard_test_with(
+                10,
+                speed,
+                10
+            )
         }
     }
 
@@ -556,7 +594,8 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun big_file_with_variations() {
-        repeat(10) { _ ->
+        repeat(100) { i ->
+            logI("===== прогон ${i+1} =====")
             val dataSize = 1.MEGABYTES * random.nextInt(10)
             val speed = 1.KILOBYTES * random.nextInt(100, 1001)
             val rate = random.nextInt(1, 100)
@@ -584,11 +623,11 @@ class LimitedStreamCopierTest2 : TestBase() {
         stepsPerSecond: Int = 1000
     ) {
         ("standard_test_with(" +
-                "dataSize:$dataSizeBytes, " +
-                "speed:$speedBytesPerSec, " +
+                "dataSize:${dataSizeBytes.humanDecimalPlaces}, " +
+                "speed:${speedBytesPerSec.humanDecimalPlaces}, " +
                 "rate:$progressRatePerSec, stepsPerSecond:$stepsPerSecond" +
                 ")").also {
-            println(it)
+            logI(it)
         }
 
         val finishCallbackWasTriggered = AtomicBoolean(false)
@@ -598,12 +637,12 @@ class LimitedStreamCopierTest2 : TestBase() {
         val sourceData = prepareSourceAndTargetFiles(dataSizeBytes)
 
 
-        val estimatedDurationSec: Long = (1f * dataSizeBytes / speedBytesPerSec).roundToLong()
-        val estimatedDurationMs: Long = estimatedDurationSec * 1000
-        println("estimatedDurationMs: ${estimatedDurationMs.humanDecimalPlaces} ($estimatedDurationSec sec)")
+        val estimatedDurationSec: Float = (1f * dataSizeBytes / speedBytesPerSec)
+        val estimatedDurationNs: Double = estimatedDurationSec * NANOS_IN_SECOND
+        logD("estimatedDurationNs: ${estimatedDurationNs.humanDecimalPlaces} ($estimatedDurationSec sec)")
 
-        val startTimeMs = currentTimeMs
-        println("start:  ${startTimeMs.humanDecimalPlaces}")
+        val startTimeNs: Long = currentTimeNanos
+        logD("start:  ${startTimeNs.humanDecimalPlaces}")
 
         limitedStreamCopier
             .copyFromStreamToStream(
@@ -619,16 +658,16 @@ class LimitedStreamCopierTest2 : TestBase() {
                     finishCallbackWasTriggered.set(true)
                 })
 
-        val finishTime = currentTimeMs
-        println("finish: ${finishTime.humanDecimalPlaces}")
+        val finishTime: Long = currentTimeNanos
+        logD("finish: ${finishTime.humanDecimalPlaces}")
 
-        val realDurationMs = finishTime - startTimeMs
-        println("duration: $realDurationMs")
+        val realDurationNs: Long = finishTime - startTimeNs
+        logD("duration: ${realDurationNs.humanDecimalPlaces}")
 
-        val timeDiffMs = realDurationMs - estimatedDurationMs
-        println("timeDiffMs: $timeDiffMs")
+        val timeDiffNs: Double = realDurationNs - estimatedDurationNs
+        logD("timeDiffNs: ${timeDiffNs.humanDecimalPlaces}")
 
-        val timeDiffPercents = (100.toDouble() * realDurationMs / estimatedDurationMs).roundToFloatingDigits(2)
+        val timeDiffPercents = (realDurationNs / estimatedDurationNs).roundToFloatingDigits(2)
 
         delayToAllowCallbackFinish(progressRatePerSec)
 
@@ -643,12 +682,12 @@ class LimitedStreamCopierTest2 : TestBase() {
         val msg = "sz:${dataSizeBytes.humanDecimalPlaces}, " +
                 "sp:${speedBytesPerSec.humanDecimalPlaces}, " +
                 "rt:$progressRatePerSec, " +
-                "est.time:${estimatedDurationMs.humanDecimalPlaces}, " +
-                "real.time:${realDurationMs.humanDecimalPlaces} (${timeDiffPercents}%), " +
-                "t.diff:${timeDiffMs}, " +
+                "est.time:${estimatedDurationNs.humanDecimalPlaces}, " +
+                "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%), " +
+                "t.diff:${timeDiffNs}, " +
                 "prList[${progressList.size}]: ${progressList.joinToString(",")}, " +
                 "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")}"
-        Log.d(TAG,msg)
+        logI(msg)
 
         val minimumProgressListSize = 1
         val minimumSpeedListSize = 1
@@ -682,6 +721,14 @@ class LimitedStreamCopierTest2 : TestBase() {
         TimeUnit.MILLISECONDS.sleep(timeout)
     }
 
+
+    private fun logD(text: String) {
+//        Log.d(TAG, text)
+    }
+
+    private fun logI(text: String) {
+//        Log.i(TAG, text)
+    }
 
     companion object {
         val TAG: String = LimitedStreamCopierTest2::class.java.simpleName
