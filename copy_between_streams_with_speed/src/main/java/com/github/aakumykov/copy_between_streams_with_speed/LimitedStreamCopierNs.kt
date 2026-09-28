@@ -13,7 +13,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-// TODO: избавться от преобразований данных
+// TODO: избавиться от преобразований данных
 class LimitedStreamCopierNs {
 
     fun copyFromStreamToStream(
@@ -62,9 +62,9 @@ class LimitedStreamCopierNs {
         var totalDataCopied: Long = 0
         var stepDataCopied = 0
         var lastProgressShowTimeMs: Long = currentTimeMs
+        var lastSentProgressValue: Long = -1
 
-
-        fun sleepIfNeeded(realDurationNanos: Long, expectedDurationNanos: Long, ) {
+        fun sleepIfNeeded(realDurationNanos: Long, expectedDurationNanos: Long) {
 
             logD("sleepIfNeeded(), " +
                     "rldr:$realDurationNanos, " +
@@ -112,11 +112,10 @@ class LimitedStreamCopierNs {
                     progressCallback.invoke(totalDataSize, speed)
                     logDD("progressCallback(tot:$totalDataCopied, sp:$speed, $isForceLog, $withSpeedLog)")
                     lastProgressShowTimeMs = currentTime
+                    lastSentProgressValue = totalDataCopied
                 }
             }
         }
-
-        var lastReadEndsOnDataBorder = false
 
         while(true) {
 
@@ -126,7 +125,8 @@ class LimitedStreamCopierNs {
 
             if (-1 == readBytes) {
                 logD("Данные закончились")
-                if (lastReadEndsOnDataBorder) {
+
+                if (lastSentProgressValue != totalDataCopied) {
                     showProgressIfNeeded(
                         totalDataCopied,
                         stepDataCopied,
@@ -156,8 +156,6 @@ class LimitedStreamCopierNs {
             if (readBytes < operationPortionSize) {
                 logI("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
 
-                lastReadEndsOnDataBorder = false
-
                 val dataFraction: Float = 1f * readBytes / operationPortionSize
                 logD("dataFraction: $dataFraction")
 
@@ -184,8 +182,6 @@ class LimitedStreamCopierNs {
             }
             else if (readBytes == operationPortionSize) {
                 logD("readBytes == operationPortionSize ($readBytes == $operationPortionSize)")
-
-                lastReadEndsOnDataBorder = true
 
                 if (stepDataCopied >= maxDataSizeCanCopiedByStep) {
                     // Пора считать скорость.
