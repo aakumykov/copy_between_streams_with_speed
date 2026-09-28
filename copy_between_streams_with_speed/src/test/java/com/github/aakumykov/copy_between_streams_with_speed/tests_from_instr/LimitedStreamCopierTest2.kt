@@ -115,7 +115,7 @@ class LimitedStreamCopierTest2 : TestBase() {
     @Test
     fun simple_test_100kb_30kb_with_specific_steps() {
 
-        val dataSize = 1
+        val dataSize = 2
         val speed = 1
         val progressRate = 1
         val steps = 1000
@@ -348,6 +348,7 @@ class LimitedStreamCopierTest2 : TestBase() {
     fun test_with_diff_data_size_1_9() {
         repeat_with_params(1..9, 1,0){ dataSize ->
             standard_test_with(dataSize, 1, 1)
+            TimeUnit.SECONDS.sleep(1)
         }
     }
 

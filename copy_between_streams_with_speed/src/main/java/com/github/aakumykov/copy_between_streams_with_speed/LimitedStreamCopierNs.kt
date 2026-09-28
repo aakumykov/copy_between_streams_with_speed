@@ -96,6 +96,9 @@ class LimitedStreamCopierNs {
             force: Boolean = false,
             withSpeed: Boolean = true
         ) {
+            val isForceLog = if (force) "force" else ""
+            val withSpeedLog = if (withSpeed) "withSpeed" else ""
+
             progressCallback?.also {
 
                 val currentTime = currentTimeMs
@@ -107,6 +110,7 @@ class LimitedStreamCopierNs {
 
                 if (timeElapsed >= progressPeriodMs || force) {
                     progressCallback.invoke(totalDataSize, speed)
+                    logDD("progressCallback(tot:$totalDataCopied, sp:$speed, $isForceLog, $withSpeedLog)")
                     lastProgressShowTimeMs = currentTime
                 }
             }
