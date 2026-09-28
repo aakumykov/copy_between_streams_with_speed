@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
@@ -208,15 +209,15 @@ class LimitedStreamCopierNs {
 
 
     private fun logD(text: String) {
-//        Log.d(TAG, text)
+        Log.d(TAG, text)
     }
 
     private fun logDD(text: String) {
-//        Log.d(TAG, text)
+        Log.d(TAG, text)
     }
 
     private fun logI(text: String) {
-//        Log.i(TAG, text)
+        Log.i(TAG, text)
     }
 
     companion object {

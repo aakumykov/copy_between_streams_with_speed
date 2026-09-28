@@ -115,10 +115,10 @@ class LimitedStreamCopierTest2 : TestBase() {
     @Test
     fun simple_test_100kb_30kb_with_specific_steps() {
 
-        val dataSize = 100.KILOBYTES
-        val speed = 30.KILOBYTES
+        val dataSize = 1
+        val speed = 1
         val progressRate = 1
-        val steps = 3
+        val steps = 1000
 
         standard_test_with(
             dataSize,
@@ -582,12 +582,13 @@ class LimitedStreamCopierTest2 : TestBase() {
         progressRatePerSec: Int,
         stepsPerSecond: Int = 1000
     ) {
-        println("steps: $stepsPerSecond")
-
-        /*"standard_test_with(dataSize:$dataSizeBytes, speed:$speedBytesPerSec, rate:$progressRatePerSec)".also {
+        ("standard_test_with(" +
+                "dataSize:$dataSizeBytes, " +
+                "speed:$speedBytesPerSec, " +
+                "rate:$progressRatePerSec, stepsPerSecond:$stepsPerSecond" +
+                ")").also {
             println(it)
-            Log.d(TAG, it)
-        }*/
+        }
 
         val finishCallbackWasTriggered = AtomicBoolean(false)
         val progressList = mutableListOf<Long>()
