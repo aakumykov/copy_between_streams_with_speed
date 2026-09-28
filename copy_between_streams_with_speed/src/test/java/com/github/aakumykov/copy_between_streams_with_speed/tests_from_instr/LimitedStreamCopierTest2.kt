@@ -115,8 +115,8 @@ class LimitedStreamCopierTest2 : TestBase() {
     @Test
     fun simple_test_100kb_30kb_with_specific_steps() {
 
-        val dataSize = 2
-        val speed = 1
+        val dataSize = 100.KILOBYTES
+        val speed = 30.KILOBYTES
         val progressRate = 1
         val steps = 1000
 

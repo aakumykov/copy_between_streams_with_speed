@@ -1,6 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.util.Log
+import com.github.aakumykov.copy_between_streams_with_speed.ext.notEquals
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
@@ -126,7 +126,8 @@ class LimitedStreamCopierNs {
             if (-1 == readBytes) {
                 logD("Данные закончились")
 
-                if (lastSentProgressValue?.equals(totalDataCopied) ?: false) {
+                // Последняя порция данных не была сообщена или они закончились на первом чтении.
+                if (lastSentProgressValue?.notEquals(totalDataCopied) ?: false) {
                     showProgressIfNeeded(
                         totalDataCopied,
                         stepDataCopied,
@@ -209,15 +210,15 @@ class LimitedStreamCopierNs {
 
 
     private fun logD(text: String) {
-        Log.d(TAG, text)
+//        Log.d(TAG, text)
     }
 
     private fun logDD(text: String) {
-        Log.d(TAG, text)
+//        Log.d(TAG, text)
     }
 
     private fun logI(text: String) {
-        Log.i(TAG, text)
+//        Log.i(TAG, text)
     }
 
     companion object {
