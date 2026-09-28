@@ -62,7 +62,7 @@ class LimitedStreamCopierNs {
         var totalDataCopied: Long = 0
         var stepDataCopied = 0
         var lastProgressShowTimeMs: Long = currentTimeMs
-        var lastSentProgressValue: Long = -1
+        var lastSentProgressValue: Long? = null
 
         fun sleepIfNeeded(realDurationNanos: Long, expectedDurationNanos: Long) {
 
@@ -126,7 +126,7 @@ class LimitedStreamCopierNs {
             if (-1 == readBytes) {
                 logD("Данные закончились")
 
-                if (lastSentProgressValue != totalDataCopied) {
+                if (lastSentProgressValue?.equals(totalDataCopied) ?: false) {
                     showProgressIfNeeded(
                         totalDataCopied,
                         stepDataCopied,
