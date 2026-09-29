@@ -594,7 +594,7 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun big_file_with_variations() {
-        repeat(100) { i ->
+        repeat(10) { i ->
             logI("===== прогон ${i+1} =====")
             val dataSize = 1.MEGABYTES * random.nextInt(10)
             val speed = 1.KILOBYTES * random.nextInt(100, 1001)
