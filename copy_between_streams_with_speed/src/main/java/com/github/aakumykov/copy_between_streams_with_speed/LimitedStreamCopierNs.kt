@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.ext.notEquals
+import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
@@ -121,6 +122,10 @@ class LimitedStreamCopierNs {
             }
         }
 
+        fun calcSpeed(dataSizeBytes: Int, durationNs: Long): Double {
+            return (1.0 * dataSizeBytes / durationNs)
+        }
+
         while(true) {
 
             val readBytes = inputStream.read( dataBuffer, 0, operationPortionSize)
@@ -175,6 +180,8 @@ class LimitedStreamCopierNs {
 
                 val copyAndSleepDurationNanos = currentTimeNanos - stepStartTimeNanos
 
+                logMomentalSpeed(calcSpeed(readBytes, copyAndSleepDurationNanos))
+
                 showProgressIfNeeded(
                     stepDataCopied = readBytes,
                     stepWithSleepDurationNanos = copyAndSleepDurationNanos,
@@ -193,6 +200,10 @@ class LimitedStreamCopierNs {
                         dataCopyDurationNanos,
                         expectedStepDurationNanos
                     )
+
+                    val copyAndSleepDurationNanos = currentTimeNanos - stepStartTimeNanos
+
+                    logMomentalSpeed(calcSpeed(readBytes, copyAndSleepDurationNanos))
 
                     showProgressIfNeeded(
                         stepDataCopied = stepDataCopied,
@@ -223,6 +234,10 @@ class LimitedStreamCopierNs {
 
     private fun logI(text: String) {
 //        Log.i(TAG, text)
+    }
+
+    private fun logMomentalSpeed(value: Number) {
+        Log.i(TAG, "моментальная скорость: ${value} байт/с")
     }
 
     companion object {

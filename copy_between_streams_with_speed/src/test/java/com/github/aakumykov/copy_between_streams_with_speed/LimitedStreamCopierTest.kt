@@ -1,9 +1,12 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs.Companion.NANOS_IN_SECOND
+import com.github.aakumykov.copy_between_streams_with_speed.ext.percentOf
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
+import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
@@ -26,10 +29,11 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 
-class LimitedStreamCopierTest2 : TestBase() {
+class LimitedStreamCopierTest : TestBase() {
 
     private val limitedStreamCopier = LimitedStreamCopierNs()
 
+    // FIXME: проверять количество шагов в прогрессе!
     /**
      * [test_low_data_size]
      * [test_data_size_hundreds_bytes]
@@ -59,6 +63,9 @@ class LimitedStreamCopierTest2 : TestBase() {
      *
      * Ошибка чтения потока [error_reading_from_stream].
      * Ошибка записи в поток [error_writing_to_stream].
+     *
+     * Время копирования:
+     * [time_test_on_single_params_set]
      *
      * Разные размеры данных:
      * [test_with_diff_data_size_1_9]
@@ -142,13 +149,13 @@ class LimitedStreamCopierTest2 : TestBase() {
         val dataSize = 100.KILOBYTES
         val speed = 30.KILOBYTES
         val progressRate = 1
-        val steps = 1000
+        val stepsPerSecond = 5
 
         standard_test_with(
             dataSize,
             speed,
             progressRate,
-            stepsPerSecond = steps
+            stepsPerSecond = stepsPerSecond
         )
     }
 
@@ -175,7 +182,7 @@ class LimitedStreamCopierTest2 : TestBase() {
 
     @Test
     fun simple_test_for_speed() {
-        for (sizeBase in listOf(/*1, 10, 100, 500, */1000)) {
+        for (sizeBase in listOf(1, 10, 100, 500, 1000)) {
             val dataSize = sizeBase.KILOBYTES
             val speed = dataSize / 3
             val rate = 1
@@ -333,6 +340,32 @@ class LimitedStreamCopierTest2 : TestBase() {
             targetStream.close()
         }
     }
+
+    @Test
+    fun time_test_on_single_params_set() {
+
+        val dataSizeBytes = 2.KILOBYTES
+        val speedBytesPerSec = 1.KILOBYTES
+        val expectedDurationNs = NANOS_IN_SECOND * dataSizeBytes / speedBytesPerSec
+
+        val startTime = currentTimeNanos
+        freshLimitedStreamCopier
+            .copyFromStreamToStream(
+                inputStream = sourceFileStream,
+                outputStream = targetFileStream,
+                speedBytesPerSec,
+            )
+        val durationNs = currentTimeNanos - startTime
+
+        val requiredDiffPercent = 20.0
+        val realDiffPercents = durationNs.percentOf(expectedDurationNs)
+
+        Assert.assertTrue(
+            "Время копирования отличается не более чем на ${requiredDiffPercent}% (реально на ${realDiffPercents}%)",
+            realDiffPercents <= requiredDiffPercent
+        )
+    }
+
 
     private fun test_error_behaviour(
         scope: CoroutineScope,
@@ -620,14 +653,6 @@ class LimitedStreamCopierTest2 : TestBase() {
         progressRatePerSec: Int,
         stepsPerSecond: Int = 1000
     ) {
-        ("standard_test_with(" +
-                "dataSize:${dataSizeBytes.humanDecimalPlaces}, " +
-                "speed:${speedBytesPerSec.humanDecimalPlaces}, " +
-                "rate:$progressRatePerSec, stepsPerSecond:$stepsPerSecond" +
-                ")").also {
-            logI(it)
-        }
-
         val finishCallbackWasTriggered = AtomicBoolean(false)
         val progressList = mutableListOf<Long>()
         val speedList = mutableListOf<Long>()
@@ -650,6 +675,7 @@ class LimitedStreamCopierTest2 : TestBase() {
                 progressRatePerSec,
                 stepsPerSecond = stepsPerSecond,
                 progressCallback = { bytes, speed ->
+                    logI("progress [${currentTimeMs.humanDecimalPlaces}]: $bytes")
                     progressList.add(bytes)
                     speedList.add(speed)
                 }, finishCallback = { _ ->
@@ -665,7 +691,9 @@ class LimitedStreamCopierTest2 : TestBase() {
         val timeDiffNs: Double = realDurationNs - estimatedDurationNs
         logD("timeDiffNs: ${timeDiffNs.humanDecimalPlaces}")
 
-        val timeDiffPercents = (realDurationNs / estimatedDurationNs).roundToFloatingDigits(2)
+        val timeDiffPercents = realDurationNs
+            .percentOf(estimatedDurationNs)
+            .roundToFloatingDigits(2)
 
         delayToAllowCallbackFinish(progressRatePerSec)
 
@@ -677,15 +705,21 @@ class LimitedStreamCopierTest2 : TestBase() {
         Assert.assertTrue("Был вызван коллбек завершения",
             finishCallbackWasTriggered.get())
 
-        val msg = "sz:${dataSizeBytes.humanDecimalPlaces}, " +
-                "sp:${speedBytesPerSec.humanDecimalPlaces}, " +
-                "rt:$progressRatePerSec, " +
-                "est.time:${estimatedDurationNs.humanDecimalPlaces}, " +
-                "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%), " +
-                "t.diff:${timeDiffNs}, " +
-                "prList[${progressList.size}]: ${progressList.joinToString(",")}, " +
-                "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")}"
-        logI(msg)
+
+        val msgMedium = "\n" +
+            "sz:${dataSizeBytes.humanDecimalPlaces},\n" +
+            "sp:${speedBytesPerSec.humanDecimalPlaces},\n" +
+            "rt:$progressRatePerSec,\n" +
+            "stp:$stepsPerSecond,\n" +
+            "est.time:${estimatedDurationNs.humanDecimalPlaces},\n" +
+            "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%),\n" +
+            "t.diff:${timeDiffNs},\n"
+
+        val progressMsg =
+                "prList[${progressList.size}]: ${progressList.joinToString(",")},\n" +
+                "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")},\n"
+
+        logI(msgMedium)
 
         val minimumProgressListSize = 1
         val minimumSpeedListSize = 1
@@ -720,16 +754,20 @@ class LimitedStreamCopierTest2 : TestBase() {
     }
 
 
+    private val freshLimitedStreamCopier
+        get() = LimitedStreamCopierNs()
+
+
     private fun logD(text: String) {
 //        Log.d(TAG, text)
     }
 
     private fun logI(text: String) {
-//        Log.i(TAG, text)
+        Log.i(TAG, text)
     }
 
     companion object {
-        val TAG: String = LimitedStreamCopierTest2::class.java.simpleName
+        val TAG: String = LimitedStreamCopierTest::class.java.simpleName
     }
 }
 

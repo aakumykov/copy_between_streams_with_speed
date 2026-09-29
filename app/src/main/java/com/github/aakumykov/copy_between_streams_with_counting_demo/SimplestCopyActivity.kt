@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
+import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.writeTestDataToFile
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
@@ -113,8 +114,6 @@ class SimplestCopyActivity : AppCompatActivity() {
         if (!sourceFile.exists()) throw FileNotFoundException("source file does not exists")
         if (!targetFile.exists()) throw FileNotFoundException("target file does not exists")
 
-        val data = random.nextBytes(dataSize)
-
         val eh = CoroutineExceptionHandler { _, throwable ->
             lifecycleScope.launch (Dispatchers.Main) {
                 showError(throwable)
@@ -123,7 +122,7 @@ class SimplestCopyActivity : AppCompatActivity() {
 
         currentJob = lifecycleScope.launch (eh + Dispatchers.IO) {
 
-            sourceFile.writeBytes(data)
+            writeTestDataToFile(sourceFile, dataSize)
 
             val sourceStream = sourceFileStream
             val targetStream =  targetFileStream
