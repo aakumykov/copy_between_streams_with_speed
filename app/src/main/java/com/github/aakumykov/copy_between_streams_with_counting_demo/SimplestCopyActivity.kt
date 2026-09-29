@@ -8,19 +8,20 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.LimitedStreamCopier
-import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.Stream2StreamCopier
-import com.github.aakumykov.copy_between_streams_with_speed.stream2stream_copier.UnlimitedStreamCopier
+import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 
 class SimplestCopyActivity : AppCompatActivity() {
@@ -49,19 +50,20 @@ class SimplestCopyActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        binding.startButton.setOnClickListener { startCopy() }
-        binding.cancelButton.setOnClickListener { cancelCopy() }
+        binding.startButton.setOnClickListener { onStartButtonClicked() }
+        binding.closeStreamButton.setOnClickListener { onCloseStreamClicked() }
+        binding.cancelJobButton.setOnClickListener { onCancelJobClicked() }
 
 
         binding.dataSizeSeekBar.apply {
             setProgressLabelProvider {
-                "Размер $it байт"
+                "Размер {${it.humanSizeBinary()}}"
             }
         }
 
         binding.speedSeekBar.apply {
             setProgressLabelProvider { progress ->
-                "Скорость $progress байт/с"
+                "Скорость ${progress.humanSizeBinary()}/с"
             }
             /*setChangeListener(object: SeekBarWithTextInput.ChangeListener{
                 override fun onSeekBarWithTextInputProgressChanged(
@@ -88,18 +90,22 @@ class SimplestCopyActivity : AppCompatActivity() {
         }
     }
 
-    private val unlimitedStreamCopier: Stream2StreamCopier by lazy {
-        UnlimitedStreamCopier(progressRate)
+    private val limitedStreamCopier: LimitedStreamCopierNs get() {
+        return LimitedStreamCopierNs()
     }
 
-    private val limitedStreamCopier: Stream2StreamCopier get() {
-        return LimitedStreamCopier(
-            speedBytesPerSecond = speedBytesPerSec,
-            progressRatePerSecond = progressRate,
-        )
+    private var currentJob: Job? = null
+
+
+    private fun onStartButtonClicked() {
+        if (null == currentJob) {
+            startCopy()
+        } else {
+            showToast("Копирование уже идёт")
+        }
     }
 
-    fun startCopy() {
+    private fun startCopy() {
 
         hideInfo()
         binding.progressBar.progress = 0
@@ -115,7 +121,7 @@ class SimplestCopyActivity : AppCompatActivity() {
             }
         }
 
-        lifecycleScope.launch (eh + Dispatchers.IO) {
+        currentJob = lifecycleScope.launch (eh + Dispatchers.IO) {
 
             sourceFile.writeBytes(data)
 
@@ -127,41 +133,53 @@ class SimplestCopyActivity : AppCompatActivity() {
             sourceStream.use { inputStream ->
                 targetStream.use { outputStream ->
 
-                    limitedStreamCopier
-                        .copyFromStreamToStream(
-                            inputStream = inputStream,
-                            outputStream = outputStream,
-                            progressCallback = { transferredBytes, speedBytesPerSecond ->
-                                Log.d(TAG, "transferredBytes: $transferredBytes")
-                                val progress = (100f * transferredBytes / dataSize).roundToInt()
-                                launch (Dispatchers.Main) {
-                                    showProgress(progress)
-                                    showSpeed(speedBytesPerSecond)
+                    try {
+                        limitedStreamCopier
+                            .copyFromStreamToStream(
+                                inputStream = inputStream,
+                                outputStream = outputStream,
+                                speedBytesPerSecond = speedBytesPerSec,
+                                progressCallback = { transferredBytes, speedBytesPerSecond ->
+                                    Log.d(TAG, "transferredBytes: $transferredBytes")
+                                    val progress = (100f * transferredBytes / dataSize).roundToInt()
+                                    launch (Dispatchers.Main) {
+                                        showProgress(progress)
+                                        showSpeed(speedBytesPerSecond)
+                                    }
+                                },
+                                finishCallback = {
+                                    showInfo("Готово, скопировано ${it.humanSizeBinary()}")
                                 }
-                            },
-                            finishCallback = {
-                                showInfo("Готово (${it.humanSizeBinary()})")
-                                currentInputStream = null
-                            }
-                        )
-
+                            )
+                    }
+                    finally {
+                        currentJob = null
+                        currentInputStream = null
+                    }
                 }
             }
         }
     }
 
-    fun cancelCopy() {
-        currentInputStream?.close()
+    private fun onCloseStreamClicked() {
+        currentInputStream?.close() ?: run {
+            showToast("Копирование не запущено")
+        }
     }
 
+    private fun onCancelJobClicked() {
+        currentJob?.cancel(CancellationException("Отменено пользователем"))
+            ?: run { showToast("Задача не найдена") }
+    }
 
-    fun showProgress(progress: Int) {
+    private fun showProgress(progress: Int) {
         Log.d(TAG, "прогресс: $progress")
         binding.progressBar.progress = progress
     }
 
-    fun showSpeed(speed: Number) {
-        val textShort = "$speed байт / с"
+    private fun showSpeed(speed: Long) {
+//        val textShort = "$speed байт / с"
+        val textShort = "${speed.humanSizeBinary()}/с"
         Log.d(TAG, "скорость: $textShort")
         binding.speedView.text = textShort
     }

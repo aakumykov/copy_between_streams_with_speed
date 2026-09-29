@@ -11,8 +11,10 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.errorMsg
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.errorMsgExtended
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getIntFromPreferences
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
+import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +70,7 @@ class DemoActivity : AppCompatActivity() {
 
     private var currentInputStream: InputStream? = null
 
-    private val limitedStreamCopier by lazy { LimitedStreamCopierOld(lifecycleScope) }
+    private val limitedStreamCopier by lazy { LimitedStreamCopierNs() }
 
     private val dataSize get() = binding.sizeSeekBar.progress
     private val speed get() = binding.speedSeekBar.progress
@@ -79,9 +81,6 @@ class DemoActivity : AppCompatActivity() {
     private val sourceFileStream: InputStream get() = sourceFile.inputStream()
     private val targetFileStream: OutputStream get() = targetFile.outputStream()
 
-
-    private var fileCopyingJob2: Job? = null
-    private var progressCollectingJob2: Job? = null
 
     fun startCopyingFile2() {
 
@@ -116,14 +115,6 @@ class DemoActivity : AppCompatActivity() {
         }
     }
 
-    fun stopCopyingFile2() {
-        fileCopyingJob2?.cancel()
-        fileCopyingJob2 = null
-    }
-
-    fun closeStream2() {
-        sourceFileStream.close()
-    }
 
     private fun onStartButtonClicked() {
 
@@ -168,45 +159,30 @@ class DemoActivity : AppCompatActivity() {
                         }
                     )*/
 
-    private val scopedLimitedStreamCopier: ScopedLimitedStreamCopier by lazy {
-        ScopedLimitedStreamCopier(
-            scope = lifecycleScope,
-            streamCopier = limitedStreamCopier
-        )
-    }
-
     private suspend fun doCopy(
         scope: CoroutineScope,
         inputStream: FileInputStream,
         outputStream: FileOutputStream
     ) {
-        scope.launch {
-            scopedLimitedStreamCopier.progressFlow.collect { transferred ->
+        limitedStreamCopier.copyFromStreamToStream(
+            inputStream,
+            outputStream,
+            speed,
+            progressCallback = { transferred, s ->
                 val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
                 showProgress(percent)
             }
-        }.invokeOnCompletion {
-            println()
-        }
-
-        scopedLimitedStreamCopier.copyFromStreamToStream(
-            inputStream,
-            outputStream,
-            speed
         )
-    }
-
-    private val probeClass by lazy {
-        ProbeClass(this@DemoActivity, lifecycleScope)
-    }
-
-    private fun onProbeButtonClicked() {
-        probeClass.probe()
     }
 
     private fun onStopButtonClicked() {
         currentInputStream?.close()
     }
+
+    private fun onProbeButtonClicked() {
+        showToast("Нету пробы пока")
+    }
+
 
     private fun showProgress(value: Int) {
         lifecycleScope.launch {

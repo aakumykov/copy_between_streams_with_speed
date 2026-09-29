@@ -21,13 +21,23 @@
             android:text="Начать копирование" />
 
         <ImageButton
-            android:id="@+id/cancelButton"
+            android:id="@+id/closeStreamButton"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="0"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_close"
-            android:backgroundTint="#AD1457"
+            android:backgroundTint="#D81B60"
+            />
+
+        <ImageButton
+            android:id="@+id/cancelJobButton"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="0"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_close"
+            android:backgroundTint="#FB8C00"
             />
 
     </LinearLayout>
@@ -49,7 +59,8 @@
         android:id="@+id/speedView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginVertical="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
         android:textAlignment="center"
         android:typeface="serif"
         android:textStyle="italic"
