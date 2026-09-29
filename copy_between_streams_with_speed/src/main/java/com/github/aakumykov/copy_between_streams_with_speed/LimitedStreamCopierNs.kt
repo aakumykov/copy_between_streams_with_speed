@@ -21,7 +21,7 @@ class LimitedStreamCopierNs {
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
         progressRatePerSecond: Int = 1,
-        stepsPerSecond: Int = MILLIS_IN_SECOND,
+        stepsPerSecond: Int = 1000,
         progressCallback: ((bytesTransferred: Long, speedBytesPerSec: Long) -> Unit)? = null,
         finishCallback: ((bytesTransferred: Long) -> Unit)? = null,
     ) {
@@ -52,8 +52,8 @@ class LimitedStreamCopierNs {
         val operationPortionSize = min(DEFAULT_BUFFER_SIZE, maxDataSizeCanCopiedByStep)
         logD("operationPortionSize: $operationPortionSize")
 
-        val progressPeriodMs: Long = (MILLIS_IN_SECOND / progressRatePerSecond).toLong()
-        logD("progressPeriodMs: $progressPeriodMs")
+        val progressPeriodNs: Double = NANOS_IN_SECOND / progressRatePerSecond
+        logI("progressPeriodNs: $progressPeriodNs")
 
 
         val dataBuffer = ByteArray(operationPortionSize)
@@ -109,13 +109,14 @@ class LimitedStreamCopierNs {
                     (NANOS_IN_SECOND * stepDataCopied / stepWithSleepDurationNanos).roundToLong()
                 } else 0
 
-                if (timeElapsedNs >= progressPeriodMs || force) {
+                if (timeElapsedNs >= progressPeriodNs || force) {
+                    logI("timeElapsedNs >= progressPeriodNs (${timeElapsedNs.humanDecimalPlaces} >= ${progressPeriodNs.humanDecimalPlaces})")
                     progressCallback.invoke(totalDataCopied, speed)
                     logDD("progressCallback(tot:$totalDataCopied, sp:$speed, $textIisForced, $textWithSpeed)")
                     lastProgressShowTimeNs = currentTimeNs
                     lastSentProgressValue = totalDataCopied
                 } else {
-                    println("Отсылать прогресс не нужно [timeElapsedNs ($timeElapsedNs) < progressPeriodMs ($progressPeriodMs)]")
+                    logDD("Отсылать прогресс не нужно [timeElapsedNs (${timeElapsedNs.humanDecimalPlaces}) < progressPeriodMs (${progressPeriodNs.humanDecimalPlaces})]")
                 }
             }
         }
@@ -157,7 +158,7 @@ class LimitedStreamCopierNs {
 
 
             if (readBytes < operationPortionSize) {
-                logI("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
+                logD("readBytes < operationPortionSize ($readBytes < $operationPortionSize)")
 
                 val dataFraction: Float = 1f * readBytes / operationPortionSize
                 logD("dataFraction: $dataFraction")
@@ -226,6 +227,7 @@ class LimitedStreamCopierNs {
 
     companion object {
         val TAG: String = LimitedStreamCopierNs::class.java.simpleName
+        // FIXME: для NANOS_IN_SECOND достаточно Long или Float?
         const val NANOS_IN_SECOND: Double = 1_000_000_000.0 // TODO: переделать в Long
         const val MILLIS_IN_SECOND: Int = 1_000
     }
