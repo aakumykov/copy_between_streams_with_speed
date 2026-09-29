@@ -13,8 +13,6 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.e
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getIntFromPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierOld
-import com.github.aakumykov.copy_between_streams_with_speed.ScopedLimitedStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
