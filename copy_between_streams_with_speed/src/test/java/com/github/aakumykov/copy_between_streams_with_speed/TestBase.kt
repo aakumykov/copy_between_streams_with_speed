@@ -1,21 +1,15 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import android.content.Context
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Assert
-import org.junit.runner.RunWith
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 
-@RunWith(AndroidJUnit4::class)
 abstract class TestBase {
 
-    protected val appContext: Context by lazy { InstrumentationRegistry.getInstrumentation().targetContext }
-    protected val testsDir: File = appContext.cacheDir
+    private val testDirName = "tests_dir"
+    protected val testsDir: File = File(testDirName)
 
     protected val sourceDir: File = testsDir
     protected val targetDir: File = testsDir
@@ -32,17 +26,22 @@ abstract class TestBase {
     protected val sourceFileStream: InputStream get() = sourceFile.inputStream()
     protected val targetFileStream: OutputStream get() = targetFile.outputStream()
 
-    protected val storageFreeSpace: Long = appContext.cacheDir.usableSpace
-
     protected fun fileContents(file: File): String = file.readBytes().asString
 
     protected val ByteArray.asString: String get() = this.joinToString("")
 
 
     protected fun prepareSourceAndTargetFiles(dataSizeBytes: Int): String {
+        prepareTestDir()
         prepareSourceFile(dataSizeBytes)
         prepareTargetFile()
         return sourceFileContents
+    }
+
+
+    protected fun prepareTestDir() {
+        if (!testsDir.exists())
+            Assert.assertTrue(testsDir.mkdirs())
     }
 
 
@@ -59,7 +58,7 @@ abstract class TestBase {
     }
 
     protected fun prepareSourceFile(dataSizeBytes: Int) {
-        println("prepareSourceFile(${dataSizeBytes})")
+//        println("prepareSourceFile(${dataSizeBytes})")
         clearSourceFile()
 
         sourceFile.createNewFile()
@@ -71,7 +70,7 @@ abstract class TestBase {
     }
 
     protected fun prepareTargetFile() {
-        println("prepareTargetFile()")
+//        println("prepareTargetFile()")
         // Выполнение "очистки" (удаления файлов) в блоке @After не срабатывало, ---------
         // поэтому производится здесь.
         clearTargetFile()
@@ -82,7 +81,7 @@ abstract class TestBase {
 
 
     protected fun writeTestDataToFile(file: File, dataSizeBytes: Int) {
-        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) СТАРТ")
+//        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) СТАРТ")
 
         val pieceSize = DEFAULT_BUFFER_SIZE
         val mainSteps = dataSizeBytes / pieceSize
@@ -95,7 +94,7 @@ abstract class TestBase {
                 outputStream.write(data)
                 val count = data.size
                 alreadyWritten += count
-                println("записано ${count}, всего ${alreadyWritten.humanDecimalPlaces}")
+//                println("записано ${count}, всего ${alreadyWritten.humanDecimalPlaces}")
             }
 
             repeat(mainSteps) {
@@ -111,6 +110,6 @@ abstract class TestBase {
             file.length()
         )
 
-        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) ФИНИШ")
+//        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) ФИНИШ")
     }
 }
