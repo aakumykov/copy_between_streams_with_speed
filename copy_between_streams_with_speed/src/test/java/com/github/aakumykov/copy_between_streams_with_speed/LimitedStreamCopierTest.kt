@@ -213,7 +213,7 @@ class LimitedStreamCopierTest : TestBase() {
 
         Assert.assertEquals(dataSize.toLong(), targetFile.length())
         Assert.assertEquals(dataSize.toLong(), sourceFile.length())
-        Assert.assertEquals(newSourceFileContents, newTargetFileContents)
+        Assert.assertEquals(sourceFileContents, targetFileContents)
     }
 
 
@@ -698,8 +698,8 @@ class LimitedStreamCopierTest : TestBase() {
         delayToAllowCallbackFinish(progressRatePerSec)
 
         // Проверка данных
-        Assert.assertEquals(sourceData, newSourceFileContents)
-        Assert.assertEquals(sourceData, newTargetFileContents)
+        Assert.assertEquals(sourceData, sourceFileContents)
+        Assert.assertEquals(sourceData, targetFileContents)
 
         // Проверка коллбеков
         Assert.assertTrue("Был вызван коллбек завершения",

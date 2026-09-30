@@ -20,8 +20,8 @@ abstract class TestBase {
     protected val sourceFile = File(sourceDir, sourceFileName)
     protected val targetFile = File(targetDir, targetFileName)
 
-    protected val newSourceFileContents: String get() = fileContents(sourceFile)
-    protected val newTargetFileContents: String get() = fileContents(targetFile)
+    protected val sourceFileContents: String get() = fileContents(sourceFile)
+    protected val targetFileContents: String get() = fileContents(targetFile)
 
     protected val newSourceFileStream: InputStream get() = sourceFile.inputStream()
     protected val newTargetFileStream: OutputStream get() = targetFile.outputStream()
@@ -35,7 +35,7 @@ abstract class TestBase {
         prepareTestDir()
         prepareSourceFile(dataSizeBytes)
         prepareTargetFile()
-        return newSourceFileContents
+        return sourceFileContents
     }
 
 
