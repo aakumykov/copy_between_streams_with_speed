@@ -14,19 +14,43 @@ class SimpleStreamCopyDurations : TestBase() {
 
     @Test
     fun a() {
-//        repeat(10) { dataSizeBase ->
-//            val dataSize = (dataSizeBase+1).MEGABYTES
-            val dataSize = 10.MEGABYTES
-            listOf(1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100).forEach { pieceSize ->
-                doCopy(dataSize, pieceSize.KILOBYTES)
-            }
-            println("")
-//        }
+        val dataSize = 10.MEGABYTES
+        listOf(
+//            1,2,3,4,5,6,7,8,9,
+            10,
+//            20,30,40,50,60,70,80,90,100
+        ).forEach { pieceSize ->
+            doCopy(dataSize, DEFAULT_BUFFER_SIZE)
+        }
+        println("")
     }
 
+
+    @Test
+    fun simple_copier_with_callback() {
+
+        val dataSize = 1.MEGABYTES
+        prepareSourceAndTargetFiles(dataSize)
+
+        val commonStartTimeNs = System.nanoTime()
+
+        SimpleStreamToStreamCopier().copyWithRateLimitAndProgress(
+            newSourceFileStream,
+            newTargetFileStream,
+            10.KILOBYTES.toLong()
+        ) { bytesTransferred ->
+            logProgress("[${System.nanoTime()}] прогресс: " +
+                    "${bytesTransferred.humanDecimalPlaces} " +
+                    "(${bytesTransferred.humanSizeBinary()})")
+        }
+
+        val commonDurationNs = System.nanoTime() - commonStartTimeNs
+        val commonDurationMs = commonDurationNs / 1_000_000f
+        println("Продолжительность записи: ${commonDurationNs.humanDecimalPlaces} нс ($commonDurationMs мс)")
+    }
+
+
     private fun doCopy(dataSize: Int, pieceSize: Int) {
-//        logI("")
-//        logI("----- doCopy(dataSize:$dataSize, pieceSize:$pieceSize) -----")
 
         prepareSourceAndTargetFiles(dataSize)
 
@@ -84,6 +108,10 @@ class SimpleStreamCopyDurations : TestBase() {
 
     private fun logI(text: String) {
         Log.i(TAG, text)
+    }
+
+    private fun logProgress(text: String){
+        println(text)
     }
 
     companion object {
