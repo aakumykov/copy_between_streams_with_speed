@@ -1,6 +1,7 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
+import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
@@ -31,14 +32,17 @@ class SimpleStreamCopyDurationsTest : TestBase() {
     fun simple_copier_with_callback() {
 
         val dataSize = 1.MEGABYTES
+        val speed = 100.KILOBYTES.toLong()
+
         prepareSourceAndTargetFiles(dataSize)
 
+        val expectedCopyTimeNs = dataSize.toDouble() * 1000_000_000 / speed
         val commonStartTimeNs = System.nanoTime()
 
         SimpleStreamToStreamCopier().copyWithRateLimitAndProgressAI(
             newSourceFileStream,
             newTargetFileStream,
-            10.KILOBYTES.toLong()
+            speed
         ) { bytesTransferred ->
             logProgress("[${System.nanoTime()}] прогресс: " +
                     "${bytesTransferred.humanDecimalPlaces} " +
@@ -47,7 +51,19 @@ class SimpleStreamCopyDurationsTest : TestBase() {
 
         val commonDurationNs = System.nanoTime() - commonStartTimeNs
         val commonDurationMs = commonDurationNs / 1_000_000f
-        println("Продолжительность записи: ${commonDurationNs.humanDecimalPlaces} нс ($commonDurationMs мс)")
+        val realDurationPercent = 100.0 * commonDurationNs / expectedCopyTimeNs
+        println("Продолжительность записи: " +
+                "${commonDurationNs.humanDecimalPlaces} нс " +
+                "($commonDurationMs мс) " +
+                "[${realDurationPercent.roundToFloatingDigits(2)}%]")
+    }
+
+    private fun copyWithCopierClass(
+        dataSize: Long,
+        speed: Int,
+        onProgress: ((byteTransferred: Long) -> Unit)? = null
+    ) {
+
     }
 
 

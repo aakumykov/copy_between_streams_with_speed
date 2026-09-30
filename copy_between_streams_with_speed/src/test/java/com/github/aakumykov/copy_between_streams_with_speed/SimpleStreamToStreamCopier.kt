@@ -1,11 +1,56 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.concurrent.TimeUnit
+import kotlin.math.min
 
 class SimpleStreamToStreamCopier {
 
-    fun copyWithRateLimitAndProgress(
+    fun copy(
+        inputStream: InputStream,
+        outputStream: OutputStream,
+        speedBytesPerSec: Int,
+        progressIntervalMs: Int = 1000,
+        onProgress: ((byteTransferred: Long) -> Unit)? = null
+    ) {
+        val bufferSize = min(speedBytesPerSec, DEFAULT_BUFFER_SIZE)
+        val dataBuffer = ByteArray(bufferSize)
+
+        var readBytes: Int
+        var totalBytesWritten: Long = 0
+        var lastProgressTimeNs = System.nanoTime()
+
+        while (true) {
+            readBytes = inputStream.read(dataBuffer)
+
+            if (-1 == readBytes)
+                break
+
+            val startTimeNs = System.nanoTime()
+
+            outputStream.write(dataBuffer, 0, readBytes)
+            totalBytesWritten += readBytes
+
+            val dataCopyDurationNs = System.nanoTime() - startTimeNs
+            val expectedDataCopyDurationNs = (readBytes.toDouble() * 1_000_000_000.0 / speedBytesPerSec).toLong()
+//            logD("продолжительность записи $readBytes байт: ${dataCopyDurationNs.humanDecimalPlaces} нс")
+            if (dataCopyDurationNs < expectedDataCopyDurationNs) {
+                TimeUnit.NANOSECONDS.sleep(expectedDataCopyDurationNs - dataCopyDurationNs)
+            }
+
+            if ((System.nanoTime() - lastProgressTimeNs) > progressIntervalMs * 1000_000) {
+                onProgress?.invoke(totalBytesWritten)
+                lastProgressTimeNs = System.nanoTime()
+            }
+        }
+
+        outputStream.flush()
+        onProgress?.invoke(totalBytesWritten)
+    }
+
+    fun copyWithRateLimitAndProgressAI(
         input: InputStream,
         output: OutputStream,
         bytesPerSecond: Long,
