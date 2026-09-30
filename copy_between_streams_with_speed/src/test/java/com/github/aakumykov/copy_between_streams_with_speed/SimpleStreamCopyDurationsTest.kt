@@ -27,12 +27,18 @@ class SimpleStreamCopyDurationsTest : TestBase() {
         println("")
     }
 
+    @Test
+    fun simple_copier_with_callback_repeat() {
+        repeat(10) {
+            simple_copier_with_callback()
+        }
+    }
 
     @Test
     fun simple_copier_with_callback() {
 
         val dataSize = 1.MEGABYTES
-        val speed = 100.KILOBYTES.toLong()
+        val speed = 100.KILOBYTES
 
         prepareSourceAndTargetFiles(dataSize)
 

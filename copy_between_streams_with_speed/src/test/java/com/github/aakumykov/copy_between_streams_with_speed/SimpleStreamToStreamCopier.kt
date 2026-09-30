@@ -1,6 +1,5 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
@@ -50,10 +49,11 @@ class SimpleStreamToStreamCopier {
         onProgress?.invoke(totalBytesWritten)
     }
 
+
     fun copyWithRateLimitAndProgressAI(
         input: InputStream,
         output: OutputStream,
-        bytesPerSecond: Long,
+        bytesPerSecond: Int,
         progressIntervalMs: Long = 1000L,
         bufferSize: Int = 8192,
         onProgress: (bytesTransferred: Long) -> Unit
