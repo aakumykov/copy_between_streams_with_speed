@@ -5,12 +5,11 @@ import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
-import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Assert
 import org.junit.Test
 import kotlin.math.min
 
-class SimpleStreamCopyDurations : TestBase() {
+class SimpleStreamCopyDurationsTest : TestBase() {
 
     @Test
     fun a() {
@@ -20,7 +19,9 @@ class SimpleStreamCopyDurations : TestBase() {
             10,
 //            20,30,40,50,60,70,80,90,100
         ).forEach { pieceSize ->
-            doCopy(dataSize, DEFAULT_BUFFER_SIZE)
+            doCopy(dataSize, DEFAULT_BUFFER_SIZE) { b ->
+                println("[${System.nanoTime()}] передано: ${b.humanDecimalPlaces}")
+            }
         }
         println("")
     }
@@ -34,7 +35,7 @@ class SimpleStreamCopyDurations : TestBase() {
 
         val commonStartTimeNs = System.nanoTime()
 
-        SimpleStreamToStreamCopier().copyWithRateLimitAndProgress(
+        SimpleStreamToStreamCopier().copyWithRateLimitAndProgressAI(
             newSourceFileStream,
             newTargetFileStream,
             10.KILOBYTES.toLong()
@@ -50,7 +51,11 @@ class SimpleStreamCopyDurations : TestBase() {
     }
 
 
-    private fun doCopy(dataSize: Int, pieceSize: Int) {
+    private fun doCopy(dataSize: Int,
+                       pieceSize: Int,
+                       progressIntervalMs: Long = 1000,
+                       onProgress: ((byteTransferred: Long) -> Unit)? = null
+    ) {
 
         prepareSourceAndTargetFiles(dataSize)
 
@@ -58,6 +63,9 @@ class SimpleStreamCopyDurations : TestBase() {
         val dataBuffer = ByteArray(bufferSize)
 
         val commonStartTimeNs = System.nanoTime()
+
+        var totalBytesWritten: Long = 0
+        var lastProgressTimeNs: Long = commonStartTimeNs
 
         newSourceFileStream.use { inputStream ->
             newTargetFileStream.use { outputStream ->
@@ -67,20 +75,25 @@ class SimpleStreamCopyDurations : TestBase() {
                 while (true) {
                     readBytes = inputStream.read(dataBuffer)
 
-                    if (-1 == readBytes) {
+                    if (-1 == readBytes)
                         break
-                    }
 
                     val startTimeNs = System.nanoTime()
 
                     outputStream.write(dataBuffer, 0, readBytes)
+                    totalBytesWritten += readBytes
 
-                    val durationNs = System.nanoTime() - startTimeNs
+                    val dataCopyDurationNs = System.nanoTime() - startTimeNs
+                    logD("продолжительность записи $readBytes байт: ${dataCopyDurationNs.humanDecimalPlaces} нс")
 
-                    logD("продолжительность записи $readBytes байт: ${durationNs.humanDecimalPlaces} нс")
+                    if ((System.nanoTime() - lastProgressTimeNs) > progressIntervalMs * 1000_000) {
+                        onProgress?.invoke(totalBytesWritten)
+                        lastProgressTimeNs = System.nanoTime()
+                    }
                 }
 
                 outputStream.flush()
+                onProgress?.invoke(totalBytesWritten)
             }
         }
 
@@ -115,6 +128,6 @@ class SimpleStreamCopyDurations : TestBase() {
     }
 
     companion object {
-        val TAG: String = SimpleStreamCopyDurations::class.java.simpleName
+        val TAG: String = SimpleStreamCopyDurationsTest::class.java.simpleName
     }
 }
