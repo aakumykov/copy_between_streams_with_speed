@@ -189,8 +189,8 @@ class LimitedStreamCopierTest : TestBase() {
             prepareSourceAndTargetFiles(dataSize)
             logD( "simple_test_for_speed(sizeBase:$sizeBase), старт")
             limitedStreamCopier.copyFromStreamToStream(
-                sourceFileStream,
-                targetFileStream,
+                newSourceFileStream,
+                newTargetFileStream,
                 speed,
                 rate
             )
@@ -208,12 +208,12 @@ class LimitedStreamCopierTest : TestBase() {
 
         prepareSourceAndTargetFiles(dataSize)
 
-        limitedStreamCopier.copyFromStreamToStream(sourceFileStream, targetFileStream,
+        limitedStreamCopier.copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
             speed, progressRate)
 
         Assert.assertEquals(dataSize.toLong(), targetFile.length())
         Assert.assertEquals(dataSize.toLong(), sourceFile.length())
-        Assert.assertEquals(sourceFileContents, targetFileContents)
+        Assert.assertEquals(newSourceFileContents, newTargetFileContents)
     }
 
 
@@ -230,7 +230,7 @@ class LimitedStreamCopierTest : TestBase() {
         prepareSourceAndTargetFiles(dataSize)
 
         limitedStreamCopier
-            .copyFromStreamToStream(sourceFileStream, targetFileStream,
+            .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
                 speed, rate,
                 progressCallback = { _,_ ->
                     progressCallbackCount.getAndIncrement()
@@ -263,8 +263,8 @@ class LimitedStreamCopierTest : TestBase() {
             prepareSourceAndTargetFiles(1)
             runBlocking {
                 limitedStreamCopier.copyFromStreamToStream(
-                    inputStream = sourceFileStream,
-                    outputStream = targetFileStream,
+                    inputStream = newSourceFileStream,
+                    outputStream = newTargetFileStream,
                     speed,
                     1
                 )
@@ -288,8 +288,8 @@ class LimitedStreamCopierTest : TestBase() {
             prepareSourceAndTargetFiles(1)
             runBlocking {
                 limitedStreamCopier.copyFromStreamToStream(
-                    inputStream = sourceFileStream,
-                    outputStream = targetFileStream,
+                    inputStream = newSourceFileStream,
+                    outputStream = newTargetFileStream,
                     1,
                     rate
                 )
@@ -310,8 +310,8 @@ class LimitedStreamCopierTest : TestBase() {
         val progressList = buildList {
             limitedStreamCopier
                 .copyFromStreamToStream(
-                    sourceFileStream,
-                    targetFileStream,
+                    newSourceFileStream,
+                    newTargetFileStream,
                     speed,
                     progressRate,
                     progressCallback = { bytes,_ ->
@@ -351,8 +351,8 @@ class LimitedStreamCopierTest : TestBase() {
         val startTime = currentTimeNanos
         freshLimitedStreamCopier
             .copyFromStreamToStream(
-                inputStream = sourceFileStream,
-                outputStream = targetFileStream,
+                inputStream = newSourceFileStream,
+                outputStream = newTargetFileStream,
                 speedBytesPerSec,
             )
         val durationNs = currentTimeNanos - startTime
@@ -380,8 +380,8 @@ class LimitedStreamCopierTest : TestBase() {
 
         prepareSourceAndTargetFiles(dataSize)
 
-        val sourceStream = sourceFileStream
-        val targetStream = targetFileStream
+        val sourceStream = newSourceFileStream
+        val targetStream = newTargetFileStream
 
         scope.launch (Dispatchers.IO) {
             delay(errorDelayMs)
@@ -669,8 +669,8 @@ class LimitedStreamCopierTest : TestBase() {
 
         limitedStreamCopier
             .copyFromStreamToStream(
-                sourceFileStream,
-                targetFileStream,
+                newSourceFileStream,
+                newTargetFileStream,
                 speedBytesPerSec,
                 progressRatePerSec,
                 stepsPerSecond = stepsPerSecond,
@@ -698,8 +698,8 @@ class LimitedStreamCopierTest : TestBase() {
         delayToAllowCallbackFinish(progressRatePerSec)
 
         // Проверка данных
-        Assert.assertEquals(sourceData, sourceFileContents)
-        Assert.assertEquals(sourceData, targetFileContents)
+        Assert.assertEquals(sourceData, newSourceFileContents)
+        Assert.assertEquals(sourceData, newTargetFileContents)
 
         // Проверка коллбеков
         Assert.assertTrue("Был вызван коллбек завершения",
