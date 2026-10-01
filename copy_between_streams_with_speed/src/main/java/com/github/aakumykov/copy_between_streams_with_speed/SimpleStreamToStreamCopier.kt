@@ -3,6 +3,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToLong
 
 class SimpleStreamToStreamCopier {
 
@@ -11,8 +12,8 @@ class SimpleStreamToStreamCopier {
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
         progressRatePerSecond: Int = 1,
-        progressCallback: ((byteTransferred: Long) -> Unit)? = null,
-        finishCallback: ((byteTransferred: Long) -> Unit)? = null
+        finishCallback: ((byteTransferred: Long) -> Unit)? = null,
+        progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
     ) {
         require(speedBytesPerSecond > 0) {
             "Speed must be greater then zero ($speedBytesPerSecond)."
@@ -36,7 +37,7 @@ class SimpleStreamToStreamCopier {
             outputStream.write(dataBuffer, 0, readBytes)
             totalBytesWritten += readBytes
 
-            val expectedNanos = (totalBytesWritten.toDouble() * 1_000_000_000.0 / speedBytesPerSecond).toLong()
+            val expectedNanos = (totalBytesWritten.toDouble() * NANOS_IN_SECOND / speedBytesPerSecond).toLong()
             val actualNanos = System.nanoTime() - startTime
             val delayNanos = expectedNanos - actualNanos
 
@@ -44,14 +45,25 @@ class SimpleStreamToStreamCopier {
                 TimeUnit.NANOSECONDS.sleep(expectedNanos - actualNanos)
             }
 
+            val durationWithSleep = System.nanoTime() - startTime
+            val speedBytesPerSecond = (NANOS_IN_SECOND * totalBytesWritten / durationWithSleep).roundToLong()
+
             if ((System.nanoTime() - lastProgressTimeNs) > progressIntervalNs) {
-                progressCallback?.invoke(totalBytesWritten)
+                progressCallback?.invoke(totalBytesWritten, speedBytesPerSecond)
                 lastProgressTimeNs = System.nanoTime()
             }
         }
 
         outputStream.flush()
-        progressCallback?.invoke(totalBytesWritten)
+
+        val finalDuration = System.nanoTime() - startTime
+        val speedBytesPerSecond = (NANOS_IN_SECOND * totalBytesWritten / finalDuration).roundToLong()
+
+        progressCallback?.invoke(totalBytesWritten, speedBytesPerSecond)
         finishCallback?.invoke(totalBytesWritten)
+    }
+
+    companion object {
+        const val NANOS_IN_SECOND: Double = 1_000_000_000.0
     }
 }

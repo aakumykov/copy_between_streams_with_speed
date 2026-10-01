@@ -52,11 +52,12 @@ class SimpleStreamCopyDurationsTest : TestBase() {
             outputStream = newTargetFileStream,
 //            progressIntervalMs = 0,
             speedBytesPerSecond = speed,
-        ) { bytesTransferred ->
-            logProgress("[${System.nanoTime()}] прогресс: " +
-                    "${bytesTransferred.humanDecimalPlaces} " +
-                    "(${bytesTransferred.humanSizeBinary()})")
-        }
+            progressCallback = { bytesTransferred, speedBytesPerSecond ->
+                logProgress("[${System.nanoTime()}] прогресс: " +
+                        "${bytesTransferred.humanDecimalPlaces} " +
+                        "(${bytesTransferred.humanSizeBinary()})")
+            }
+        )
 
         val commonDurationNs = System.nanoTime() - commonStartTimeNs
         val commonDurationMs = commonDurationNs / 1_000_000f
