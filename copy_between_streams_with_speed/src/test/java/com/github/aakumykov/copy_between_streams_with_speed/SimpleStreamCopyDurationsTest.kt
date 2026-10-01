@@ -48,9 +48,10 @@ class SimpleStreamCopyDurationsTest : TestBase() {
         SimpleStreamToStreamCopier()
             .copy(
 //            .copyWithRateLimitAndProgressAI(
-            newSourceFileStream,
-            newTargetFileStream,
-            speed
+            inputStream = newSourceFileStream,
+            outputStream = newTargetFileStream,
+//            progressIntervalMs = 0,
+            speedBytesPerSecond = speed,
         ) { bytesTransferred ->
             logProgress("[${System.nanoTime()}] прогресс: " +
                     "${bytesTransferred.humanDecimalPlaces} " +

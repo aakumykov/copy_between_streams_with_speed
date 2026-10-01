@@ -7,13 +7,13 @@ import java.util.concurrent.TimeUnit
 class SimpleStreamToStreamCopier {
 
     fun copy(
-        input: InputStream,
-        output: OutputStream,
-        bytesPerSecond: Int,
+        inputStream: InputStream,
+        outputStream: OutputStream,
+        speedBytesPerSecond: Int,
         progressIntervalMs: Long = 1000,
         onProgress: ((byteTransferred: Long) -> Unit)? = null
     ) {
-        require(bytesPerSecond > 0) { "Скорость должна быть больше нуля" }
+        require(speedBytesPerSecond > 0) { "Speed must be greater then zero ($speedBytesPerSecond)." }
         require(progressIntervalMs >= 0) { "Интервал прогресса не может быть отрицательным" }
 
         val bufferSize = DEFAULT_BUFFER_SIZE //min(speedBytesPerSec, DEFAULT_BUFFER_SIZE)
@@ -25,13 +25,13 @@ class SimpleStreamToStreamCopier {
         var lastProgressTimeNs = System.nanoTime()
 
         while (true) {
-            val readBytes = input.read(dataBuffer)
+            val readBytes = inputStream.read(dataBuffer)
             if (-1 == readBytes) break
 
-            output.write(dataBuffer, 0, readBytes)
+            outputStream.write(dataBuffer, 0, readBytes)
             totalBytesWritten += readBytes
 
-            val expectedNanos = (totalBytesWritten.toDouble() * 1_000_000_000.0 / bytesPerSecond).toLong()
+            val expectedNanos = (totalBytesWritten.toDouble() * 1_000_000_000.0 / speedBytesPerSecond).toLong()
             val actualNanos = System.nanoTime() - startTime
 //            logD("продолжительность записи $readBytes байт: ${dataCopyDurationNs.humanDecimalPlaces} нс")
 
@@ -47,7 +47,7 @@ class SimpleStreamToStreamCopier {
             }
         }
 
-        output.flush()
+        outputStream.flush()
         onProgress?.invoke(totalBytesWritten)
     }
 
