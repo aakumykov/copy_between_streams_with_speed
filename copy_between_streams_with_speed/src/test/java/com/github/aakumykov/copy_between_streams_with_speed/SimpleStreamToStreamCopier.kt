@@ -11,7 +11,7 @@ class SimpleStreamToStreamCopier {
         output: OutputStream,
         bytesPerSecond: Int,
         progressIntervalMs: Int = 1000, // TODO: Long?
-        onProgress: ((byteTransferred: Long) -> Unit) // TODO: nullable
+        onProgress: ((byteTransferred: Long) -> Unit)? = null
     ) {
         require(bytesPerSecond > 0) { "Скорость должна быть больше нуля" }
         require(progressIntervalMs >= 0) { "Интервал прогресса не может быть отрицательным" }
@@ -28,15 +28,13 @@ class SimpleStreamToStreamCopier {
             val readBytes = input.read(dataBuffer)
             if (-1 == readBytes) break
 
-            val iterationStartTimeNs = System.nanoTime()
-
             output.write(dataBuffer, 0, readBytes)
             totalBytesWritten += readBytes
 
-            val expectedNanos = (readBytes.toDouble() * 1_000_000_000.0 / bytesPerSecond).toLong()
-//            val expectedNanos = (totalBytesWritten.toDouble() * 1_000_000_000.0 / bytesPerSecond).toLong()
-            val actualNanos = System.nanoTime() - iterationStartTimeNs
+            val expectedNanos = (totalBytesWritten.toDouble() * 1_000_000_000.0 / bytesPerSecond).toLong()
+            val actualNanos = System.nanoTime() - startTime
 //            logD("продолжительность записи $readBytes байт: ${dataCopyDurationNs.humanDecimalPlaces} нс")
+
             val delayNanos = expectedNanos - actualNanos
 
             if (delayNanos > 0) {
