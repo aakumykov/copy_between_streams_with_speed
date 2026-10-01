@@ -17,7 +17,7 @@ class SimpleStreamToStreamCopier {
         require(speedBytesPerSecond > 0) { "Speed must be greater then zero ($speedBytesPerSecond)." }
         require(progressIntervalMs >= 0) { "Интервал прогресса не может быть отрицательным" }
 
-        val bufferSize = min(speedBytesPerSecond, DEFAULT_BUFFER_SIZE)
+        val bufferSize = DEFAULT_BUFFER_SIZE
         val dataBuffer = ByteArray(bufferSize)
         val progressIntervalNs = progressIntervalMs * 1000_000
         val startTime = System.nanoTime()
