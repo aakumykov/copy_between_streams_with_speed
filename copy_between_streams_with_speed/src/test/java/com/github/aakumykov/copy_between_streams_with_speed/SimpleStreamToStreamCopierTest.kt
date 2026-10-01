@@ -187,7 +187,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                 newSourceFileStream,
                 newTargetFileStream,
                 speed,
-                (1 / rate).toLong()
+                1
             )
             logD( "simple_test_for_speed(sizeBase:$sizeBase), финиш")
             standard_test_with(dataSize, speed, rate)
@@ -199,7 +199,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
         val dataSize = 101
         val speed = dataSize * 2
-        val progressRate = 1L
+        val progressRate = 1
 
         prepareSourceAndTargetFiles(dataSize)
 
@@ -229,13 +229,13 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                 newSourceFileStream,
                 newTargetFileStream,
                 speed,
-                (1 / rate).toLong(),
+                1,
                 progressCallback = { _->
                     progressCallbackCount.getAndIncrement()
                 },
-                /*finishCallback = { _ ->
+                finishCallback = { _ ->
                     finishCallbackCount.getAndIncrement()
-                }*/
+                }
             )
 
         Assert.assertTrue(progressCallbackCount.get() >= 2)
@@ -279,7 +279,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
         checkOnExceptionWithRate(-1)
     }
 
-    private fun checkOnExceptionWithRate(rate: Long) {
+    private fun checkOnExceptionWithRate(rate: Int) {
         Assert.assertThrows(IllegalArgumentException::class.java) {
             prepareSourceAndTargetFiles(1)
             runBlocking {
@@ -299,7 +299,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
         val dataSize = 0
         val speed = 10
-        val progressRate = 1L
+        val progressRate = 1
 
         prepareSourceAndTargetFiles(dataSize)
 
@@ -667,15 +667,15 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                 newSourceFileStream,
                 newTargetFileStream,
                 speedBytesPerSec,
-                (1 / progressRatePerSec).toLong(),
+                progressRatePerSec,
                 progressCallback = { bytes ->
                     logI("progress [${currentTimeMs.humanDecimalPlaces}]: $bytes")
                     progressList.add(bytes)
 //                    speedList.add(speed)
                 },
-                /*finishCallback = { _ ->
+                finishCallback = { _ ->
                     finishCallbackWasTriggered.set(true)
-                }*/
+                }
             )
 
         val finishTime: Long = currentTimeNanos

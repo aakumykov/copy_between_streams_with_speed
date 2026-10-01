@@ -10,15 +10,16 @@ class SimpleStreamToStreamCopier {
         inputStream: InputStream,
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
-        progressIntervalMs: Long = 1000,
-        progressCallback: ((byteTransferred: Long) -> Unit)? = null
+        progressRatePerSecond: Int = 1,
+        progressCallback: ((byteTransferred: Long) -> Unit)? = null,
+        finishCallback: ((byteTransferred: Long) -> Unit)? = null
     ) {
-        require(speedBytesPerSecond > 0) { "Speed must be greater then zero ($speedBytesPerSecond)." }
-        require(progressIntervalMs >= 0) { "Интервал прогресса не может быть отрицательным" }
+        require(speedBytesPerSecond >= 0) { "Speed must be greater then zero ($speedBytesPerSecond)." }
+        require(progressRatePerSecond >= 0) { "Интервал прогресса не может быть отрицательным" }
 
         val bufferSize = DEFAULT_BUFFER_SIZE
         val dataBuffer = ByteArray(bufferSize)
-        val progressIntervalNs = progressIntervalMs * 1000_000
+        val progressIntervalNs = 1000f / progressRatePerSecond * 1000_000
         val startTime = System.nanoTime()
 
         var totalBytesWritten: Long = 0
@@ -47,5 +48,6 @@ class SimpleStreamToStreamCopier {
 
         outputStream.flush()
         progressCallback?.invoke(totalBytesWritten)
+        finishCallback?.invoke(totalBytesWritten)
     }
 }
