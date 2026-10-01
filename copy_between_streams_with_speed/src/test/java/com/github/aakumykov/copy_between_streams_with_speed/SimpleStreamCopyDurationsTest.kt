@@ -45,7 +45,9 @@ class SimpleStreamCopyDurationsTest : TestBase() {
         val expectedCopyTimeNs = dataSize.toDouble() * 1000_000_000 / speed
         val commonStartTimeNs = System.nanoTime()
 
-        SimpleStreamToStreamCopier().copyWithRateLimitAndProgressAI(
+        SimpleStreamToStreamCopier()
+            .copy(
+//            .copyWithRateLimitAndProgressAI(
             newSourceFileStream,
             newTargetFileStream,
             speed
