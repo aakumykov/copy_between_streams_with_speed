@@ -28,11 +28,14 @@ class SimpleStreamToStreamCopier {
             val readBytes = input.read(dataBuffer)
             if (-1 == readBytes) break
 
+            val iterationStartTimeNs = System.nanoTime()
+
             output.write(dataBuffer, 0, readBytes)
             totalBytesWritten += readBytes
 
-            val expectedNanos = (totalBytesWritten.toDouble() * 1_000_000_000.0 / bytesPerSecond).toLong()
-            val actualNanos = System.nanoTime() - startTime
+            val expectedNanos = (readBytes.toDouble() * 1_000_000_000.0 / bytesPerSecond).toLong()
+//            val expectedNanos = (totalBytesWritten.toDouble() * 1_000_000_000.0 / bytesPerSecond).toLong()
+            val actualNanos = System.nanoTime() - iterationStartTimeNs
 //            logD("продолжительность записи $readBytes байт: ${dataCopyDurationNs.humanDecimalPlaces} нс")
             val delayNanos = expectedNanos - actualNanos
 
