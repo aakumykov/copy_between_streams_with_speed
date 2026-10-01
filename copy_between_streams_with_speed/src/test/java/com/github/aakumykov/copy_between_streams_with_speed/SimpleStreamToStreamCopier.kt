@@ -10,7 +10,7 @@ class SimpleStreamToStreamCopier {
         input: InputStream,
         output: OutputStream,
         bytesPerSecond: Int,
-        progressIntervalMs: Int = 1000, // TODO: Long?
+        progressIntervalMs: Long = 1000,
         onProgress: ((byteTransferred: Long) -> Unit)? = null
     ) {
         require(bytesPerSecond > 0) { "Скорость должна быть больше нуля" }
