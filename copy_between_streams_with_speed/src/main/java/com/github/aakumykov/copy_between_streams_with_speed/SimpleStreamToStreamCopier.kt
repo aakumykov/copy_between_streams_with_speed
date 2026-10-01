@@ -3,16 +3,15 @@ package com.github.aakumykov.copy_between_streams_with_speed
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
-import kotlin.math.min
 
 class SimpleStreamToStreamCopier {
 
-    fun copy(
+    fun copyFromStreamToStream(
         inputStream: InputStream,
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
         progressIntervalMs: Long = 1000,
-        onProgress: ((byteTransferred: Long) -> Unit)? = null
+        progressCallback: ((byteTransferred: Long) -> Unit)? = null
     ) {
         require(speedBytesPerSecond > 0) { "Speed must be greater then zero ($speedBytesPerSecond)." }
         require(progressIntervalMs >= 0) { "Интервал прогресса не может быть отрицательным" }
@@ -41,12 +40,12 @@ class SimpleStreamToStreamCopier {
             }
 
             if ((System.nanoTime() - lastProgressTimeNs) > progressIntervalNs) {
-                onProgress?.invoke(totalBytesWritten)
+                progressCallback?.invoke(totalBytesWritten)
                 lastProgressTimeNs = System.nanoTime()
             }
         }
 
         outputStream.flush()
-        onProgress?.invoke(totalBytesWritten)
+        progressCallback?.invoke(totalBytesWritten)
     }
 }
