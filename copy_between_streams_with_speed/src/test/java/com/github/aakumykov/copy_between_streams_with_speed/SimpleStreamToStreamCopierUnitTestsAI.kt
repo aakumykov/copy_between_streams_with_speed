@@ -1,13 +1,19 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.FilterInputStream
+import java.io.FilterOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 class SimpleStreamToStreamCopierUnitTestsAI {
 
@@ -17,229 +23,271 @@ class SimpleStreamToStreamCopierUnitTestsAI {
         inputStream: InputStream,
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
-        progressIntervalMs: Long = 1000,
-        onProgress: (totalBytesTransferred: Long) -> Unit
+        progressRatePerSecond: Int = 1,
+        progressCallback: ((totalBytesTransferred: Long) -> Unit)? = null,
+        finishCallback: ((totalBytesTransferred: Long) -> Unit)? = null
     ) {
         simpleStreamToStreamCopier.copyFromStreamToStream(
             inputStream = inputStream,
             outputStream = outputStream,
             speedBytesPerSecond = speedBytesPerSecond,
-            progressIntervalMs = progressIntervalMs,
-            progressCallback = onProgress
+            progressRatePerSecond = progressRatePerSecond,
+            progressCallback = progressCallback,
+            finishCallback = finishCallback
         )
     }
 
-    // =====================================================================
-    // Вспомогательные потоки для теста 6
-    // =====================================================================
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
 
-    /** Поток, который бросает IOException при попытке чтения */
-    private class FailingInputStream : InputStream() {
-        override fun read(): Int = throw IOException("Input stream is closed")
-        override fun read(b: ByteArray, off: Int, len: Int): Int =
-            throw IOException("Input stream is closed")
-    }
-
-    /** Поток, который бросает IOException при попытке записи */
-    private class FailingOutputStream : OutputStream() {
-        override fun write(b: Int) = throw IOException("Output stream is closed")
-        override fun write(b: ByteArray, off: Int, len: Int) =
-            throw IOException("Output stream is closed")
-    }
-
-    // =====================================================================
-    // 0. Некорректные входные параметры → исключения
-    // =====================================================================
-
-    @Test(expected = IllegalArgumentException::class)
-    fun `0a - throws when bytesPerSecond is zero or negative`() {
-        val input = ByteArrayInputStream(ByteArray(100))
-        val output = ByteArrayOutputStream()
-        copyWithRateLimitAndProgress(input, output, speedBytesPerSecond = 0) { _ -> }
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun `0b - throws when progressIntervalMs is negative`() {
-        val input = ByteArrayInputStream(ByteArray(100))
-        val output = ByteArrayOutputStream()
-        copyWithRateLimitAndProgress(
-            input, output,
-            speedBytesPerSecond = 1000,
-            progressIntervalMs = -1
-        ) { _ -> }
-    }
-
-    // =====================================================================
-    // 1. Скопированный поток идентичен исходному
-    // =====================================================================
-
+    // =========================================================================
+    // 1. Проверка некорректного speedBytesPerSecond
+    // =========================================================================
     @Test
-    fun `1 - copied data is identical to source`() {
-        val sourceData = ByteArray(100_000) { (it % 256).toByte() }
-        val input = ByteArrayInputStream(sourceData)
-        val output = ByteArrayOutputStream()
+    fun `should throw exception when speedBytesPerSecond is not positive`() {
+        val dummyIn = ByteArrayInputStream(ByteArray(10))
+        val dummyOut = ByteArrayOutputStream()
 
-        copyWithRateLimitAndProgress(
-            inputStream = input,
-            outputStream = output,
-            speedBytesPerSecond = 10_000_000, // высокая скорость, чтобы не ждать
-            progressIntervalMs = 10L
-        ) { _ -> }
-
-        assertArrayEquals(sourceData, output.toByteArray())
+        for (invalidSpeed in listOf(0, -1, -100)) {
+            try {
+                copyWithRateLimitAndProgress(dummyIn, dummyOut, invalidSpeed)
+                fail("Ожидалось исключение для speedBytesPerSecond = $invalidSpeed")
+            } catch (e: IllegalArgumentException) {
+                // Ожидаемое поведение
+            } catch (e: Exception) {
+                // Если реализация кидает другой тип исключений (например, IllegalStateException)
+                // можно заменить IllegalArgumentException на Exception::class в expected
+            }
+        }
     }
 
-    // =====================================================================
-    // 2. Время копирования ≈ расчётному (±10%)
-    // =====================================================================
-
+    // =========================================================================
+    // 2. Проверка некорректного progressRatePerSecond
+    // =========================================================================
     @Test
-    fun `2 - copy time is within 10 percent of expected`() {
-        val dataSize = 500_000L              // 500 КБ
-        val speed = 500_000                 // 500 КБ/с
-        val expectedMs = TimeUnit.SECONDS.toMillis(
-            (dataSize.toDouble() / speed).toLong()
-        ) // 1000 мс
+    fun `should throw exception when progressRatePerSecond is not positive`() {
+        val dummyIn = ByteArrayInputStream(ByteArray(10))
+        val dummyOut = ByteArrayOutputStream()
 
-        val input = ByteArrayInputStream(ByteArray(dataSize.toInt()))
-        val output = ByteArrayOutputStream()
+        for (invalidRate in listOf(0, -1, -5)) {
+            try {
+                copyWithRateLimitAndProgress(dummyIn, dummyOut, 10, invalidRate)
+                fail("Ожидалось исключение для progressRatePerSecond = $invalidRate")
+            } catch (e: IllegalArgumentException) {
+                // Ожидаемое поведение
+            } catch (e: Exception) {
+                // Допускаем другие типы исключений
+            }
+        }
+    }
 
-        val start = System.nanoTime()
-        copyWithRateLimitAndProgress(
-            inputStream = input,
-            outputStream = output,
-            speedBytesPerSecond = speed,
-            progressIntervalMs = 50L
-        ) { _ -> }
-        val elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start)
+    // =========================================================================
+    // 3. Скопированный файл идентичен исходному
+    // =========================================================================
+    @Test
+    fun `copied file should be identical to original`() {
+        val originalBytes = Random.nextBytes(1024 * 1024) // 1 МБ
+        val inFile = tempFolder.newFile("in_identical.bin").apply { writeBytes(originalBytes) }
+        val outFile = tempFolder.newFile("out_identical.bin")
 
-        val lowerBound = (expectedMs * 0.9).toLong()
-        val upperBound = (expectedMs * 1.1).toLong()
+        inFile.inputStream().use { `in` ->
+            outFile.outputStream().use { out ->
+                // Скорость высокая, чтобы тест быстро прошел
+                copyWithRateLimitAndProgress(`in`, out, 10 * 1024 * 1024)
+            }
+        }
+
+        assertArrayEquals("Содержимое файлов должно совпадать", originalBytes, outFile.readBytes())
+    }
+
+    // =========================================================================
+    // 4. Время копирования отличается от расчётного не более чем на 10%
+    // =========================================================================
+    @Test
+    fun `copy time should be within 10 percent of expected time`() {
+        val fileSize = 500_000
+        val speed = 100_000 // 100 КБ/с
+        val expectedTimeMs = (fileSize.toDouble() / speed * 1000).toLong() // 5000 мс
+
+        val originalBytes = Random.nextBytes(fileSize)
+        val inFile = tempFolder.newFile("in_time.bin").apply { writeBytes(originalBytes) }
+        val outFile = tempFolder.newFile("out_time.bin")
+
+        val start = System.currentTimeMillis()
+        inFile.inputStream().use { `in` ->
+            outFile.outputStream().use { out ->
+                copyWithRateLimitAndProgress(`in`, out, speed)
+            }
+        }
+        val elapsed = System.currentTimeMillis() - start
+
+        val lowerBound = (expectedTimeMs * 0.9).toLong()
+        val upperBound = (expectedTimeMs * 1.1).toLong()
 
         assertTrue(
-            "Elapsed time ${elapsedMs}ms is outside expected range [$lowerBound, $upperBound]ms",
-            elapsedMs in lowerBound..upperBound
+            "Время копирования ${elapsed} мс вышло за пределы [${lowerBound}, ${upperBound}] мс",
+            elapsed in lowerBound..upperBound
         )
     }
 
-    // =====================================================================
-    // 3. Значения прогресса не убывают
-    // =====================================================================
-
+    // =========================================================================
+    // 5. Коллбек прогресса возвращает неубывающие значения
+    // =========================================================================
     @Test
-    fun `3 - progress values are monotonically non-decreasing`() {
-        val input = ByteArrayInputStream(ByteArray(200_000))
-        val output = ByteArrayOutputStream()
-        val progressValues = mutableListOf<Long>()
+    fun `progress callback values should be non-decreasing`() {
+        val progressValues = CopyOnWriteArrayList<Long>()
+        val fileSize = 200_000
 
-        copyWithRateLimitAndProgress(
-            inputStream = input,
-            outputStream = output,
-            speedBytesPerSecond = 1_000_000,
-            progressIntervalMs = 20L
-        ) { bytes -> progressValues.add(bytes) }
+        val inFile = tempFolder.newFile("in_progress.bin").apply { writeBytes(Random.nextBytes(fileSize)) }
+        val outFile = tempFolder.newFile("out_progress.bin")
 
-        assertTrue("Progress callback was never called", progressValues.isNotEmpty())
+        inFile.inputStream().use { `in` ->
+            outFile.outputStream().use { out ->
+                copyWithRateLimitAndProgress(
+                    inputStream = `in`,
+                    outputStream = out,
+                    speedBytesPerSecond = 100_000,
+                    progressRatePerSecond = 4,
+                    progressCallback = { progressValues.add(it) }
+                )
+            }
+        }
 
         for (i in 1 until progressValues.size) {
             assertTrue(
-                "Progress decreased at index $i: " +
-                        "${progressValues[i - 1]} -> ${progressValues[i]}",
-                progressValues[i] >= progressValues[i - 1]
+                "Значение прогресса уменьшилось: ${progressValues[i-1]} -> ${progressValues[i]}",
+                progressValues[i] >= progressValues[i-1]
             )
         }
     }
 
-    // =====================================================================
-    // 4. Финальное значение прогресса = размер файла
-    // =====================================================================
-
+    // =========================================================================
+    // 6. Финальное значение коллбека прогресса равно размеру файла
+    // =========================================================================
     @Test
-    fun `4 - final progress value equals source size`() {
-        val sourceData = ByteArray(150_000)
-        val input = ByteArrayInputStream(sourceData)
-        val output = ByteArrayOutputStream()
-        val progressValues = mutableListOf<Long>()
+    fun `final progress callback value should equal file size`() {
+        val progressValues = CopyOnWriteArrayList<Long>()
+        val fileSize = 200_000
 
-        copyWithRateLimitAndProgress(
-            inputStream = input,
-            outputStream = output,
-            speedBytesPerSecond = 1_000_000,
-            progressIntervalMs = 20L
-        ) { bytes -> progressValues.add(bytes) }
+        val inFile = tempFolder.newFile("in_final_prog.bin").apply { writeBytes(Random.nextBytes(fileSize)) }
+        val outFile = tempFolder.newFile("out_final_prog.bin")
 
-        assertEquals(
-            sourceData.size.toLong(),
-            progressValues.lastOrNull()
-                ?: error("Progress callback was never called")
-        )
-    }
-
-    // =====================================================================
-    // 5. Интервалы между вызовами callback ≈ заданному (±10%)
-    // =====================================================================
-
-    @Test
-    fun `5 - intervals between progress callbacks are within 10 percent of configured`() {
-        val dataSize = 2_000_000              // 2 МБ
-        val speed = 2_000_000                // 2 МБ/с → ~1 сек работы
-        val intervalMs = 100L
-
-        val input = ByteArrayInputStream(ByteArray(dataSize))
-        val output = ByteArrayOutputStream()
-        // Собираем времена вызовов callback в миллисекундах от старта
-        val callTimesMs = mutableListOf<Long>()
-        val start = System.nanoTime()
-
-        copyWithRateLimitAndProgress(
-            inputStream = input,
-            outputStream = output,
-            speedBytesPerSecond = speed,
-            progressIntervalMs = intervalMs
-        ) { _ ->
-            callTimesMs.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start))
+        inFile.inputStream().use { `in` ->
+            outFile.outputStream().use { out ->
+                copyWithRateLimitAndProgress(
+                    inputStream = `in`,
+                    outputStream = out,
+                    speedBytesPerSecond = 100_000,
+                    progressRatePerSecond = 4,
+                    progressCallback = { progressValues.add(it) }
+                )
+            }
         }
 
-        // Первый вызов происходит почти мгновенно (т.к. lastProgressTimeNs = 0),
-        // поэтому анализируем интервалы начиная со 2-го вызова.
-        assertTrue(
-            "Expected at least 3 progress calls, got ${callTimesMs.size}",
-            callTimesMs.size >= 3
-        )
+        assertTrue("Коллбек прогресса не был вызван", progressValues.isNotEmpty())
+        assertEquals("Финальное значение прогресса должно равняться размеру файла",
+            fileSize.toLong(), progressValues.last())
+    }
 
-        val lowerBound = (intervalMs * 0.9).toLong()
-        val upperBound = (intervalMs * 1.1).toLong()
+    // =========================================================================
+    // 7. Коллбек завершения вызывается и возвращает размер файла
+    // =========================================================================
+    @Test
+    fun `finish callback should be called with file size`() {
+        val finishValues = CopyOnWriteArrayList<Long>()
+        val fileSize = 200_000
 
-        for (i in 2 until callTimesMs.size) {
-            val interval = callTimesMs[i] - callTimesMs[i - 1]
+        val inFile = tempFolder.newFile("in_finish.bin").apply { writeBytes(Random.nextBytes(fileSize)) }
+        val outFile = tempFolder.newFile("out_finish.bin")
+
+        inFile.inputStream().use { `in` ->
+            outFile.outputStream().use { out ->
+                copyWithRateLimitAndProgress(
+                    inputStream = `in`,
+                    outputStream = out,
+                    speedBytesPerSecond = 100_000,
+                    finishCallback = { finishValues.add(it) }
+                )
+            }
+        }
+
+        assertEquals("Коллбек завершения должен быть вызван ровно 1 раз", 1, finishValues.size)
+        assertEquals("Значение в коллбеке завершения должно равняться размеру файла",
+            fileSize.toLong(), finishValues.first())
+    }
+
+    // =========================================================================
+    // 8. Интервалы между срабатываниями коллбека прогресса (допуск 10%)
+    // =========================================================================
+    @Test
+    fun `intervals between progress callbacks should be within 10 percent of expected`() {
+        val progressTimestamps = CopyOnWriteArrayList<Long>() // В наносекундах
+        val progressRate = 4 // 4 раза в секунду -> интервал 250 мс
+        val expectedIntervalMs = 1000.0 / progressRate
+
+        val fileSize = 500_000
+        val speed = 100_000 // Копирование займет 5 секунд, что даст ~20 срабатываний
+
+        val inFile = tempFolder.newFile("in_intervals.bin").apply { writeBytes(Random.nextBytes(fileSize)) }
+        val outFile = tempFolder.newFile("out_intervals.bin")
+
+        inFile.inputStream().use { `in` ->
+            outFile.outputStream().use { out ->
+                copyWithRateLimitAndProgress(
+                    inputStream = `in`,
+                    outputStream = out,
+                    speedBytesPerSecond = speed,
+                    progressRatePerSecond = progressRate,
+                    progressCallback = {
+                        progressTimestamps.add(System.nanoTime())
+                    }
+                )
+            }
+        }
+
+        // Нам нужно минимум 3 записи, чтобы проверить 2 интервала
+        assertTrue("Слишком мало срабатываний коллбека для проверки интервалов", progressTimestamps.size >= 3)
+
+        val lowerBound = (expectedIntervalMs * 0.9).toLong()
+        val upperBound = (expectedIntervalMs * 1.1).toLong()
+
+        // Проверяем все интервалы, кроме самого последнего (так как файл может завершиться
+        // ровно в момент срабатывания, и последний "сон" может не состояться или быть прерван).
+        for (i in 1 until progressTimestamps.size - 1) {
+            val diffMs = (progressTimestamps[i] - progressTimestamps[i - 1]) / 1_000_000
+
             assertTrue(
-                "Interval #$i = ${interval}ms is outside [$lowerBound, $upperBound]ms",
-                interval in lowerBound..upperBound
+                "Интервал ${diffMs} мс вышел за пределы [${lowerBound}, ${upperBound}] мс",
+                diffMs in lowerBound..upperBound
             )
         }
     }
 
-    // =====================================================================
-    // 6. Внезапное закрытие потоков → IOException
-    // =====================================================================
-
+    // =========================================================================
+    // 9. Внезапное закрытие входного или выходного потока (IOException)
+    // =========================================================================
     @Test(expected = IOException::class)
-    fun `6a - throws IOException when input stream is abruptly closed`() {
-        val output = ByteArrayOutputStream()
-        copyWithRateLimitAndProgress(
-            inputStream = FailingInputStream(),
-            outputStream = output,
-            speedBytesPerSecond = 1_000_000
-        ) { _ -> }
+    fun `should throw IOException when input stream is suddenly closed`() {
+        val failingIn = object : FilterInputStream(ByteArrayInputStream(ByteArray(100_000))) {
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                throw IOException("Simulated sudden input stream closure")
+            }
+        }
+        val dummyOut = ByteArrayOutputStream()
+
+        copyWithRateLimitAndProgress(failingIn, dummyOut, 10_000)
     }
 
     @Test(expected = IOException::class)
-    fun `6b - throws IOException when output stream is abruptly closed`() {
-        val input = ByteArrayInputStream(ByteArray(10_000))
-        copyWithRateLimitAndProgress(
-            inputStream = input,
-            outputStream = FailingOutputStream(),
-            speedBytesPerSecond = 1_000_000
-        ) { _ -> }
+    fun `should throw IOException when output stream is suddenly closed`() {
+        val dummyIn = ByteArrayInputStream(ByteArray(100_000))
+        val failingOut = object : FilterOutputStream(ByteArrayOutputStream()) {
+            override fun write(b: ByteArray, off: Int, len: Int) {
+                throw IOException("Simulated sudden output stream closure")
+            }
+        }
+
+        copyWithRateLimitAndProgress(dummyIn, failingOut, 10_000)
     }
 }

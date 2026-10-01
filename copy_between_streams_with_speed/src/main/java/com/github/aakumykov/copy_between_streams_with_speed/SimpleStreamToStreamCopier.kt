@@ -14,8 +14,12 @@ class SimpleStreamToStreamCopier {
         progressCallback: ((byteTransferred: Long) -> Unit)? = null,
         finishCallback: ((byteTransferred: Long) -> Unit)? = null
     ) {
-        require(speedBytesPerSecond >= 0) { "Speed must be greater then zero ($speedBytesPerSecond)." }
-        require(progressRatePerSecond >= 0) { "Интервал прогресса не может быть отрицательным" }
+        require(speedBytesPerSecond > 0) {
+            "Speed must be greater then zero ($speedBytesPerSecond)."
+        }
+        require(progressRatePerSecond > 0) {
+            "Интервал прогресса не может быть отрицательным"
+        }
 
         val bufferSize = DEFAULT_BUFFER_SIZE
         val dataBuffer = ByteArray(bufferSize)
