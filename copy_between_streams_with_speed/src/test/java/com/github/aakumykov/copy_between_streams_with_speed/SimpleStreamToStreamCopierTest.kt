@@ -16,7 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
 import java.io.InputStream
@@ -24,6 +23,7 @@ import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
@@ -31,7 +31,7 @@ import kotlin.math.roundToInt
 
 class SimpleStreamToStreamCopierTest : TestBase() {
 
-        private val limitedStreamCopier = SimpleStreamToStreamCopier()
+        private val streamCopier = SimpleStreamToStreamCopier()
 
         // FIXME: проверять количество шагов в прогрессе!
         /**
@@ -66,6 +66,9 @@ class SimpleStreamToStreamCopierTest : TestBase() {
          *
          * Время копирования:
          * [time_test_on_single_params_set]
+         *
+         * Интервалы выдачи значений коллбеком прогресса
+         * [progress_callback_intervals]
          *
          * Разные размеры данных:
          * [test_with_diff_data_size_1_9]
@@ -147,19 +150,17 @@ class SimpleStreamToStreamCopierTest : TestBase() {
         fun simple_test_100kb_30kb_with_specific_steps() {
 
             val dataSize = 100.KILOBYTES
-            val speed = 30.KILOBYTES
+            val speed = 70.KILOBYTES
             val progressRate = 1
-            val stepsPerSecond = 5
 
             standard_test_with(
                 dataSize,
                 speed,
                 progressRate,
-                stepsPerSecond = stepsPerSecond
             )
         }
 
-        @Test
+        /*@Test
         fun simple_test_100kb_30kb_with_diff_steps() {
 //        listOf(1,2,3,4,5,6,7,8,9,10).forEach { steps ->
             for (steps in 1..10 step 1) {
@@ -173,12 +174,11 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                     dataSize,
                     speed,
                     progressRate,
-                    stepsPerSecond = steps
                 )
 
                 logD("")
             }
-        }
+        }*/
 
         @Test
         fun simple_test_for_speed() {
@@ -188,7 +188,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                 val rate = 1
                 prepareSourceAndTargetFiles(dataSize)
                 logD( "simple_test_for_speed(sizeBase:$sizeBase), старт")
-                limitedStreamCopier.copyFromStreamToStream(
+                streamCopier.copyFromStreamToStream(
                     newSourceFileStream,
                     newTargetFileStream,
                     speed,
@@ -208,7 +208,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
             prepareSourceAndTargetFiles(dataSize)
 
-            limitedStreamCopier.copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
+            streamCopier.copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
                 speed, progressRate)
 
             Assert.assertEquals(dataSize.toLong(), targetFile.length())
@@ -229,7 +229,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
             prepareSourceAndTargetFiles(dataSize)
 
-            limitedStreamCopier
+            streamCopier
                 .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
                     speed, rate,
                     progressCallback = { _,_ ->
@@ -262,7 +262,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             Assert.assertThrows(IllegalArgumentException::class.java) {
                 prepareSourceAndTargetFiles(1)
                 runBlocking {
-                    limitedStreamCopier.copyFromStreamToStream(
+                    streamCopier.copyFromStreamToStream(
                         inputStream = newSourceFileStream,
                         outputStream = newTargetFileStream,
                         speed,
@@ -287,7 +287,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             Assert.assertThrows(IllegalArgumentException::class.java) {
                 prepareSourceAndTargetFiles(1)
                 runBlocking {
-                    limitedStreamCopier.copyFromStreamToStream(
+                    streamCopier.copyFromStreamToStream(
                         inputStream = newSourceFileStream,
                         outputStream = newTargetFileStream,
                         1,
@@ -308,7 +308,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             prepareSourceAndTargetFiles(dataSize)
 
             val progressList = buildList {
-                limitedStreamCopier
+                streamCopier
                     .copyFromStreamToStream(
                         newSourceFileStream,
                         newTargetFileStream,
@@ -386,12 +386,61 @@ class SimpleStreamToStreamCopierTest : TestBase() {
         }
 
 
-        private suspend fun test_error_behaviour(
+    @Test
+    fun progress_callback_intervals() {
+
+        val progressIntervalsList = mutableListOf<Long>()
+
+        val dataSize = 1000
+        val speed = 300
+        val rate = 1
+
+        val expectedProgressIntervalNs = NANOS_IN_SECOND / rate
+        val expectedProgressIntervalDeviationPercent = 10
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        newSourceFileStream.use { sourceStream ->
+            newTargetFileStream.use { targetStream ->
+                streamCopier.copyFromStreamToStream(
+                    sourceStream,
+                    targetStream,
+                    speed,
+                    rate
+                ) { _, _ ->
+                    progressIntervalsList.add(currentTimeNanos)
+                }
+            }
+        }
+
+        Assert.assertTrue(progressIntervalsList.isNotEmpty())
+
+        progressIntervalsList.removeLast()
+
+        val minInterval = progressIntervalsList.min()
+        val minIntervalDeviationNs = abs(minInterval - expectedProgressIntervalNs)
+        Assert.assertTrue(
+            "Отклонение минимального интервала ($minIntervalDeviationNs) от заданного ($expectedProgressIntervalNs)",
+            minIntervalDeviationNs.percentOf(expectedProgressIntervalNs) <= expectedProgressIntervalDeviationPercent
+        )
+
+        if (progressIntervalsList.size > 1) {
+            val maxInterval = progressIntervalsList.max()
+            val maxIntervalDeviationNs = abs(maxInterval - expectedProgressIntervalNs)
+            Assert.assertTrue(
+                "Отклонение максимального интервала ($maxIntervalDeviationNs) от заданного ($expectedProgressIntervalNs)",
+                maxIntervalDeviationNs.percentOf(expectedProgressIntervalNs) <= expectedProgressIntervalDeviationPercent
+            )
+        }
+    }
+
+
+        private fun test_error_behaviour(
             scope: CoroutineScope,
             errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit,
             progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
         ) {
-            val dataSize = 1000//DEFAULT_BUFFER_SIZE * 10
+            val dataSize = 1000
             val speed = 100
             val errorDelayMs: Long = 1000
 
@@ -409,7 +458,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
             scope.launch (Dispatchers.IO) {
                 Assert.assertThrows(Exception::class.java) {
-                    limitedStreamCopier.copyFromStreamToStream(
+                    streamCopier.copyFromStreamToStream(
                         inputStream = sourceStream,
                         outputStream = targetStream,
                         speed,
@@ -672,7 +721,6 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             dataSizeBytes: Int,
             speedBytesPerSec: Int,
             progressRatePerSec: Int,
-            stepsPerSecond: Int = 1000
         ) {
             val finishCallbackWasTriggered = AtomicBoolean(false)
             val progressList = mutableListOf<Long>()
@@ -688,14 +736,14 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             val startTimeNs: Long = currentTimeNanos
             logD("start:  ${startTimeNs.humanDecimalPlaces}")
 
-            limitedStreamCopier
+            streamCopier
                 .copyFromStreamToStream(
                     newSourceFileStream,
                     newTargetFileStream,
                     speedBytesPerSec,
                     progressRatePerSec,
                     progressCallback = { bytes,speed ->
-                        logI("progress [${currentTimeMs.humanDecimalPlaces}]: $bytes")
+                        logI("[${currentTimeMs.humanDecimalPlaces}] pr: $bytes, sp: $speed")
                         progressList.add(bytes)
                         speedList.add(speed)
                     }, finishCallback = { _ ->
@@ -730,7 +778,6 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                     "sz:${dataSizeBytes.humanDecimalPlaces},\n" +
                     "sp:${speedBytesPerSec.humanDecimalPlaces},\n" +
                     "rt:$progressRatePerSec,\n" +
-                    "stp:$stepsPerSecond,\n" +
                     "est.time:${estimatedDurationNs.humanDecimalPlaces},\n" +
                     "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%),\n" +
                     "t.diff:${timeDiffNs},\n"
