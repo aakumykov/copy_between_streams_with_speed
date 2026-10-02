@@ -231,7 +231,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             limitedStreamCopier
                 .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
                     speed, rate,
-                    progressCallback = { _ ->
+                    progressCallback = { _,_ ->
                         progressCallbackCount.getAndIncrement()
                     },
                     finishCallback = { _ ->
@@ -313,7 +313,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                         newTargetFileStream,
                         speed,
                         progressRate,
-                        progressCallback = { bytes ->
+                        progressCallback = { bytes,_ ->
                             add(bytes)
                         }
                     )
@@ -654,7 +654,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
         ) {
             val finishCallbackWasTriggered = AtomicBoolean(false)
             val progressList = mutableListOf<Long>()
-//            val speedList = mutableListOf<Long>()
+            val speedList = mutableListOf<Long>()
 
             val sourceData = prepareSourceAndTargetFiles(dataSizeBytes)
 
@@ -672,10 +672,10 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                     newTargetFileStream,
                     speedBytesPerSec,
                     progressRatePerSec,
-                    progressCallback = { bytes ->
+                    progressCallback = { bytes,speed ->
                         logI("progress [${currentTimeMs.humanDecimalPlaces}]: $bytes")
                         progressList.add(bytes)
-//                        speedList.add(speed)
+                        speedList.add(speed)
                     }, finishCallback = { _ ->
                         finishCallbackWasTriggered.set(true)
                     })
@@ -713,9 +713,9 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                     "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%),\n" +
                     "t.diff:${timeDiffNs},\n"
 
-            /*val progressMsg =
+            val progressMsg =
                 "prList[${progressList.size}]: ${progressList.joinToString(",")},\n" +
-                        "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")},\n"*/
+                        "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")},\n"
 
             logI(msgMedium)
 
@@ -725,8 +725,8 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             Assert.assertTrue("Размер списка прогресса (${progressList.size}) >= $minimumProgressListSize",
                 progressList.size >= minimumProgressListSize)
 
-            /*Assert.assertTrue("Размер списка скорости (${speedList.size}) >= $minimumSpeedListSize",
-                speedList.size >= minimumSpeedListSize)*/
+            Assert.assertTrue("Размер списка скорости (${speedList.size}) >= $minimumSpeedListSize",
+                speedList.size >= minimumSpeedListSize)
 
             if (dataSizeBytes > 1) {
                 progressList.reduce { acc, nextValue ->

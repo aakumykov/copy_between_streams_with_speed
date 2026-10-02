@@ -12,7 +12,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 class SimpleStreamToStreamCopierUnitTestsAI {
@@ -24,7 +23,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
         progressRatePerSecond: Int = 1,
-        progressCallback: ((totalBytesTransferred: Long) -> Unit)? = null,
+        progressCallback: ((totalBytesTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null,
         finishCallback: ((totalBytesTransferred: Long) -> Unit)? = null
     ) {
         simpleStreamToStreamCopier.copyFromStreamToStream(
@@ -53,9 +52,9 @@ class SimpleStreamToStreamCopierUnitTestsAI {
             try {
                 copyWithRateLimitAndProgress(dummyIn, dummyOut, invalidSpeed)
                 fail("Ожидалось исключение для speedBytesPerSecond = $invalidSpeed")
-            } catch (e: IllegalArgumentException) {
+            } catch (_: IllegalArgumentException) {
                 // Ожидаемое поведение
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Если реализация кидает другой тип исключений (например, IllegalStateException)
                 // можно заменить IllegalArgumentException на Exception::class в expected
             }
@@ -74,9 +73,9 @@ class SimpleStreamToStreamCopierUnitTestsAI {
             try {
                 copyWithRateLimitAndProgress(dummyIn, dummyOut, 10, invalidRate)
                 fail("Ожидалось исключение для progressRatePerSecond = $invalidRate")
-            } catch (e: IllegalArgumentException) {
+            } catch (_: IllegalArgumentException) {
                 // Ожидаемое поведение
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Допускаем другие типы исключений
             }
         }
@@ -149,7 +148,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
                     outputStream = out,
                     speedBytesPerSecond = 100_000,
                     progressRatePerSecond = 4,
-                    progressCallback = { progressValues.add(it) }
+                    progressCallback = { b, _ -> progressValues.add(b) }
                 )
             }
         }
@@ -180,7 +179,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
                     outputStream = out,
                     speedBytesPerSecond = 100_000,
                     progressRatePerSecond = 4,
-                    progressCallback = { progressValues.add(it) }
+                    progressCallback = { b, _ -> progressValues.add(b) }
                 )
             }
         }
@@ -239,7 +238,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
                     outputStream = out,
                     speedBytesPerSecond = speed,
                     progressRatePerSecond = progressRate,
-                    progressCallback = {
+                    progressCallback = { _, _ ->
                         progressTimestamps.add(System.nanoTime())
                     }
                 )
