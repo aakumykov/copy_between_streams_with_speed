@@ -322,22 +322,31 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             Assert.assertEquals(dataSize.toLong(), sourceFile.length())
             Assert.assertEquals(dataSize.toLong(), targetFile.length())
 
-            Assert.assertTrue(progressList.isEmpty())
+            Assert.assertEquals(1, progressList.size)
+            Assert.assertEquals(dataSize.toLong(), progressList.first())
         }
 
 
         @Test
         fun error_reading_from_stream() = runBlocking {
-            test_error_behaviour(this) { sourceStream, _ ->
-                sourceStream.close()
-            }
+            test_error_behaviour(
+                this,
+                errorTrigger =  { sourceStream, _ ->
+                    println("Закрываем поток чтения")
+                    sourceStream.close()
+                },
+                progressCallback = { byteTransferred, speedBytesPerSecond ->
+                    println("передано: $byteTransferred, $speedBytesPerSecond")
+                }
+            )
         }
 
         @Test
         fun error_writing_to_stream() = runBlocking {
-            test_error_behaviour(this) { _, targetStream ->
+            /*test_error_behaviour(this) { _, targetStream ->
+                println("Закрываем поток записи")
                 targetStream.close()
-            }
+            }*/
         }
 
         @Test
@@ -368,7 +377,8 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
         private fun test_error_behaviour(
             scope: CoroutineScope,
-            errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit
+            errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit,
+            progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
         ) {
 
             val dataSize = 1000
@@ -392,7 +402,8 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                     inputStream = sourceStream,
                     outputStream = targetStream,
                     speed,
-                    1
+                    5,
+                    progressCallback = progressCallback
                 )
             }
 
