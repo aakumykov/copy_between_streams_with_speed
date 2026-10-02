@@ -32,7 +32,9 @@ class SimpleStreamToStreamCopier {
 
         while (true) {
             val readBytes = inputStream.read(dataBuffer)
-            if (-1 == readBytes) break
+            if (-1 == readBytes) {
+                break
+            }
 
             outputStream.write(dataBuffer, 0, readBytes)
             totalBytesWritten += readBytes
@@ -42,7 +44,8 @@ class SimpleStreamToStreamCopier {
             val delayNanos = expectedNanos - actualNanos
 
             if (delayNanos > 0) {
-                TimeUnit.NANOSECONDS.sleep(expectedNanos - actualNanos)
+                val seconds = delayNanos / NANOS_IN_SECOND
+                TimeUnit.NANOSECONDS.sleep(delayNanos)
             }
 
             val durationWithSleep = System.nanoTime() - startTime

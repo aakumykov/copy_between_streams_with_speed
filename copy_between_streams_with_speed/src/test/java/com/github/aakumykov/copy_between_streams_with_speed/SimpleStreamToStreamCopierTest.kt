@@ -329,7 +329,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
 
         @Test
-        fun error_reading_from_stream() = runTest {
+        fun error_reading_from_stream() = runBlocking {
             test_error_behaviour(
                 this,
                 errorTrigger =  { sourceStream, _ ->
@@ -376,12 +376,12 @@ class SimpleStreamToStreamCopierTest : TestBase() {
         }
 
 
-        private fun test_error_behaviour(
+        private suspend fun test_error_behaviour(
             scope: CoroutineScope,
             errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit,
             progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
         ) {
-            val dataSize = 1000
+            val dataSize = 1000//DEFAULT_BUFFER_SIZE * 10
             val speed = 100
             val errorDelayMs: Long = 1000
 
@@ -397,17 +397,18 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                 errorTrigger.invoke(sourceStream, targetStream)
             }
 
-            Assert.assertThrows(Exception::class.java) {
-                limitedStreamCopier.copyFromStreamToStream(
-                    inputStream = sourceStream,
-                    outputStream = targetStream,
-                    speed,
-                    5,
-                    progressCallback = progressCallback
-                )
+            scope.launch (Dispatchers.IO) {
+                Assert.assertThrows(Exception::class.java) {
+                    limitedStreamCopier.copyFromStreamToStream(
+                        inputStream = sourceStream,
+                        outputStream = targetStream,
+                        speed,
+                        10,
+                        progressCallback = progressCallback
+                    )
+                }
+                Assert.assertFalse(finishCallbackWasTriggered.get())
             }
-
-            Assert.assertFalse(finishCallbackWasTriggered.get())
         }
 
 
