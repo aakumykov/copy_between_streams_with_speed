@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert
 import org.junit.Test
 import java.io.InputStream
@@ -328,7 +329,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
 
         @Test
-        fun error_reading_from_stream() = runBlocking {
+        fun error_reading_from_stream() = runTest {
             test_error_behaviour(
                 this,
                 errorTrigger =  { sourceStream, _ ->
@@ -380,7 +381,6 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit,
             progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
         ) {
-
             val dataSize = 1000
             val speed = 100
             val errorDelayMs: Long = 1000
