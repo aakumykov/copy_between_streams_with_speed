@@ -9,9 +9,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivitySimplestCopyBinding
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
-import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.writeTestDataToFile
-import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
+import com.github.aakumykov.copy_between_streams_with_speed.SimpleStreamToStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.file_lister_navigator_selector.extensions.errorMsg
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -91,8 +90,8 @@ class SimplestCopyActivity : AppCompatActivity() {
         }
     }
 
-    private val limitedStreamCopier: LimitedStreamCopierNs get() {
-        return LimitedStreamCopierNs()
+    private val streamCopier: SimpleStreamToStreamCopier get() {
+        return SimpleStreamToStreamCopier()
     }
 
     private var currentJob: Job? = null
@@ -133,10 +132,11 @@ class SimplestCopyActivity : AppCompatActivity() {
                 targetStream.use { outputStream ->
 
                     try {
-                        limitedStreamCopier
+                        streamCopier
                             .copyFromStreamToStream(
                                 inputStream = inputStream,
                                 outputStream = outputStream,
+                                progressRatePerSecond = progressRate,
                                 speedBytesPerSecond = speedBytesPerSec,
                                 progressCallback = { transferredBytes, speedBytesPerSecond ->
                                     Log.d(TAG, "transferredBytes: $transferredBytes")

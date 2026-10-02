@@ -1,7 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
-import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs.Companion.NANOS_IN_SECOND
 import com.github.aakumykov.copy_between_streams_with_speed.SimpleStreamToStreamCopier.Companion.MILLIS_IN_SECOND
 import com.github.aakumykov.copy_between_streams_with_speed.ext.percentOf
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits

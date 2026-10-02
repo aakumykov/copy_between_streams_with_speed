@@ -14,12 +14,11 @@ import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.g
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs
+import com.github.aakumykov.copy_between_streams_with_speed.SimpleStreamToStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
@@ -70,7 +69,7 @@ class DemoActivity : AppCompatActivity() {
 
     private var currentInputStream: InputStream? = null
 
-    private val limitedStreamCopier by lazy { LimitedStreamCopierNs() }
+    private val streamCopier by lazy { SimpleStreamToStreamCopier() }
 
     private val dataSize get() = binding.sizeSeekBar.progress
     private val speed get() = binding.speedSeekBar.progress
@@ -100,7 +99,7 @@ class DemoActivity : AppCompatActivity() {
                         showInfo("Копирование-2 начато")
                     }
 
-                    limitedStreamCopier.copyFromStreamToStream(
+                    streamCopier.copyFromStreamToStream(
                         inputStream,
                         outputStream,
                         1000_1000,
@@ -164,7 +163,7 @@ class DemoActivity : AppCompatActivity() {
         inputStream: FileInputStream,
         outputStream: FileOutputStream
     ) {
-        limitedStreamCopier.copyFromStreamToStream(
+        streamCopier.copyFromStreamToStream(
             inputStream,
             outputStream,
             speed,
