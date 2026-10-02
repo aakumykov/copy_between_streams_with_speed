@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.SimpleStreamToStreamCopier.Companion.MILLIS_IN_SECOND
+import com.github.aakumykov.copy_between_streams_with_speed.SimpleStreamToStreamCopier.Companion.NANOS_IN_SECOND
 import com.github.aakumykov.copy_between_streams_with_speed.ext.percentOf
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
@@ -29,126 +30,143 @@ import kotlin.math.roundToInt
 
 class SimpleStreamToStreamCopierTest : TestBase() {
 
-        private val streamCopier = SimpleStreamToStreamCopier()
+private val streamCopier = SimpleStreamToStreamCopier()
 
-        // FIXME: проверять количество шагов в прогрессе!
-        /**
-         * [test_low_data_size]
-         * [test_data_size_hundreds_bytes]
-         * [test_data_size_kilobytes]
-         * [simple_test_100kb_30kb_with_specific_steps]
-         * [simple_test_for_speed]
-         * [simple_test_100kb_30kb_with_diff_steps]
-         *
-         * План теста:
-         *
-         * Данные просто копируются [data_simply_copied]
-         *
-         * Коллбеки [callbacks_are_triggered]:
-         *  - вызываются
-         *  - коллбек завершения вызывается один раз
-         *  - коллбек прогресса вызывается минимум 1 раз
-         *
-         * Ограничения работают:
-         *   - исключение при нулевой скорости [throws_exception_on_zero_speed]
-         *   - исключение при отрицательной скорости [throws_exception_on_negative_speed]
-         *   - исключение при отрицательном нулевом количестве шагов в секунду [throws_exception_on_zero_rate]
-         *   - исключение при отрицательном количестве шагов в секунду [throws_exception_on_negative_rate]
-         *
-         * Файл нулевого размера [zero_size_file]:
-         *  - исходный и целевой файлы остаются нулевого размера.
-         *  - массив прогресса пустой.
-         *
-         * Ошибка чтения потока [error_reading_from_stream].
-         * Ошибка записи в поток [error_writing_to_stream].
-         *
-         * Время копирования:
-         * [time_test_on_single_params_set]
-         *
-         * Интервалы выдачи значений коллбеком прогресса
-         * [progress_callback_intervals]
-         *
-         * Разные размеры данных:
-         * [test_with_diff_data_size_1_9]
-         * [test_with_diff_data_size_10_99]
-         * [test_with_diff_data_size_100_999]
-         * [test_with_diff_data_size_1000_9999]
-         *
-         * Разные скорости:
-         * [test_with_diff_speed_1_9]
-         * [test_with_diff_speed_10_99]
-         * [test_with_diff_speed_100_999]
-         * [test_with_diff_speed_1000_9999]
-         *
-         * Разные частоты прогресса:
-         * [test_with_diff_rate_1_9]
-         * [test_with_diff_rate_10_99]
-         * [test_with_diff_rate_100_999]
-         * [test_with_diff_rate_1000_9999]
-         *
-         * Фиксированный размер с разными скоростями и частотами:
-         * [fixed_data_size_10_with_diff_speed_and_rate]
-         * [fixed_data_size_100_with_diff_speed_and_rate]
-         * [fixed_data_size_1000_with_diff_speed_and_rate]
-         *
-         * Фиксированная скорость с разными размерами и частотами:
-         * [fixed_speed_10_with_diff_size_and_rate]
-         * [fixed_speed_100_with_diff_size_and_rate]
-         * [fixed_speed_1000_with_diff_size_and_rate]
-         *
-         * Фиксированная частота с разными размерами и скоростями:
-         * [fixed_rate_10_with_diff_size_and_speed]
-         * [fixed_rate_100_with_diff_size_and_speed]
-         * [fixed_rate_1000_with_diff_size_and_speed]
-         *
-         * Копирование большаго файла разными вариациями:
-         * [big_file_with_variations]
-         */
+    // FIXME: проверять количество шагов в прогрессе!
+    /**
+     * [test_low_data_size]
+     * [test_data_size_hundreds_bytes]
+     * [test_data_size_kilobytes]
+     * [simple_test_100kb_30kb_with_specific_steps]
+     * [simple_test_for_speed]
+     * [simple_test_100kb_30kb_with_diff_steps]
+     *
+     * План теста:
+     *
+     * Данные просто копируются [data_simply_copied]
+     *
+     * Коллбеки [callbacks_are_triggered]:
+     *  - вызываются
+     *  - коллбек завершения вызывается один раз
+     *  - коллбек прогресса вызывается минимум 1 раз
+     *
+     * Ограничения работают:
+     *   - исключение при нулевой скорости [throws_exception_on_zero_speed]
+     *   - исключение при отрицательной скорости [throws_exception_on_negative_speed]
+     *   - исключение при отрицательном нулевом количестве шагов в секунду [throws_exception_on_zero_rate]
+     *   - исключение при отрицательном количестве шагов в секунду [throws_exception_on_negative_rate]
+     *
+     * Файл нулевого размера [zero_size_file]:
+     *  - исходный и целевой файлы остаются нулевого размера.
+     *  - массив прогресса пустой.
+     *
+     * Ошибка чтения потока [error_reading_from_stream].
+     * Ошибка записи в поток [error_writing_to_stream].
+     *
+     * Время копирования:
+     * [time_test_on_single_params_set]
+     *
+     * Интервалы выдачи значений коллбеком прогресса
+     * [progress_callback_intervals]
+     *
+     * Разные размеры данных:
+     * [test_with_diff_data_size_1_9]
+     * [test_with_diff_data_size_10_99]
+     * [test_with_diff_data_size_100_999]
+     * [test_with_diff_data_size_1000_9999]
+     *
+     * Разные скорости:
+     * [test_with_diff_speed_1_9]
+     * [test_with_diff_speed_10_99]
+     * [test_with_diff_speed_100_999]
+     * [test_with_diff_speed_1000_9999]
+     *
+     * Разные частоты прогресса:
+     * [test_with_diff_rate_1_9]
+     * [test_with_diff_rate_10_99]
+     * [test_with_diff_rate_100_999]
+     * [test_with_diff_rate_1000_9999]
+     *
+     * Фиксированный размер с разными скоростями и частотами:
+     * [fixed_data_size_10_with_diff_speed_and_rate]
+     * [fixed_data_size_100_with_diff_speed_and_rate]
+     * [fixed_data_size_1000_with_diff_speed_and_rate]
+     *
+     * Фиксированная скорость с разными размерами и частотами:
+     * [fixed_speed_10_with_diff_size_and_rate]
+     * [fixed_speed_100_with_diff_size_and_rate]
+     * [fixed_speed_1000_with_diff_size_and_rate]
+     *
+     * Фиксированная частота с разными размерами и скоростями:
+     * [fixed_rate_10_with_diff_size_and_speed]
+     * [fixed_rate_100_with_diff_size_and_speed]
+     * [fixed_rate_1000_with_diff_size_and_speed]
+     *
+     * Копирование большаго файла разными вариациями:
+     * [big_file_with_variations]
+     */
 
 
 
-        /**
-         * Этот тест ниже был сбойным...
-         * [test_with_diff_speed_100_999]
-         */
-        @Test
-        fun test_low_data_size() {
-            repeat(10) { i ->
-                logD("================= Прогон ${i+1} =================")
-                standard_test_with(
-                    10,
-                    126,
-                    10
-                )
-            }
+    /**
+     * Этот тест ниже был сбойным...
+     * [test_with_diff_speed_100_999]
+     */
+    @Test
+    fun test_low_data_size() {
+        repeat(10) { i ->
+            logD("================= Прогон ${i+1} =================")
+            standard_test_with(
+                10,
+                126,
+                10
+            )
         }
+    }
 
 
-        @Test
-        fun test_data_size_hundreds_bytes() {
-            for(base in 1.. 9) {
-                val dataSize = base * 100
-                val speed = dataSize * 10
-                val rate = 1
-                standard_test_with(dataSize, speed, rate,)
-            }
+    @Test
+    fun test_data_size_hundreds_bytes() {
+        for(base in 1.. 9) {
+            val dataSize = base * 100
+            val speed = dataSize * 10
+            val rate = 1
+            standard_test_with(dataSize, speed, rate,)
         }
+    }
 
-        @Test
-        fun test_data_size_kilobytes() {
-            for(base in 1..10) {
-                val dataSize = base.KILOBYTES
-                val speed = dataSize * 10
-                val rate = 1
-                standard_test_with(dataSize, speed, rate,)
-            }
+    @Test
+    fun test_data_size_kilobytes() {
+        for(base in 1..10) {
+            val dataSize = base.KILOBYTES
+            val speed = dataSize * 10
+            val rate = 1
+            standard_test_with(dataSize, speed, rate,)
         }
+    }
 
-        @Test
-        fun simple_test_100kb_30kb_with_specific_steps() {
+    @Test
+    fun simple_test_100kb_30kb_with_specific_steps() {
+
+        val dataSize = 100.KILOBYTES
+        val speed = 16.KILOBYTES
+        val progressRate = 1
+
+        standard_test_with(
+            dataSize,
+            speed,
+            progressRate,
+        )
+    }
+
+    @Test
+    fun simple_test_100kb_30kb_with_diff_steps() {
+//        listOf(1,2,3,4,5,6,7,8,9,10).forEach { steps ->
+        for (steps in 1..10 step 1) {
+            logD("steps: $steps")
 
             val dataSize = 100.KILOBYTES
-            val speed = 16.KILOBYTES
+            val speed = 30.KILOBYTES
             val progressRate = 1
 
             standard_test_with(
@@ -156,232 +174,215 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                 speed,
                 progressRate,
             )
+
+            logD("")
         }
+    }
 
-        /*@Test
-        fun simple_test_100kb_30kb_with_diff_steps() {
-//        listOf(1,2,3,4,5,6,7,8,9,10).forEach { steps ->
-            for (steps in 1..10 step 1) {
-                logD("steps: $steps")
-
-                val dataSize = 100.KILOBYTES
-                val speed = 30.KILOBYTES
-                val progressRate = 1
-
-                standard_test_with(
-                    dataSize,
-                    speed,
-                    progressRate,
-                )
-
-                logD("")
-            }
-        }*/
-
-        @Test
-        fun simple_test_for_speed() {
-            for (sizeBase in listOf(1, 10, 100, 500, 1000)) {
-                val dataSize = sizeBase.KILOBYTES
-                val speed = dataSize / 3
-                val rate = 1
-                prepareSourceAndTargetFiles(dataSize)
-                logD( "simple_test_for_speed(sizeBase:$sizeBase), старт")
-                streamCopier.copyFromStreamToStream(
-                    newSourceFileStream,
-                    newTargetFileStream,
-                    speed,
-                    rate
-                )
-                logD( "simple_test_for_speed(sizeBase:$sizeBase), финиш")
-                standard_test_with(dataSize, speed, rate,)
-            }
-        }
-
-        @Test
-        fun data_simply_copied() {
-
-            val dataSize = 101
-            val speed = dataSize * 2
-            val progressRate = 1
-
-            prepareSourceAndTargetFiles(dataSize)
-
-            streamCopier.copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
-                speed, progressRate)
-
-            Assert.assertEquals(dataSize.toLong(), targetFile.length())
-            Assert.assertEquals(dataSize.toLong(), sourceFile.length())
-            Assert.assertEquals(sourceFileContents, targetFileContents)
-        }
-
-
-        @Test
-        fun callbacks_are_triggered() = runBlocking {
-
-            val progressCallbackCount = AtomicInteger(0)
-            val finishCallbackCount = AtomicInteger(0)
-
-            val dataSize = 100
-            val speed = 30
+    @Test
+    fun simple_test_for_speed() {
+        for (sizeBase in listOf(1, 10, 100, 500, 1000)) {
+            val dataSize = sizeBase.KILOBYTES
+            val speed = dataSize / 3
             val rate = 1
-
             prepareSourceAndTargetFiles(dataSize)
+            logD( "simple_test_for_speed(sizeBase:$sizeBase), старт")
+            streamCopier.copyFromStreamToStream(
+                newSourceFileStream,
+                newTargetFileStream,
+                speed,
+                rate
+            )
+            logD( "simple_test_for_speed(sizeBase:$sizeBase), финиш")
+            standard_test_with(dataSize, speed, rate,)
+        }
+    }
 
-            streamCopier
-                .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
-                    speed, rate,
-                    progressCallback = { _,_ ->
-                        progressCallbackCount.getAndIncrement()
-                    },
-                    finishCallback = { _ ->
-                        finishCallbackCount.getAndIncrement()
-                    }
-                )
+    @Test
+    fun data_simply_copied() {
+
+        val dataSize = 101
+        val speed = dataSize * 2
+        val progressRate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        streamCopier.copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
+            speed, progressRate)
+
+        Assert.assertEquals(dataSize.toLong(), targetFile.length())
+        Assert.assertEquals(dataSize.toLong(), sourceFile.length())
+        Assert.assertEquals(sourceFileContents, targetFileContents)
+    }
+
+
+    @Test
+    fun callbacks_are_triggered() = runBlocking {
+
+        val progressCallbackCount = AtomicInteger(0)
+        val finishCallbackCount = AtomicInteger(0)
+
+        val dataSize = 100
+        val speed = 30
+        val rate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        streamCopier
+            .copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
+                speed, rate,
+                progressCallback = { _,_ ->
+                    progressCallbackCount.getAndIncrement()
+                },
+                finishCallback = { _ ->
+                    finishCallbackCount.getAndIncrement()
+                }
+            )
 
 //            delayToAllowCallbackFinish(rate)
 
-            Assert.assertTrue(progressCallbackCount.get() >= 2)
-            Assert.assertTrue(finishCallbackCount.get() == 1)
-        }
+        Assert.assertTrue(progressCallbackCount.get() >= 2)
+        Assert.assertTrue(finishCallbackCount.get() == 1)
+    }
 
 
 
-        @Test
-        fun throws_exception_on_zero_speed() {
-            checkOnExceptionWithSpeed(0)
-        }
+    @Test
+    fun throws_exception_on_zero_speed() {
+        checkOnExceptionWithSpeed(0)
+    }
 
-        @Test
-        fun throws_exception_on_negative_speed() {
-            checkOnExceptionWithSpeed(-1)
-        }
+    @Test
+    fun throws_exception_on_negative_speed() {
+        checkOnExceptionWithSpeed(-1)
+    }
 
-        private fun checkOnExceptionWithSpeed(speed: Int) {
-            Assert.assertThrows(IllegalArgumentException::class.java) {
-                prepareSourceAndTargetFiles(1)
-                runBlocking {
-                    streamCopier.copyFromStreamToStream(
-                        inputStream = newSourceFileStream,
-                        outputStream = newTargetFileStream,
-                        speed,
-                        1
-                    )
-                }
-            }
-        }
-
-
-        @Test
-        fun throws_exception_on_zero_rate() {
-            checkOnExceptionWithRate(0)
-        }
-
-        @Test
-        fun throws_exception_on_negative_rate() {
-            checkOnExceptionWithRate(-1)
-        }
-
-        private fun checkOnExceptionWithRate(rate: Int) {
-            Assert.assertThrows(IllegalArgumentException::class.java) {
-                prepareSourceAndTargetFiles(1)
-                runBlocking {
-                    streamCopier.copyFromStreamToStream(
-                        inputStream = newSourceFileStream,
-                        outputStream = newTargetFileStream,
-                        1,
-                        rate
-                    )
-                }
-            }
-        }
-
-
-        @Test
-        fun zero_size_file() {
-
-            val dataSize = 0
-            val speed = 10
-            val progressRate = 1
-
-            prepareSourceAndTargetFiles(dataSize)
-
-            val progressList = buildList {
-                streamCopier
-                    .copyFromStreamToStream(
-                        newSourceFileStream,
-                        newTargetFileStream,
-                        speed,
-                        progressRate,
-                        progressCallback = { bytes,_ ->
-                            add(bytes)
-                        }
-                    )
-            }
-
-            Assert.assertEquals(dataSize.toLong(), sourceFile.length())
-            Assert.assertEquals(dataSize.toLong(), targetFile.length())
-
-            Assert.assertEquals(1, progressList.size)
-            Assert.assertEquals(dataSize.toLong(), progressList.first())
-        }
-
-
-        @Test
-        fun error_reading_from_stream() = runBlocking {
-            test_error_behaviour(
-                this,
-                errorTrigger =  { sourceStream, _ ->
-                    println("Закрываем поток чтения")
-                    sourceStream.close()
-                },
-                progressCallback = { byteTransferred, speedBytesPerSecond ->
-                    println("передано: $byteTransferred, $speedBytesPerSecond")
-                }
-            )
-        }
-
-        @Test
-        fun error_writing_to_stream() = runBlocking {
-            /*test_error_behaviour(this) { _, targetStream ->
-                println("Закрываем поток записи")
-                targetStream.close()
-            }*/
-            test_error_behaviour(
-                this,
-                errorTrigger =  { _, targetStream ->
-                    println("Закрываем поток записи")
-                    targetStream.close()
-                },
-                progressCallback = { byteTransferred, speedBytesPerSecond ->
-                    println("передано: $byteTransferred, $speedBytesPerSecond")
-                }
-            )
-        }
-
-        @Test
-        fun time_test_on_single_params_set() {
-
-            val dataSizeBytes = 2.KILOBYTES
-            val speedBytesPerSec = 1.KILOBYTES
-            val expectedDurationNs = NANOS_IN_SECOND * dataSizeBytes / speedBytesPerSec
-
-            val startTime = currentTimeNanos
-            freshLimitedStreamCopier
-                .copyFromStreamToStream(
+    private fun checkOnExceptionWithSpeed(speed: Int) {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            prepareSourceAndTargetFiles(1)
+            runBlocking {
+                streamCopier.copyFromStreamToStream(
                     inputStream = newSourceFileStream,
                     outputStream = newTargetFileStream,
-                    speedBytesPerSec,
+                    speed,
+                    1
                 )
-            val durationNs = currentTimeNanos - startTime
-
-            val requiredDiffPercent = 20.0
-            val realDiffPercents = durationNs.percentOf(expectedDurationNs)
-
-            Assert.assertTrue(
-                "Время копирования отличается не более чем на ${requiredDiffPercent}% (реально на ${realDiffPercents}%)",
-                realDiffPercents <= requiredDiffPercent
-            )
+            }
         }
+    }
+
+
+    @Test
+    fun throws_exception_on_zero_rate() {
+        checkOnExceptionWithRate(0)
+    }
+
+    @Test
+    fun throws_exception_on_negative_rate() {
+        checkOnExceptionWithRate(-1)
+    }
+
+    private fun checkOnExceptionWithRate(rate: Int) {
+        Assert.assertThrows(IllegalArgumentException::class.java) {
+            prepareSourceAndTargetFiles(1)
+            runBlocking {
+                streamCopier.copyFromStreamToStream(
+                    inputStream = newSourceFileStream,
+                    outputStream = newTargetFileStream,
+                    1,
+                    rate
+                )
+            }
+        }
+    }
+
+
+    @Test
+    fun zero_size_file() {
+
+        val dataSize = 0
+        val speed = 10
+        val progressRate = 1
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        val progressList = buildList {
+            streamCopier
+                .copyFromStreamToStream(
+                    newSourceFileStream,
+                    newTargetFileStream,
+                    speed,
+                    progressRate,
+                    progressCallback = { bytes,_ ->
+                        add(bytes)
+                    }
+                )
+        }
+
+        Assert.assertEquals(dataSize.toLong(), sourceFile.length())
+        Assert.assertEquals(dataSize.toLong(), targetFile.length())
+
+        Assert.assertEquals(1, progressList.size)
+        Assert.assertEquals(dataSize.toLong(), progressList.first())
+    }
+
+
+    @Test
+    fun error_reading_from_stream() = runBlocking {
+        test_error_behaviour(
+            this,
+            errorTrigger =  { sourceStream, _ ->
+                println("Закрываем поток чтения")
+                sourceStream.close()
+            },
+            progressCallback = { byteTransferred, speedBytesPerSecond ->
+                println("передано: $byteTransferred, $speedBytesPerSecond")
+            }
+        )
+    }
+
+    @Test
+    fun error_writing_to_stream() = runBlocking {
+        /*test_error_behaviour(this) { _, targetStream ->
+            println("Закрываем поток записи")
+            targetStream.close()
+        }*/
+        test_error_behaviour(
+            this,
+            errorTrigger =  { _, targetStream ->
+                println("Закрываем поток записи")
+                targetStream.close()
+            },
+            progressCallback = { byteTransferred, speedBytesPerSecond ->
+                println("передано: $byteTransferred, $speedBytesPerSecond")
+            }
+        )
+    }
+
+    @Test
+    fun time_test_on_single_params_set() {
+
+        val dataSizeBytes = 1.MEGABYTES
+        val speedBytesPerSec = 14.KILOBYTES
+        val expectedDurationNs = NANOS_IN_SECOND * dataSizeBytes / speedBytesPerSec
+
+        val startTime = currentTimeNanos
+        streamCopier
+            .copyFromStreamToStream(
+                inputStream = newSourceFileStream,
+                outputStream = newTargetFileStream,
+                speedBytesPerSec,
+            )
+        val durationNs = currentTimeNanos - startTime
+
+        val requiredDiffPercent = 20.0
+        val realDiffPercents = durationNs.percentOf(expectedDurationNs)
+
+        Assert.assertTrue(
+            "Время копирования отличается не более чем на ${requiredDiffPercent}% (реально на ${realDiffPercents}%)",
+            realDiffPercents <= requiredDiffPercent
+        )
+    }
 
 
     @Test
@@ -857,10 +858,6 @@ class SimpleStreamToStreamCopierTest : TestBase() {
     }*/
 
 
-    private val freshLimitedStreamCopier
-        get() = LimitedStreamCopierNs()
-
-
     private fun logD(text: String) {
 //        Log.d(TAG, text)
     }
@@ -870,7 +867,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
     }
 
     companion object {
-        val TAG: String = LimitedStreamCopierTest::class.java.simpleName
+        val TAG: String = SimpleStreamToStreamCopier::class.java.simpleName
     }
 }
 
