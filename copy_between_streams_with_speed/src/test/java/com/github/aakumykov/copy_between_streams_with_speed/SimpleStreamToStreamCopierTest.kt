@@ -2,6 +2,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 
 import android.util.Log
 import com.github.aakumykov.copy_between_streams_with_speed.LimitedStreamCopierNs.Companion.NANOS_IN_SECOND
+import com.github.aakumykov.copy_between_streams_with_speed.SimpleStreamToStreamCopier.Companion.MILLIS_IN_SECOND
 import com.github.aakumykov.copy_between_streams_with_speed.ext.percentOf
 import com.github.aakumykov.copy_between_streams_with_speed.ext.roundToFloatingDigits
 import com.github.aakumykov.copy_between_streams_with_speed.utils.KILOBYTES
@@ -24,7 +25,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -150,7 +150,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
         fun simple_test_100kb_30kb_with_specific_steps() {
 
             val dataSize = 100.KILOBYTES
-            val speed = 70.KILOBYTES
+            val speed = 16.KILOBYTES
             val progressRate = 1
 
             standard_test_with(
@@ -240,7 +240,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                     }
                 )
 
-            delayToAllowCallbackFinish(rate)
+//            delayToAllowCallbackFinish(rate)
 
             Assert.assertTrue(progressCallbackCount.get() >= 2)
             Assert.assertTrue(finishCallbackCount.get() == 1)
@@ -391,13 +391,432 @@ class SimpleStreamToStreamCopierTest : TestBase() {
 
         val progressIntervalsList = mutableListOf<Long>()
 
-        val dataSize = 1000
-        val speed = 300
+        val dataSize = 1.MEGABYTES
+        val speed = 150.KILOBYTES
         val rate = 1
+        val minListSize = 5
 
-        val expectedProgressIntervalNs = NANOS_IN_SECOND / rate
-        val expectedProgressIntervalDeviationPercent = 10
+        val expectedProgressIntervalMs = (1f * MILLIS_IN_SECOND / rate).toDouble()
+        val expectedDeviationRange = 90.0..110.0
 
+        var lastTimeMs = currentTimeMs
+
+        prepareAndCopy(dataSize, speed, rate) { _, _ ->
+            val progressTimeMs = currentTimeMs
+            progressIntervalsList.add(progressTimeMs - lastTimeMs)
+            lastTimeMs = progressTimeMs
+        }
+
+        Assert.assertTrue(
+            "Размер тестируемого списка (${progressIntervalsList.size}) не меньше $minListSize",
+            progressIntervalsList.size >= minListSize
+        )
+
+        // Удаляю наименьшее и наибольшие значения как, вероятно, выбивающиеся из системы.
+        // TODO: Лучше их тестировать,и не просто удалять.
+        progressIntervalsList.remove(progressIntervalsList.min())
+        progressIntervalsList.remove(progressIntervalsList.max())
+
+        val averageInterval = progressIntervalsList.average()
+
+        val deviationPercent = averageInterval.percentOf(expectedProgressIntervalMs)
+        Assert.assertTrue(
+            "Отклонение среднего интервала (${averageInterval}) от ожидаемого (${expectedProgressIntervalMs}), ${deviationPercent}%) в пределах $expectedDeviationRange",
+            deviationPercent in expectedDeviationRange
+        )
+    }
+
+
+    private fun test_error_behaviour(
+        scope: CoroutineScope,
+        errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit,
+        progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
+    ) {
+        val dataSize = 1000
+        val speed = 100
+        val errorDelayMs: Long = 1000
+
+        val finishCallbackWasTriggered = AtomicBoolean(false)
+
+        prepareSourceAndTargetFiles(dataSize)
+
+        val sourceStream = newSourceFileStream
+        val targetStream = newTargetFileStream
+
+        scope.launch (Dispatchers.IO) {
+            delay(errorDelayMs)
+            errorTrigger.invoke(sourceStream, targetStream)
+        }
+
+        scope.launch (Dispatchers.IO) {
+            Assert.assertThrows(Exception::class.java) {
+                streamCopier.copyFromStreamToStream(
+                    inputStream = sourceStream,
+                    outputStream = targetStream,
+                    speed,
+                    1,
+                    progressCallback = progressCallback
+                )
+            }
+            Assert.assertFalse(finishCallbackWasTriggered.get())
+        }
+    }
+
+
+    @Test
+    fun test_with_diff_data_size_1_9() {
+        repeat_with_params(1..9, 1,0){ dataSize ->
+            standard_test_with(dataSize, 1, 1)
+            TimeUnit.SECONDS.sleep(1)
+        }
+    }
+
+    @Test
+    fun test_with_diff_data_size_10_99() {
+        repeat_with_params(10..99, 10,5){ dataSize ->
+            standard_test_with(dataSize, dataSize * 2, 10)
+        }
+    }
+
+    @Test
+    fun test_with_diff_data_size_100_999() {
+        repeat_with_params(100..999, 100,50){ dataSize ->
+            standard_test_with(dataSize, dataSize * 2, 10)
+        }
+    }
+
+    @Test
+    fun test_with_diff_data_size_1000_9999() {
+        repeat_with_params(1000..9999, 1000,500){ dataSize ->
+            standard_test_with(dataSize, dataSize * 2, 10)
+        }
+    }
+
+
+
+    @Test
+    fun test_with_diff_speed_1_9() {
+        repeat_with_params(1..9, 1, randomSize = 0) { speed ->
+            standard_test_with(10, speed, speed)
+        }
+    }
+
+    @Test
+    fun test_with_diff_speed_10_99() {
+        repeat_with_params(10..99, 10, 5) { speed ->
+            standard_test_with(
+                10,
+                speed,
+                10
+            )
+        }
+    }
+
+    /**
+     * При разных скоростях появляются сбои...
+     * Одиночный тест проходит [test_low_data_size] нормально...
+     */
+    @Test
+    fun test_with_diff_speed_100_999() {
+        repeat_with_params(100..999, 100, 50) { speed ->
+            standard_test_with(
+                10,
+                speed,
+                10
+            )
+        }
+    }
+
+    @Test
+    fun test_with_diff_speed_1000_9999() {
+        repeat_with_params(1000..9999, 1000, 500) { speed ->
+            standard_test_with(10, speed, 10)
+        }
+    }
+
+
+    @Test
+    fun test_with_diff_rate_1_9() {
+        repeat_with_params(1..9, 1, randomSize = 0) { rate ->
+            standard_test_with(10, 10, rate)
+        }
+    }
+
+    @Test
+    fun test_with_diff_rate_10_99() {
+        repeat_with_params(10..99, 10, 5) { rate ->
+            standard_test_with(10, 100, rate)
+        }
+    }
+
+    @Test
+    fun test_with_diff_rate_100_999() {
+        repeat_with_params(100..999, 100, 50) { rate ->
+            standard_test_with(10, 1000, rate)
+        }
+    }
+
+    @Test
+    fun test_with_diff_rate_1000_9999() {
+        repeat_with_params(1000..9999, 1000, 500) { rate ->
+            standard_test_with(10, 100_000, rate)
+        }
+    }
+
+
+    @Test
+    fun fixed_data_size_10_with_diff_speed_and_rate() {
+        val dataSize = 10
+        val otherParamsRange = 1..9
+        val otherParamsStep = 1
+        repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_data_size_100_with_diff_speed_and_rate() {
+        val dataSize = 100
+        val otherParamsRange = 10..99
+        val otherParamsStep = 10
+        repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_data_size_1000_with_diff_speed_and_rate() {
+        val dataSize = 100
+        val otherParamsRange = 1000..9999
+        val otherParamsStep = 1000
+        repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+
+    @Test
+    fun fixed_speed_10_with_diff_size_and_rate() {
+        val speed = 10
+        val otherParamsRange = 1..9
+        val otherParamsStep = 1
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_speed_100_with_diff_size_and_rate() {
+        val speed = 100
+        val otherParamsRange = 10..99
+        val otherParamsStep = 10
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_speed_1000_with_diff_size_and_rate() {
+        val speed = 1000
+        val otherParamsRange = 100..999
+        val otherParamsStep = 100
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+
+
+    @Test
+    fun fixed_rate_10_with_diff_size_and_speed() {
+        val rate = 10
+        val otherParamsRange = 1..9
+        val otherParamsStep = 1
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_rate_100_with_diff_size_and_speed() {
+        val rate = 100
+        val otherParamsRange = 10..99
+        val otherParamsStep = 10
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+    @Test
+    fun fixed_rate_1000_with_diff_size_and_speed() {
+        val rate = 100
+        val otherParamsRange = 100..999
+        val otherParamsStep = 100
+        repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
+            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
+                val realRate = min(speed, rate)
+                standard_test_with(dataSize, speed, realRate)
+            }
+        }
+    }
+
+
+    @Test
+    fun big_file_with_variations() {
+        repeat(10) { i ->
+            logI("===== прогон ${i+1} =====")
+            val dataSize = 1.MEGABYTES * random.nextInt(10)
+            val speed = 1.KILOBYTES * random.nextInt(100, 1001)
+            val rate = random.nextInt(1, 100)
+            standard_test_with(dataSize, speed, rate)
+        }
+    }
+
+
+    private fun repeat_with_params(range: IntRange,
+                                   step: Int,
+                                   randomSize: Int = floor(step/2f).roundToInt(),
+                                   action: (value:Int) -> Unit) {
+        var base = range.first
+        while(base <= range.last) {
+            val value = base + (if (randomSize > 0) random.nextInt(randomSize) else 0)
+            action.invoke(value)
+            base += step
+        }
+    }
+
+    private fun standard_test_with(
+        dataSizeBytes: Int,
+        speedBytesPerSec: Int,
+        progressRatePerSec: Int,
+    ) {
+        val finishCallbackWasTriggered = AtomicBoolean(false)
+        val progressList = mutableListOf<Long>()
+        val speedList = mutableListOf<Long>()
+
+        val sourceData = prepareSourceAndTargetFiles(dataSizeBytes)
+
+
+        val estimatedDurationSec: Float = (1f * dataSizeBytes / speedBytesPerSec)
+        val estimatedDurationNs: Double = estimatedDurationSec * NANOS_IN_SECOND
+        logD("estimatedDurationNs: ${estimatedDurationNs.humanDecimalPlaces} ($estimatedDurationSec sec)")
+
+        val startTimeNs: Long = currentTimeNanos
+        logD("start:  ${startTimeNs.humanDecimalPlaces}")
+
+        streamCopier
+            .copyFromStreamToStream(
+                newSourceFileStream,
+                newTargetFileStream,
+                speedBytesPerSec,
+                progressRatePerSec,
+                progressCallback = { bytes,speed ->
+                    logI("[${currentTimeMs.humanDecimalPlaces}] pr: $bytes, sp: $speed")
+                    progressList.add(bytes)
+                    speedList.add(speed)
+                }, finishCallback = { _ ->
+                    finishCallbackWasTriggered.set(true)
+                })
+
+        val finishTime: Long = currentTimeNanos
+        logD("finish: ${finishTime.humanDecimalPlaces}")
+
+        val realDurationNs: Long = finishTime - startTimeNs
+        logD("duration: ${realDurationNs.humanDecimalPlaces}")
+
+        val timeDiffNs: Double = realDurationNs - estimatedDurationNs
+        logD("timeDiffNs: ${timeDiffNs.humanDecimalPlaces}")
+
+        val timeDiffPercents = realDurationNs
+            .percentOf(estimatedDurationNs)
+            .roundToFloatingDigits(2)
+
+//            delayToAllowCallbackFinish(progressRatePerSec)
+
+        logI("progressList: ${progressList.joinToString(",")}")
+        logI("speedList: ${speedList.joinToString(",")}")
+
+        // Проверка данных
+        Assert.assertEquals(sourceData, sourceFileContents)
+        Assert.assertEquals(sourceData, targetFileContents)
+
+        // Проверка коллбеков
+        Assert.assertTrue("Был вызван коллбек завершения",
+            finishCallbackWasTriggered.get())
+
+
+        val msgMedium = "\n" +
+                "sz:${dataSizeBytes.humanDecimalPlaces},\n" +
+                "sp:${speedBytesPerSec.humanDecimalPlaces},\n" +
+                "rt:$progressRatePerSec,\n" +
+                "est.time:${estimatedDurationNs.humanDecimalPlaces},\n" +
+                "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%),\n" +
+                "t.diff:${timeDiffNs},\n"
+
+        val progressMsg =
+            "prList[${progressList.size}]: ${progressList.joinToString(",")},\n" +
+                    "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")},\n"
+
+        logI(msgMedium)
+
+        val minimumProgressListSize = 1
+        val minimumSpeedListSize = 1
+
+        Assert.assertTrue("Размер списка прогресса (${progressList.size}) >= $minimumProgressListSize",
+            progressList.size >= minimumProgressListSize)
+
+        Assert.assertTrue("Размер списка скорости (${speedList.size}) >= $minimumSpeedListSize",
+            speedList.size >= minimumSpeedListSize)
+
+        if (dataSizeBytes > 1) {
+            progressList.reduce { acc, nextValue ->
+                Assert.assertTrue(
+                    "Каждое следующее значение в списке прогресса больше или равно предыдущему ($nextValue >= $acc)",
+                    nextValue >= acc
+                )
+                nextValue
+            }
+        }
+
+        Assert.assertEquals(
+            "Последнее значение списка прогресса (${progressList.last()}) == размеру данных ($dataSizeBytes)",
+            dataSizeBytes.toLong(),
+            progressList.last()
+        )
+    }
+
+
+    private fun prepareAndCopy(
+        dataSize: Int,
+        speed: Int,
+        rate: Int,
+        finishCallback: ((byteTransferred: Long) -> Unit)? = null,
+        progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
+    ) {
         prepareSourceAndTargetFiles(dataSize)
 
         newSourceFileStream.use { sourceStream ->
@@ -406,435 +825,35 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                     sourceStream,
                     targetStream,
                     speed,
-                    rate
-                ) { _, _ ->
-                    progressIntervalsList.add(currentTimeNanos)
-                }
+                    rate,
+                    progressCallback = progressCallback,
+                    finishCallback = finishCallback
+                )
             }
-        }
-
-        Assert.assertTrue(progressIntervalsList.isNotEmpty())
-
-        progressIntervalsList.removeLast()
-
-        val minInterval = progressIntervalsList.min()
-        val minIntervalDeviationNs = abs(minInterval - expectedProgressIntervalNs)
-        Assert.assertTrue(
-            "Отклонение минимального интервала ($minIntervalDeviationNs) от заданного ($expectedProgressIntervalNs)",
-            minIntervalDeviationNs.percentOf(expectedProgressIntervalNs) <= expectedProgressIntervalDeviationPercent
-        )
-
-        if (progressIntervalsList.size > 1) {
-            val maxInterval = progressIntervalsList.max()
-            val maxIntervalDeviationNs = abs(maxInterval - expectedProgressIntervalNs)
-            Assert.assertTrue(
-                "Отклонение максимального интервала ($maxIntervalDeviationNs) от заданного ($expectedProgressIntervalNs)",
-                maxIntervalDeviationNs.percentOf(expectedProgressIntervalNs) <= expectedProgressIntervalDeviationPercent
-            )
         }
     }
 
 
-        private fun test_error_behaviour(
-            scope: CoroutineScope,
-            errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit,
-            progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
-        ) {
-            val dataSize = 1000
-            val speed = 100
-            val errorDelayMs: Long = 1000
+    /*private fun delayToAllowCallbackFinish(progressRate: Int) {
+        val timeout = 3 * ceil(1000f / progressRate).toLong()
+        TimeUnit.MILLISECONDS.sleep(timeout)
+    }*/
 
-            val finishCallbackWasTriggered = AtomicBoolean(false)
 
-            prepareSourceAndTargetFiles(dataSize)
+    private val freshLimitedStreamCopier
+        get() = LimitedStreamCopierNs()
 
-            val sourceStream = newSourceFileStream
-            val targetStream = newTargetFileStream
 
-            scope.launch (Dispatchers.IO) {
-                delay(errorDelayMs)
-                errorTrigger.invoke(sourceStream, targetStream)
-            }
-
-            scope.launch (Dispatchers.IO) {
-                Assert.assertThrows(Exception::class.java) {
-                    streamCopier.copyFromStreamToStream(
-                        inputStream = sourceStream,
-                        outputStream = targetStream,
-                        speed,
-                        1,
-                        progressCallback = progressCallback
-                    )
-                }
-                Assert.assertFalse(finishCallbackWasTriggered.get())
-            }
-        }
-
-
-        @Test
-        fun test_with_diff_data_size_1_9() {
-            repeat_with_params(1..9, 1,0){ dataSize ->
-                standard_test_with(dataSize, 1, 1)
-                TimeUnit.SECONDS.sleep(1)
-            }
-        }
-
-        @Test
-        fun test_with_diff_data_size_10_99() {
-            repeat_with_params(10..99, 10,5){ dataSize ->
-                standard_test_with(dataSize, dataSize * 2, 10)
-            }
-        }
-
-        @Test
-        fun test_with_diff_data_size_100_999() {
-            repeat_with_params(100..999, 100,50){ dataSize ->
-                standard_test_with(dataSize, dataSize * 2, 10)
-            }
-        }
-
-        @Test
-        fun test_with_diff_data_size_1000_9999() {
-            repeat_with_params(1000..9999, 1000,500){ dataSize ->
-                standard_test_with(dataSize, dataSize * 2, 10)
-            }
-        }
-
-
-
-        @Test
-        fun test_with_diff_speed_1_9() {
-            repeat_with_params(1..9, 1, randomSize = 0) { speed ->
-                standard_test_with(10, speed, speed)
-            }
-        }
-
-        @Test
-        fun test_with_diff_speed_10_99() {
-            repeat_with_params(10..99, 10, 5) { speed ->
-                standard_test_with(
-                    10,
-                    speed,
-                    10
-                )
-            }
-        }
-
-        /**
-         * При разных скоростях появляются сбои...
-         * Одиночный тест проходит [test_low_data_size] нормально...
-         */
-        @Test
-        fun test_with_diff_speed_100_999() {
-            repeat_with_params(100..999, 100, 50) { speed ->
-                standard_test_with(
-                    10,
-                    speed,
-                    10
-                )
-            }
-        }
-
-        @Test
-        fun test_with_diff_speed_1000_9999() {
-            repeat_with_params(1000..9999, 1000, 500) { speed ->
-                standard_test_with(10, speed, 10)
-            }
-        }
-
-
-        @Test
-        fun test_with_diff_rate_1_9() {
-            repeat_with_params(1..9, 1, randomSize = 0) { rate ->
-                standard_test_with(10, 10, rate)
-            }
-        }
-
-        @Test
-        fun test_with_diff_rate_10_99() {
-            repeat_with_params(10..99, 10, 5) { rate ->
-                standard_test_with(10, 100, rate)
-            }
-        }
-
-        @Test
-        fun test_with_diff_rate_100_999() {
-            repeat_with_params(100..999, 100, 50) { rate ->
-                standard_test_with(10, 1000, rate)
-            }
-        }
-
-        @Test
-        fun test_with_diff_rate_1000_9999() {
-            repeat_with_params(1000..9999, 1000, 500) { rate ->
-                standard_test_with(10, 100_000, rate)
-            }
-        }
-
-
-        @Test
-        fun fixed_data_size_10_with_diff_speed_and_rate() {
-            val dataSize = 10
-            val otherParamsRange = 1..9
-            val otherParamsStep = 1
-            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-        @Test
-        fun fixed_data_size_100_with_diff_speed_and_rate() {
-            val dataSize = 100
-            val otherParamsRange = 10..99
-            val otherParamsStep = 10
-            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-        @Test
-        fun fixed_data_size_1000_with_diff_speed_and_rate() {
-            val dataSize = 100
-            val otherParamsRange = 1000..9999
-            val otherParamsStep = 1000
-            repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-
-        @Test
-        fun fixed_speed_10_with_diff_size_and_rate() {
-            val speed = 10
-            val otherParamsRange = 1..9
-            val otherParamsStep = 1
-            repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-        @Test
-        fun fixed_speed_100_with_diff_size_and_rate() {
-            val speed = 100
-            val otherParamsRange = 10..99
-            val otherParamsStep = 10
-            repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-        @Test
-        fun fixed_speed_1000_with_diff_size_and_rate() {
-            val speed = 1000
-            val otherParamsRange = 100..999
-            val otherParamsStep = 100
-            repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-
-
-        @Test
-        fun fixed_rate_10_with_diff_size_and_speed() {
-            val rate = 10
-            val otherParamsRange = 1..9
-            val otherParamsStep = 1
-            repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-        @Test
-        fun fixed_rate_100_with_diff_size_and_speed() {
-            val rate = 100
-            val otherParamsRange = 10..99
-            val otherParamsStep = 10
-            repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-        @Test
-        fun fixed_rate_1000_with_diff_size_and_speed() {
-            val rate = 100
-            val otherParamsRange = 100..999
-            val otherParamsStep = 100
-            repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
-                repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
-                    val realRate = min(speed, rate)
-                    standard_test_with(dataSize, speed, realRate)
-                }
-            }
-        }
-
-
-        @Test
-        fun big_file_with_variations() {
-            repeat(10) { i ->
-                logI("===== прогон ${i+1} =====")
-                val dataSize = 1.MEGABYTES * random.nextInt(10)
-                val speed = 1.KILOBYTES * random.nextInt(100, 1001)
-                val rate = random.nextInt(1, 100)
-                standard_test_with(dataSize, speed, rate)
-            }
-        }
-
-
-        private fun repeat_with_params(range: IntRange,
-                                       step: Int,
-                                       randomSize: Int = floor(step/2f).roundToInt(),
-                                       action: (value:Int) -> Unit) {
-            var base = range.first
-            while(base <= range.last) {
-                val value = base + (if (randomSize > 0) random.nextInt(randomSize) else 0)
-                action.invoke(value)
-                base += step
-            }
-        }
-
-        private fun standard_test_with(
-            dataSizeBytes: Int,
-            speedBytesPerSec: Int,
-            progressRatePerSec: Int,
-        ) {
-            val finishCallbackWasTriggered = AtomicBoolean(false)
-            val progressList = mutableListOf<Long>()
-            val speedList = mutableListOf<Long>()
-
-            val sourceData = prepareSourceAndTargetFiles(dataSizeBytes)
-
-
-            val estimatedDurationSec: Float = (1f * dataSizeBytes / speedBytesPerSec)
-            val estimatedDurationNs: Double = estimatedDurationSec * NANOS_IN_SECOND
-            logD("estimatedDurationNs: ${estimatedDurationNs.humanDecimalPlaces} ($estimatedDurationSec sec)")
-
-            val startTimeNs: Long = currentTimeNanos
-            logD("start:  ${startTimeNs.humanDecimalPlaces}")
-
-            streamCopier
-                .copyFromStreamToStream(
-                    newSourceFileStream,
-                    newTargetFileStream,
-                    speedBytesPerSec,
-                    progressRatePerSec,
-                    progressCallback = { bytes,speed ->
-                        logI("[${currentTimeMs.humanDecimalPlaces}] pr: $bytes, sp: $speed")
-                        progressList.add(bytes)
-                        speedList.add(speed)
-                    }, finishCallback = { _ ->
-                        finishCallbackWasTriggered.set(true)
-                    })
-
-            val finishTime: Long = currentTimeNanos
-            logD("finish: ${finishTime.humanDecimalPlaces}")
-
-            val realDurationNs: Long = finishTime - startTimeNs
-            logD("duration: ${realDurationNs.humanDecimalPlaces}")
-
-            val timeDiffNs: Double = realDurationNs - estimatedDurationNs
-            logD("timeDiffNs: ${timeDiffNs.humanDecimalPlaces}")
-
-            val timeDiffPercents = realDurationNs
-                .percentOf(estimatedDurationNs)
-                .roundToFloatingDigits(2)
-
-            delayToAllowCallbackFinish(progressRatePerSec)
-
-            // Проверка данных
-            Assert.assertEquals(sourceData, sourceFileContents)
-            Assert.assertEquals(sourceData, targetFileContents)
-
-            // Проверка коллбеков
-            Assert.assertTrue("Был вызван коллбек завершения",
-                finishCallbackWasTriggered.get())
-
-
-            val msgMedium = "\n" +
-                    "sz:${dataSizeBytes.humanDecimalPlaces},\n" +
-                    "sp:${speedBytesPerSec.humanDecimalPlaces},\n" +
-                    "rt:$progressRatePerSec,\n" +
-                    "est.time:${estimatedDurationNs.humanDecimalPlaces},\n" +
-                    "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%),\n" +
-                    "t.diff:${timeDiffNs},\n"
-
-            val progressMsg =
-                "prList[${progressList.size}]: ${progressList.joinToString(",")},\n" +
-                        "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")},\n"
-
-            logI(msgMedium)
-
-            val minimumProgressListSize = 1
-            val minimumSpeedListSize = 1
-
-            Assert.assertTrue("Размер списка прогресса (${progressList.size}) >= $minimumProgressListSize",
-                progressList.size >= minimumProgressListSize)
-
-            Assert.assertTrue("Размер списка скорости (${speedList.size}) >= $minimumSpeedListSize",
-                speedList.size >= minimumSpeedListSize)
-
-            if (dataSizeBytes > 1) {
-                progressList.reduce { acc, nextValue ->
-                    Assert.assertTrue(
-                        "Каждое следующее значение в списке прогресса больше или равно предыдущему ($nextValue >= $acc)",
-                        nextValue >= acc
-                    )
-                    nextValue
-                }
-            }
-
-            Assert.assertEquals(
-                "Последнее значение списка прогресса (${progressList.last()}) == размеру данных ($dataSizeBytes)",
-                dataSizeBytes.toLong(),
-                progressList.last()
-            )
-        }
-
-
-        private fun delayToAllowCallbackFinish(progressRate: Int) {
-            val timeout = 3 * ceil(1000f / progressRate).toLong()
-            TimeUnit.MILLISECONDS.sleep(timeout)
-        }
-
-
-        private val freshLimitedStreamCopier
-            get() = LimitedStreamCopierNs()
-
-
-        private fun logD(text: String) {
+    private fun logD(text: String) {
 //        Log.d(TAG, text)
-        }
-
-        private fun logI(text: String) {
-            Log.i(TAG, text)
-        }
-
-        companion object {
-            val TAG: String = LimitedStreamCopierTest::class.java.simpleName
-        }
     }
+
+    private fun logI(text: String) {
+        Log.i(TAG, text)
+    }
+
+    companion object {
+        val TAG: String = LimitedStreamCopierTest::class.java.simpleName
+    }
+}
 

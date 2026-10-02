@@ -7,3 +7,7 @@ fun Long.percentOf(base: Double): Double {
 fun Double.percentOf(base: Double): Double {
     return 100.0 * this / base
 }
+
+fun Float.percentOf(base: Float): Double {
+    return 100.0 * this / base
+}

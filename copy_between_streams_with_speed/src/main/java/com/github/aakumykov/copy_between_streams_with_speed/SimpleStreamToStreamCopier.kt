@@ -69,5 +69,6 @@ class SimpleStreamToStreamCopier {
 
     companion object {
         const val NANOS_IN_SECOND: Double = 1_000_000_000.0
+        const val MILLIS_IN_SECOND: Int = 1_000
     }
 }
