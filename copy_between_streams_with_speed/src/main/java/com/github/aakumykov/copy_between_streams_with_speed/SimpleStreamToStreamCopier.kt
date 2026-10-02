@@ -3,6 +3,7 @@ package com.github.aakumykov.copy_between_streams_with_speed
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
+import kotlin.math.min
 import kotlin.math.roundToLong
 
 class SimpleStreamToStreamCopier {
@@ -22,7 +23,7 @@ class SimpleStreamToStreamCopier {
             "Интервал прогресса не может быть отрицательным"
         }
 
-        val bufferSize = DEFAULT_BUFFER_SIZE
+        val bufferSize = min(speedBytesPerSecond, DEFAULT_BUFFER_SIZE)
         val dataBuffer = ByteArray(bufferSize)
         val progressIntervalNs = 1000f / progressRatePerSecond * 1000_000
         val startTime = System.nanoTime()

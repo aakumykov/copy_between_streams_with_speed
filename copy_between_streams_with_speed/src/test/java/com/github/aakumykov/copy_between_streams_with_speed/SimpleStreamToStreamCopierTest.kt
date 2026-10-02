@@ -348,6 +348,16 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                 println("Закрываем поток записи")
                 targetStream.close()
             }*/
+            test_error_behaviour(
+                this,
+                errorTrigger =  { _, targetStream ->
+                    println("Закрываем поток записи")
+                    targetStream.close()
+                },
+                progressCallback = { byteTransferred, speedBytesPerSecond ->
+                    println("передано: $byteTransferred, $speedBytesPerSecond")
+                }
+            )
         }
 
         @Test
@@ -403,7 +413,7 @@ class SimpleStreamToStreamCopierTest : TestBase() {
                         inputStream = sourceStream,
                         outputStream = targetStream,
                         speed,
-                        10,
+                        1,
                         progressCallback = progressCallback
                     )
                 }
