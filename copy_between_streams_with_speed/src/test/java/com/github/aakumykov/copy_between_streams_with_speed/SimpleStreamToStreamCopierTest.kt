@@ -24,7 +24,6 @@ import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -397,7 +396,10 @@ class SimpleStreamToStreamCopierTest : TestBase() {
         val minListSize = 5
 
         val expectedProgressIntervalMs = (1f * MILLIS_IN_SECOND / rate).toDouble()
-        val expectedDeviationRange = 90.0..110.0
+
+        val averageIntervalExpectedDeviationRange = 90.0..110.0
+        val minIntervalExpectedDeviationRange = 30.0..170.0
+        val maxIntervalExpectedDeviationRange = minIntervalExpectedDeviationRange
 
         var lastTimeMs = currentTimeMs
 
@@ -412,17 +414,33 @@ class SimpleStreamToStreamCopierTest : TestBase() {
             progressIntervalsList.size >= minListSize
         )
 
-        // Удаляю наименьшее и наибольшие значения как, вероятно, выбивающиеся из системы.
-        // TODO: Лучше их тестировать,и не просто удалять.
-        progressIntervalsList.remove(progressIntervalsList.min())
-        progressIntervalsList.remove(progressIntervalsList.max())
 
         val averageInterval = progressIntervalsList.average()
+        val minInterval = progressIntervalsList.min()
+        val maxInterval = progressIntervalsList.max()
 
-        val deviationPercent = averageInterval.percentOf(expectedProgressIntervalMs)
+        val deviationPercentOfAverage = averageInterval.percentOf(expectedProgressIntervalMs)
         Assert.assertTrue(
-            "Отклонение среднего интервала (${averageInterval}) от ожидаемого (${expectedProgressIntervalMs}), ${deviationPercent}%) в пределах $expectedDeviationRange",
-            deviationPercent in expectedDeviationRange
+            "Отклонение среднего интервала (${averageInterval}) " +
+                    "от ожидаемого (${expectedProgressIntervalMs}), ${deviationPercentOfAverage}%) " +
+                    "в пределах $averageIntervalExpectedDeviationRange",
+            deviationPercentOfAverage in averageIntervalExpectedDeviationRange
+        )
+
+        val deviationPercentOfMin = minInterval.percentOf(expectedProgressIntervalMs)
+        Assert.assertTrue(
+            "Отклонение наименьшего интервала (${minInterval}) " +
+                    "от ожидаемого (${expectedProgressIntervalMs}), ${deviationPercentOfMin}%) " +
+                    "в пределах $minIntervalExpectedDeviationRange",
+            deviationPercentOfMin in minIntervalExpectedDeviationRange
+        )
+
+        val deviationPercentOfMax = maxInterval.percentOf(expectedProgressIntervalMs)
+        Assert.assertTrue(
+            "Отклонение наибольшего интервала (${maxInterval}) " +
+                    "от ожидаемого (${expectedProgressIntervalMs}), ${deviationPercentOfMax}%) " +
+                    "в пределах $maxIntervalExpectedDeviationRange",
+            deviationPercentOfMax in maxIntervalExpectedDeviationRange
         )
     }
 
