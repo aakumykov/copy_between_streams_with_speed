@@ -11,17 +11,38 @@ import org.junit.Test
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-class WorkClass {
+class WorkClass : TestBase() {
 
-    private val exceptionRequired = AtomicBoolean(false)
+    private val sourceExceptionRequired = AtomicBoolean(false)
+    private val targetExceptionRequired = AtomicBoolean(false)
 
-    fun requestException() {
-        exceptionRequired.set(true)
+
+    fun requestSourceStreamClose() {
+        sourceExceptionRequired.set(true)
     }
 
-    fun work(workTimeMs: Int) {
-        repeat(workTimeMs) {
-            throwExceptionIfRequired()
+    fun requestTargetStreamClose() {
+        targetExceptionRequired.set(true)
+    }
+
+    fun work(dataSizeBytes: Int) {
+        prepareSourceAndTargetFiles(dataSizeBytes)
+
+        val source = newSourceFileStream
+        val target = newTargetFileStream
+        val dataBuffer = ByteArray(1)
+
+        repeat(dataSizeBytes) {
+            source.use { sourceStream ->
+                target.use { targetStream ->
+                    sourceStream.read(dataBuffer)
+                    targetStream.write(dataBuffer)
+                }
+            }
+            if (sourceExceptionRequired.get())
+                source.close()
+            if (targetExceptionRequired.get())
+                target.close()
             TimeUnit.MILLISECONDS.sleep(1)
         }
     }
@@ -41,7 +62,7 @@ class WorkClass {
     }
 
     private fun throwExceptionIfRequired() {
-        if (exceptionRequired.get())
+        if (sourceExceptionRequired.get())
             throw RuntimeException(newExceptionMessage)
     }
 
@@ -55,17 +76,32 @@ class WorkClassDelayedExceptionUnitTest() {
     private val newWorkClass get() = WorkClass()
 
     @Test
-    fun simpleWorkWithException(): Unit = runBlocking {
+    fun sourceStreamClose(): Unit = runBlocking {
         val wc = newWorkClass
         // Без Dispatchers.IO тест не срабатывает
         launch (Dispatchers.IO) {
             delay(1000)
-            wc.requestException()
+            wc.requestSourceStreamClose()
         }
         Assert.assertThrows(Exception::class.java) {
-            wc.work(10_000)
+            wc.work(1000)
         }
     }
+
+
+    @Test
+    fun targetStreamClose(): Unit = runBlocking {
+        val wc = newWorkClass
+        // Без Dispatchers.IO тест не срабатывает
+        launch (Dispatchers.IO) {
+            delay(1000)
+            wc.requestTargetStreamClose()
+        }
+        Assert.assertThrows(Exception::class.java) {
+            wc.work(1000)
+        }
+    }
+
 
     @Test
     fun simpleWorkSuspendWithException(): Unit = runBlocking {
@@ -74,7 +110,7 @@ class WorkClassDelayedExceptionUnitTest() {
         // Тест работает даже без Dispatchers.IO
         launch {
             delay(1000)
-            wc.requestException()
+            wc.requestSourceStreamClose()
         }
 
         try {
