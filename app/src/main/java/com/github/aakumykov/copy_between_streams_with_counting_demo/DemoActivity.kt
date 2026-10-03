@@ -1,21 +1,30 @@
 package com.github.aakumykov.copy_between_streams_with_counting_demo
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.github.aakumykov.copy_between_streams_with_counting_demo.databinding.ActivityDemoBinding
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.errorMsg
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.errorMsgExtended
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.getIntFromPreferences
+import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.showToast
 import com.github.aakumykov.copy_between_streams_with_counting_demo.extensions.storeIntInPreferences
 import com.github.aakumykov.copy_between_streams_with_counting_demo.utils.random
-import com.github.aakumykov.copy_between_streams_with_speed.copyBetweenStreamsWithSpeed
+import com.github.aakumykov.copy_between_streams_with_speed.SimpleStreamToStreamCopier
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanReadableByteCount
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import kotlin.math.roundToInt
 
 class DemoActivity : AppCompatActivity() {
@@ -53,30 +62,88 @@ class DemoActivity : AppCompatActivity() {
             }
         }
         binding.startButton.setOnClickListener { onStartButtonClicked() }
+        binding.startButton2.setOnClickListener { startCopyingFile2() }
         binding.stopButton.setOnClickListener { onStopButtonClicked() }
         binding.probeButton.setOnClickListener { onProbeButtonClicked() }
     }
 
     private var currentInputStream: InputStream? = null
 
-    private fun onStartButtonClicked() {
+    private val streamCopier by lazy { SimpleStreamToStreamCopier() }
 
-        val dataSize = binding.sizeSeekBar.progress
-        val speed = binding.speedSeekBar.progress
+    private val dataSize get() = binding.sizeSeekBar.progress
+    private val speed get() = binding.speedSeekBar.progress
+
+    private val sourceFile: File by lazy { File.createTempFile("source", "file") }
+    private val targetFile: File by lazy { File.createTempFile("target", "file") }
+
+    private val sourceFileStream: InputStream get() = sourceFile.inputStream()
+    private val targetFileStream: OutputStream get() = targetFile.outputStream()
+
+
+    fun startCopyingFile2() {
+
+
+
+        val sourceStream = sourceFileStream
+        val targetStream = targetFileStream
+
+        sourceStream.use { inputStream ->
+            targetStream.use { outputStream ->
+
+                lifecycleScope.launch (Dispatchers.IO) {
+
+                    sourceFile.writeBytes(random.nextBytes(dataSize))
+
+                    launch (Dispatchers.Main) {
+                        showInfo("Копирование-2 начато")
+                    }
+
+                    streamCopier.copyFromStreamToStream(
+                        inputStream,
+                        outputStream,
+                        1000_1000,
+                    )
+
+                    launch (Dispatchers.Main) {
+                        showInfo("Копирование-2 завершено")
+                    }
+
+                }
+            }
+        }
+    }
+
+
+    private fun onStartButtonClicked() {
 
         storeIntInPreferences(KEY_SIZE, dataSize)
         storeIntInPreferences(KEY_SPEED, speed)
 
-        lifecycleScope.launch (Dispatchers.IO) {
-            val sourceFile = File.createTempFile("source","file")
-            val targetFile = File.createTempFile("target","file")
+        val eh = CoroutineExceptionHandler { context, throwable ->
+            showError(throwable.errorMsgExtended)
+            Log.e(TAG, throwable.errorMsg, throwable)
+        }
+
+        lifecycleScope.launch (eh + Dispatchers.IO) {
+
 
             sourceFile.writeBytes(random.nextBytes(dataSize))
 
             sourceFile.inputStream().use { inputStream ->
                 this@DemoActivity.currentInputStream = inputStream
                 targetFile.outputStream().use { outputStream ->
-                    copyBetweenStreamsWithSpeed(
+                    doCopy(
+                        scope = this,
+                        inputStream = inputStream,
+                        outputStream = outputStream
+                    )
+                }
+            }
+        }
+    }
+
+    /*copyBetweenStreamsWithSpeed(
                         inputStream = inputStream,
                         outputStream = outputStream,
                         speedBytesPerSec = speed,
@@ -89,23 +156,32 @@ class DemoActivity : AppCompatActivity() {
                                     "за ${(timeElapsedMs.toFloat()/1000)} с,\n" +
                                     "скорость: ${humanReadableByteCount(speedBytesPerSec)}/с")
                         }
-                    )
-                }
+                    )*/
+
+    private suspend fun doCopy(
+        scope: CoroutineScope,
+        inputStream: FileInputStream,
+        outputStream: FileOutputStream
+    ) {
+        streamCopier.copyFromStreamToStream(
+            inputStream,
+            outputStream,
+            speed,
+            progressCallback = { transferred, s ->
+                val percent = ((transferred.toFloat()/dataSize)*100).roundToInt()
+                showProgress(percent)
             }
-        }
-    }
-
-    private val probeClass by lazy {
-        ProbeClass(this@DemoActivity, lifecycleScope)
-    }
-
-    private fun onProbeButtonClicked() {
-        probeClass.probe()
+        )
     }
 
     private fun onStopButtonClicked() {
         currentInputStream?.close()
     }
+
+    private fun onProbeButtonClicked() {
+        showToast("Нету пробы пока")
+    }
+
 
     private fun showProgress(value: Int) {
         lifecycleScope.launch {
@@ -113,9 +189,21 @@ class DemoActivity : AppCompatActivity() {
         }
     }
 
-    private fun showInfo(text: String) {
+    private fun showInfo(message: String) {
         lifecycleScope.launch {
-            binding.infoView.text = text
+            binding.infoView.apply {
+                text = message
+                setTextColor(getColor(R.color.black_white_day_night))
+            }
+        }
+    }
+
+    private fun showError(message: String) {
+        lifecycleScope.launch {
+            binding.infoView.apply {
+                text = message
+                setTextColor(getColor(R.color.error))
+            }
         }
     }
 
@@ -125,6 +213,7 @@ class DemoActivity : AppCompatActivity() {
     }
 
     companion object {
+        val TAG: String = DemoActivity::class.java.simpleName
         const val KEY_SIZE = "SIZE"
         const val KEY_SPEED = "SPEED"
         const val MAX_SIZE = 12_000_000
