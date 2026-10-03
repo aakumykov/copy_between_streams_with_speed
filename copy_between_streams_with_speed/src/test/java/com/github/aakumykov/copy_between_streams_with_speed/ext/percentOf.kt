@@ -11,3 +11,7 @@ fun Double.percentOf(base: Double): Double {
 fun Float.percentOf(base: Float): Double {
     return 100.0 * this / base
 }
+
+fun Int.percentOf(base: Number): Double {
+    return 100 * this / base.toDouble()
+}

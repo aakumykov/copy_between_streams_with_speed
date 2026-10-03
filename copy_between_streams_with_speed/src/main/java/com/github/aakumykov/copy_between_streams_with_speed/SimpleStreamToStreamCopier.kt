@@ -33,11 +33,13 @@ class SimpleStreamToStreamCopier {
 
         while (true) {
             val readBytes = inputStream.read(dataBuffer)
+
             if (-1 == readBytes) {
                 break
             }
 
             outputStream.write(dataBuffer, 0, readBytes)
+
             totalBytesWritten += readBytes
 
             val expectedNanos = (totalBytesWritten.toDouble() * NANOS_IN_SECOND / speedBytesPerSecond).toLong()

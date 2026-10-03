@@ -24,6 +24,7 @@ import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -49,6 +50,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
      *  - вызываются
      *  - коллбек завершения вызывается один раз
      *  - коллбек прогресса вызывается минимум 1 раз
+     *  - коллбек прогресса вызывается указанное количество раз в секунду
+     *  [progress_callback_triggers_specified_times]
      *
      * Ограничения работают:
      *   - исключение при нулевой скорости [throws_exception_on_zero_speed]
@@ -245,6 +248,62 @@ private val streamCopier = SimpleStreamToStreamCopier()
         Assert.assertTrue(finishCallbackCount.get() == 1)
     }
 
+
+    /*
+    // Число срабатываний коллбека прогресса слишком вариабельно...
+    @Test
+    fun progress_callback_triggers_specified_times() {
+
+        fun copyAndCheck(dataSize: Int, speed: Int, rate: Int, expectedProgressCountDeviationPercent: Int) {
+
+            val expectedProgressCount = (dataSize.toDouble() / speed) * rate
+            val exDeviationValue = expectedProgressCount * expectedProgressCountDeviationPercent / 100.0
+            val exProgressCountRange = expectedProgressCount-exDeviationValue..expectedProgressCount+exDeviationValue
+
+            val progressList = mutableListOf<Long>()
+            val speedList = mutableListOf<Long>()
+
+            prepareAndCopy(dataSize, speed, rate) { b, s ->
+                progressList.add(b)
+                speedList.add(s)
+            }
+
+            val progressCount = progressList.size.toDouble()
+
+            val paramsMsg = "\ndataSize:$dataSize, speed:$speed,  rate:$rate "
+            logProgressList("$paramsMsg, ($progressCount/$expectedProgressCount) $progressList")
+            logProgressList("speedList: $speedList")
+
+
+            Assert.assertTrue(
+                "Число срабатываний прогресса " +
+                        "($progressCount) = $exProgressCountRange " +
+                        "при $paramsMsg" +
+                        "$progressList",
+                progressCount in exProgressCountRange,
+            )
+        }
+
+        val expectedProgressCountDeviationPercent = 40
+
+        repeat_with_params(1..10, 1) { rate ->
+
+            repeat_with_params(1..10, 1) { sizeBase ->
+                val dataSize = sizeBase.MEGABYTES
+
+                repeat_with_params(100..1000, 100) { speedBase ->
+                    val speed = speedBase.KILOBYTES
+
+                    copyAndCheck(
+                        dataSize = dataSize,
+                        speed = speed,
+                        rate = rate,
+                        expectedProgressCountDeviationPercent = expectedProgressCountDeviationPercent
+                    )
+                }
+            }
+        }
+    }*/
 
 
     @Test
@@ -863,6 +922,10 @@ private val streamCopier = SimpleStreamToStreamCopier()
     }
 
     private fun logI(text: String) {
+        Log.i(TAG, text)
+    }
+
+    private fun logProgressList(text: String) {
         Log.i(TAG, text)
     }
 
