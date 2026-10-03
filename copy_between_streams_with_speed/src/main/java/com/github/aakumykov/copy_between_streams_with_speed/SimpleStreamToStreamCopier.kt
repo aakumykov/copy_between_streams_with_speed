@@ -13,7 +13,7 @@ class SimpleStreamToStreamCopier {
         outputStream: OutputStream,
         speedBytesPerSecond: Int,
         progressRatePerSecond: Int = 1,
-        finishCallback: ((byteTransferred: Long) -> Unit)? = null,
+        finishCallback: ((byteTransferred:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null,
         progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
     ) {
         require(speedBytesPerSecond > 0) {
@@ -62,15 +62,21 @@ class SimpleStreamToStreamCopier {
 
         outputStream.flush()
 
-        val finalDuration = System.nanoTime() - startTime
-        val speedBytesPerSecond = (NANOS_IN_SECOND * totalBytesWritten / finalDuration).roundToLong()
+        val finalDurationNanos = System.nanoTime() - startTime
+        val speedBytesPerSecond = (NANOS_IN_SECOND * totalBytesWritten / finalDurationNanos).roundToLong()
 
         progressCallback?.invoke(totalBytesWritten, speedBytesPerSecond)
-        finishCallback?.invoke(totalBytesWritten)
+
+        finishCallback?.invoke(
+             totalBytesWritten,
+            (finalDurationNanos / DIFF_NANOS_MILLIS),
+            speedBytesPerSecond
+        )
     }
 
     companion object {
         const val NANOS_IN_SECOND: Double = 1_000_000_000.0
         const val MILLIS_IN_SECOND: Int = 1_000
+        private const val DIFF_NANOS_MILLIS: Long = (NANOS_IN_SECOND / MILLIS_IN_SECOND).toLong()
     }
 }
