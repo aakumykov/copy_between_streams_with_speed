@@ -24,7 +24,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
         speedBytesPerSecond: Int,
         progressRatePerSecond: Int = 1,
         progressCallback: ((totalBytesTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null,
-        finishCallback: ((totalBytesTransferred: Long) -> Unit)? = null
+        finishCallback: ((byteTransferred:Long, timeElapsedMs:Long, speedBytesPerSec:Long) -> Unit)? = null
     ) {
         simpleStreamToStreamCopier.copyFromStreamToStream(
             inputStream = inputStream,
@@ -125,7 +125,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
         val upperBound = (expectedTimeMs * 1.1).toLong()
 
         assertTrue(
-            "Время копирования ${elapsed} мс вышло за пределы [${lowerBound}, ${upperBound}] мс",
+            "Время копирования $elapsed мс вышло за пределы [${lowerBound}, ${upperBound}] мс",
             elapsed in lowerBound..upperBound
         )
     }
@@ -206,7 +206,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
                     inputStream = `in`,
                     outputStream = out,
                     speedBytesPerSecond = 100_000,
-                    finishCallback = { finishValues.add(it) }
+                    finishCallback = { _, _, s -> finishValues.add(s) }
                 )
             }
         }
@@ -257,7 +257,7 @@ class SimpleStreamToStreamCopierUnitTestsAI {
             val diffMs = (progressTimestamps[i] - progressTimestamps[i - 1]) / 1_000_000
 
             assertTrue(
-                "Интервал ${diffMs} мс вышел за пределы [${lowerBound}, ${upperBound}] мс",
+                "Интервал $diffMs мс вышел за пределы [${lowerBound}, ${upperBound}] мс",
                 diffMs in lowerBound..upperBound
             )
         }
