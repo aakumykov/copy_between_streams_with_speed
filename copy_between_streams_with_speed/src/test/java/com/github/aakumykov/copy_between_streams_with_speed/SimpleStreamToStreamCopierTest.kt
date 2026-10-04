@@ -51,7 +51,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
      *  - коллбек завершения вызывается один раз
      *  - коллбек прогресса вызывается минимум 1 раз
      *  - коллбек прогресса вызывается указанное количество раз в секунду
-     *  [progress_callback_triggers_specified_times]
+     *  (не удаётся корректно реализовать из-за слишком большого разброса значений)
      *
      * Ограничения работают:
      *   - исключение при нулевой скорости [throws_exception_on_zero_speed]
@@ -237,7 +237,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
                 progressCallback = { _,_ ->
                     progressCallbackCount.getAndIncrement()
                 },
-                finishCallback = { _ ->
+                finishCallback = { _, _, _ ->
                     finishCallbackCount.getAndIncrement()
                 }
             )
@@ -815,7 +815,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
                     logI("[${currentTimeMs.humanDecimalPlaces}] pr: $bytes, sp: $speed")
                     progressList.add(bytes)
                     speedList.add(speed)
-                }, finishCallback = { _ ->
+                }, finishCallback = { _,_,_ ->
                     finishCallbackWasTriggered.set(true)
                 })
 
@@ -891,7 +891,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         dataSize: Int,
         speed: Int,
         rate: Int,
-        finishCallback: ((byteTransferred: Long) -> Unit)? = null,
+        finishCallback: ((byteTransferred: Long, timeElapsedMs: Long, speedBytesPerSec: Long) -> Unit)? = null,
         progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
     ) {
         prepareSourceAndTargetFiles(dataSize)
