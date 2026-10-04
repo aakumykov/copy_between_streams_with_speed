@@ -8,6 +8,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.Assert
 import org.junit.Test
+import java.io.File
+import java.util.Properties
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -16,6 +18,20 @@ class WorkClass : TestBase() {
     private val sourceExceptionRequired = AtomicBoolean(false)
     private val targetExceptionRequired = AtomicBoolean(false)
 
+    private val localPropertiesFilePath = "../local.properties"
+
+    private val yandexAuthId: String by lazy {
+        val localPropertiesFile = File(localPropertiesFilePath)
+        val keyYandexAuthId = "YANDEX_AUTH_ID"
+        Properties().apply {
+            load(localPropertiesFile.inputStream())
+        }.getProperty(keyYandexAuthId)
+    }
+
+    @Test
+    fun yandex_auth_id_exists() {
+        Assert.assertTrue(yandexAuthId.isNotEmpty())
+    }
 
     fun requestSourceStreamClose() {
         sourceExceptionRequired.set(true)
