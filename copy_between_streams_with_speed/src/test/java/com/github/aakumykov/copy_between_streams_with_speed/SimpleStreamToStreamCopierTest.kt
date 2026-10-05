@@ -10,7 +10,6 @@ import com.github.aakumykov.copy_between_streams_with_speed.utils.MEGABYTES
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeMs
 import com.github.aakumykov.copy_between_streams_with_speed.utils.currentTimeNanos
 import com.github.aakumykov.copy_between_streams_with_speed.utils.humanDecimalPlaces
-import com.github.aakumykov.copy_between_streams_with_speed.utils.humanSizeBinary
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +23,6 @@ import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -131,8 +129,9 @@ private val streamCopier = SimpleStreamToStreamCopier()
     @Test
     fun test_data_size_hundreds_bytes() {
         for(base in 1.. 9) {
-            val dataSize = base * 100
-            val speed = dataSize * 10
+            val dataSize = base * 100L
+            val speed = (dataSize * 10).toInt()
+            require(speed > 0)
             val rate = 1
             standard_test_with(dataSize, speed, rate,)
         }
@@ -142,7 +141,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
     fun test_data_size_kilobytes() {
         for(base in 1..10) {
             val dataSize = base.KILOBYTES
-            val speed = dataSize * 10
+            val speed = (dataSize * 10).toInt()
+            require(speed > 0)
             val rate = 1
             standard_test_with(dataSize, speed, rate,)
         }
@@ -152,7 +152,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
     fun simple_test_100kb_30kb_with_specific_steps() {
 
         val dataSize = 100.KILOBYTES
-        val speed = 16.KILOBYTES
+        val speed = 16.KILOBYTES.toInt()
+        require(speed > 0)
         val progressRate = 1
 
         standard_test_with(
@@ -169,7 +170,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
             logD("steps: $steps")
 
             val dataSize = 100.KILOBYTES
-            val speed = 30.KILOBYTES
+            val speed = 30.KILOBYTES.toInt()
             val progressRate = 1
 
             standard_test_with(
@@ -186,7 +187,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
     fun simple_test_for_speed() {
         for (sizeBase in listOf(1, 10, 100, 500, 1000)) {
             val dataSize = sizeBase.KILOBYTES
-            val speed = dataSize / 3
+            val speed = (dataSize / 3).toInt()
+            require(speed > 0)
             val rate = 1
             prepareSourceAndTargetFiles(dataSize)
             logD( "simple_test_for_speed(sizeBase:$sizeBase), старт")
@@ -204,8 +206,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
     @Test
     fun data_simply_copied() {
 
-        val dataSize = 101
-        val speed = dataSize * 2
+        val dataSize = 101L
+        val speed = (dataSize * 2).toInt()
         val progressRate = 1
 
         prepareSourceAndTargetFiles(dataSize)
@@ -213,8 +215,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
         streamCopier.copyFromStreamToStream(newSourceFileStream, newTargetFileStream,
             speed, progressRate)
 
-        Assert.assertEquals(dataSize.toLong(), targetFile.length())
-        Assert.assertEquals(dataSize.toLong(), sourceFile.length())
+        Assert.assertEquals(dataSize, targetFile.length())
+        Assert.assertEquals(dataSize, sourceFile.length())
         Assert.assertEquals(sourceFileContents, targetFileContents)
     }
 
@@ -225,7 +227,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         val progressCallbackCount = AtomicInteger(0)
         val finishCallbackCount = AtomicInteger(0)
 
-        val dataSize = 100
+        val dataSize = 100L
         val speed = 30
         val rate = 1
 
@@ -359,7 +361,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
     @Test
     fun zero_size_file() {
 
-        val dataSize = 0
+        val dataSize = 0L
         val speed = 10
         val progressRate = 1
 
@@ -378,11 +380,11 @@ private val streamCopier = SimpleStreamToStreamCopier()
                 )
         }
 
-        Assert.assertEquals(dataSize.toLong(), sourceFile.length())
-        Assert.assertEquals(dataSize.toLong(), targetFile.length())
+        Assert.assertEquals(dataSize, sourceFile.length())
+        Assert.assertEquals(dataSize, targetFile.length())
 
         Assert.assertEquals(1, progressList.size)
-        Assert.assertEquals(dataSize.toLong(), progressList.first())
+        Assert.assertEquals(dataSize, progressList.first())
     }
 
 
@@ -422,7 +424,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
     fun time_test_on_single_params_set() {
 
         val dataSizeBytes = 1.MEGABYTES
-        val speedBytesPerSec = 14.KILOBYTES
+        val speedBytesPerSec = 14.KILOBYTES.toInt()
         val expectedDurationNs = NANOS_IN_SECOND * dataSizeBytes / speedBytesPerSec
 
         val startTime = currentTimeNanos
@@ -450,7 +452,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
         val progressIntervalsList = mutableListOf<Long>()
 
         val dataSize = 1.MEGABYTES
-        val speed = 150.KILOBYTES
+        val speed = 150.KILOBYTES.toInt()
+        require(speed > 0)
         val rate = 1
         val minListSize = 5
 
@@ -509,7 +512,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         errorTrigger: (sourceStream: InputStream, targetStream: OutputStream) -> Unit,
         progressCallback: ((byteTransferred: Long, speedBytesPerSecond: Long) -> Unit)? = null
     ) {
-        val dataSize = 1000
+        val dataSize = 1000L
         val speed = 100
         val errorDelayMs: Long = 1000
 
@@ -543,7 +546,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
     @Test
     fun test_with_diff_data_size_1_9() {
         repeat_with_params(1..9, 1,0){ dataSize ->
-            standard_test_with(dataSize, 1, 1)
+            standard_test_with(dataSize.toLong(), 1, 1)
             TimeUnit.SECONDS.sleep(1)
         }
     }
@@ -551,21 +554,21 @@ private val streamCopier = SimpleStreamToStreamCopier()
     @Test
     fun test_with_diff_data_size_10_99() {
         repeat_with_params(10..99, 10,5){ dataSize ->
-            standard_test_with(dataSize, dataSize * 2, 10)
+            standard_test_with(dataSize.toLong(), dataSize * 2, 10)
         }
     }
 
     @Test
     fun test_with_diff_data_size_100_999() {
         repeat_with_params(100..999, 100,50){ dataSize ->
-            standard_test_with(dataSize, dataSize * 2, 10)
+            standard_test_with(dataSize.toLong(), dataSize * 2, 10)
         }
     }
 
     @Test
     fun test_with_diff_data_size_1000_9999() {
         repeat_with_params(1000..9999, 1000,500){ dataSize ->
-            standard_test_with(dataSize, dataSize * 2, 10)
+            standard_test_with(dataSize.toLong(), dataSize * 2, 10)
         }
     }
 
@@ -649,7 +652,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
             repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -662,7 +665,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
             repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -675,7 +678,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
             repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -689,7 +692,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
             repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -702,7 +705,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
             repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -715,7 +718,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
             repeat_with_params(otherParamsRange, otherParamsStep) { rate ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -730,7 +733,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
             repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -743,7 +746,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
             repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -756,7 +759,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat_with_params(otherParamsRange, otherParamsStep) { dataSize ->
             repeat_with_params(otherParamsRange, otherParamsStep) { speed ->
                 val realRate = min(speed, rate)
-                standard_test_with(dataSize, speed, realRate)
+                standard_test_with(dataSize.toLong(), speed, realRate)
             }
         }
     }
@@ -767,7 +770,8 @@ private val streamCopier = SimpleStreamToStreamCopier()
         repeat(10) { i ->
             logI("===== прогон ${i+1} =====")
             val dataSize = 1.MEGABYTES * random.nextInt(10)
-            val speed = 1.KILOBYTES * random.nextInt(100, 1001)
+            val speed = (1.KILOBYTES * random.nextInt(100, 1001)).toInt()
+            require(speed > 0)
             val rate = random.nextInt(1, 100)
             standard_test_with(dataSize, speed, rate)
         }
@@ -787,7 +791,7 @@ private val streamCopier = SimpleStreamToStreamCopier()
     }
 
     private fun standard_test_with(
-        dataSizeBytes: Int,
+        dataSizeBytes: Long,
         speedBytesPerSec: Int,
         progressRatePerSec: Int,
     ) {
@@ -854,9 +858,9 @@ private val streamCopier = SimpleStreamToStreamCopier()
                 "real.time:${realDurationNs.humanDecimalPlaces} (${timeDiffPercents}%),\n" +
                 "t.diff:${timeDiffNs},\n"
 
-        val progressMsg =
-            "prList[${progressList.size}]: ${progressList.joinToString(",")},\n" +
-                    "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")},\n"
+//        val progressMsg =
+//            "prList[${progressList.size}]: ${progressList.joinToString(",")},\n" +
+//                    "spList[${0}]: ${speedList.map { "${it.humanSizeBinary()}/с" }.joinToString(",")},\n"
 
         logI(msgMedium)
 
@@ -881,14 +885,14 @@ private val streamCopier = SimpleStreamToStreamCopier()
 
         Assert.assertEquals(
             "Последнее значение списка прогресса (${progressList.last()}) == размеру данных ($dataSizeBytes)",
-            dataSizeBytes.toLong(),
+            dataSizeBytes,
             progressList.last()
         )
     }
 
 
     private fun prepareAndCopy(
-        dataSize: Int,
+        dataSize: Long,
         speed: Int,
         rate: Int,
         finishCallback: ((byteTransferred: Long, timeElapsedMs: Long, speedBytesPerSec: Long) -> Unit)? = null,

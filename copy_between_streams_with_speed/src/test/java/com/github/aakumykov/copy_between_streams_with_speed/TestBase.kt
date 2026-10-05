@@ -1,5 +1,6 @@
 package com.github.aakumykov.copy_between_streams_with_speed
 
+import com.github.aakumykov.copy_between_streams_with_speed.ext.repeat
 import com.github.aakumykov.copy_between_streams_with_speed.utils.random
 import org.junit.Assert
 import java.io.File
@@ -31,7 +32,7 @@ abstract class TestBase {
     protected val ByteArray.asString: String get() = this.joinToString("")
 
 
-    protected fun prepareSourceAndTargetFiles(dataSizeBytes: Int): String {
+    protected fun prepareSourceAndTargetFiles(dataSizeBytes: Long): String {
         prepareTestDir()
         prepareSourceFile(dataSizeBytes)
         prepareTargetFile()
@@ -57,7 +58,7 @@ abstract class TestBase {
         Assert.assertFalse(targetFile.exists())
     }
 
-    protected fun prepareSourceFile(dataSizeBytes: Int) {
+    protected fun prepareSourceFile(dataSizeBytes: Long) {
 //        println("prepareSourceFile(${dataSizeBytes})")
         clearSourceFile()
 
@@ -66,7 +67,7 @@ abstract class TestBase {
         Assert.assertEquals(0L, sourceFile.length())
 
         writeTestDataToFile(sourceFile, dataSizeBytes)
-        Assert.assertEquals(dataSizeBytes.toLong(), sourceFile.length())
+        Assert.assertEquals(dataSizeBytes, sourceFile.length())
     }
 
     protected fun prepareTargetFile() {
@@ -80,7 +81,7 @@ abstract class TestBase {
     }
 
 
-    protected fun writeTestDataToFile(file: File, dataSizeBytes: Int) {
+    protected fun writeTestDataToFile(file: File, dataSizeBytes: Long) {
 //        println("writeTestDataToFile(${dataSizeBytes.humanDecimalPlaces}) СТАРТ")
 
         val pieceSize = DEFAULT_BUFFER_SIZE
@@ -101,12 +102,13 @@ abstract class TestBase {
                 writeAndDisplay(random.nextBytes(pieceSize))
             }
 
-            val additionalBytesCount = dataSizeBytes - alreadyWritten
+            val additionalBytesCount = (dataSizeBytes - alreadyWritten).toInt()
+            require(additionalBytesCount >= 0)
             writeAndDisplay(random.nextBytes(additionalBytesCount))
         }
 
         Assert.assertEquals(
-            dataSizeBytes.toLong(),
+            dataSizeBytes,
             file.length()
         )
 

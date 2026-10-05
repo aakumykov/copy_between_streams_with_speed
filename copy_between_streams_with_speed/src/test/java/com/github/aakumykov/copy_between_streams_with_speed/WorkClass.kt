@@ -42,7 +42,7 @@ class WorkClass : TestBase() {
     }
 
     fun work(dataSizeBytes: Int) {
-        prepareSourceAndTargetFiles(dataSizeBytes)
+        prepareSourceAndTargetFiles(dataSizeBytes.toLong())
 
         val source = newSourceFileStream
         val target = newTargetFileStream
